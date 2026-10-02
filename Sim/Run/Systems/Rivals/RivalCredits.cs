@@ -17,7 +17,7 @@ public enum RivalCreditKind
 /// muerte a manos del rival en el índice <see cref="RivalIndex"/> del clan <see cref="RivalId"/> (índice
 /// dentro de <c>data/rivals/&lt;RivalId&gt;.json</c>, ver <c>RivalTeamBuilder.OpponentFirstPlayerId</c>).
 /// </summary>
-public sealed record RivalCredit(string RivalId, int RivalIndex, int OwnPlayerId, RivalCreditKind Kind, int Count);
+public sealed record RivalCredit(string RivalId, int RivalIndex, int OwnPlayerId, RivalCreditKind Kind, int Count, int Occupant = 0);
 
 /// <summary>
 /// Lectura pura sobre <see cref="RunState.Counters"/> del par knaveador-víctima que
@@ -53,7 +53,9 @@ public static class RivalCredits
                 continue;
             }
 
-            credits.Add(new RivalCredit(rivalId, rivalIndex, ownPlayerId, kind, count));
+            credits.Add(new RivalCredit(
+                rivalId, rivalIndex, ownPlayerId, kind, count,
+                state.Counter(RunState.RivalOccupantPrefix + key[RunState.RivalCreditPrefix.Length..])));
         }
 
         return credits;

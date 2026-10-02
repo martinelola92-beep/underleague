@@ -135,7 +135,7 @@ public static class GazetteView
             Mvp(state, nicknames, templates, language),
             Pick(templates, "mvp.none", language, state.Seed, 8, facts),
             Pick(templates, "villain.title", language, state.Seed, 5, facts),
-            NemesisVillain(state, nemesis, templates, language) ?? Villain(state, credits, rivals, templates, language),
+            NemesisVillain(state, nemesis, templates, language) ?? Villain(state, credits, rivals, templates, language, catalog),
             Pick(templates, "obituaries.title", language, state.Seed, 6, facts),
             Pick(templates, "obituaries.none", language, state.Seed, 7, facts),
             Obituaries(state, catalog, nicknames, rivals, credits, templates, language));
@@ -312,19 +312,25 @@ public static class GazetteView
         return new GazetteVillain(name, villain.Clan, villain.Kills, 0, line);
     }
 
-    private static GazetteVillain? Villain(RunState state, IReadOnlyList<RivalCredit> credits, RivalCatalog rivals, GazetteCatalog templates, string language)
+    private static GazetteVillain? Villain(RunState state, IReadOnlyList<RivalCredit> credits, RivalCatalog rivals, GazetteCatalog templates, string language, Catalog catalog)
     {
-        var comparer = Comparer<(string, int)>.Create(static (a, b) =>
+        var comparer = Comparer<(string, int, int)>.Create(static (a, b) =>
         {
             int byClan = string.CompareOrdinal(a.Item1, b.Item1);
-            return byClan != 0 ? byClan : a.Item2.CompareTo(b.Item2);
+            if (byClan != 0)
+            {
+                return byClan;
+            }
+
+            int bySlot = a.Item2.CompareTo(b.Item2);
+            return bySlot != 0 ? bySlot : a.Item3.CompareTo(b.Item3);
         });
-        var killedBy = new SortedDictionary<(string, int), SortedSet<int>>(comparer);
-        var hurtBy = new SortedDictionary<(string, int), SortedSet<int>>(comparer);
+        var killedBy = new SortedDictionary<(string, int, int), SortedSet<int>>(comparer);
+        var hurtBy = new SortedDictionary<(string, int, int), SortedSet<int>>(comparer);
         for (int i = 0; i < credits.Count; i++)
         {
             var target = credits[i].Kind == RivalCreditKind.SufferedDeath ? killedBy : hurtBy;
-            var key = (credits[i].RivalId, credits[i].RivalIndex);
+            var key = (credits[i].RivalId, credits[i].RivalIndex, credits[i].Occupant);
             if (!target.TryGetValue(key, out var victims))
             {
                 victims = new SortedSet<int>();
@@ -334,11 +340,11 @@ public static class GazetteView
             victims.Add(credits[i].OwnPlayerId);
         }
 
-        (string Clan, int Index) best = (string.Empty, -1);
+        (string Clan, int Index, int Occupant) best = (string.Empty, -1, 0);
         int bestScore = 0;
         int bestKilled = 0;
         int bestHurt = 0;
-        var keys = new SortedSet<(string, int)>(killedBy.Keys, comparer);
+        var keys = new SortedSet<(string, int, int)>(killedBy.Keys, comparer);
         keys.UnionWith(hurtBy.Keys);
         foreach (var key in keys)
         {
@@ -379,17 +385,19 @@ public static class GazetteView
 
         int killed = bestKilled;
         int hurt = bestHurt;
+        // BS-A: el nombre es el de quien ocupaba el puesto, no el del jugador de datos.
+        string villainName = RivalKiller.Name(best.Occupant, team, best.Index, state.RivalMemory, state.Seed, catalog);
         string clan = NameIn(team.Name, language);
         var facts = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            ["villain"] = team.Players[best.Index].Name,
+            ["villain"] = villainName,
             ["clan"] = clan,
             ["deaths"] = Number(killed),
             ["injuries"] = Number(hurt),
         };
 
         string line = Pick(templates, killed > 0 ? "villain.deaths" : "villain.injuries", language, state.Seed, 200 + best.Index, facts);
-        return new GazetteVillain(team.Players[best.Index].Name, clan, killed, hurt, line);
+        return new GazetteVillain(villainName, clan, killed, hurt, line);
     }
 
     // ------------------------------------------------------------------ esquelas

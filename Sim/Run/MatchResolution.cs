@@ -250,7 +250,10 @@ internal static class MatchResolution
         //     bandos, pero hasta el mismo punto que el bucle de bajas (BR-B: un crédito de muerte que el
         //     estado no refleja es una contradicción visible en la Gaceta) -es contabilidad pura sobre
         //     RunState.Counters (RT-054)-.
-        next = ApplyRivalCredits(next, node, players, result.Events, processedEvents);
+        var killerTeam = nemesis is not null && node.OpponentId.Length > 0 && NodeKinds.IsCatalogRivalMatch(node.Kind)
+            ? nemesis.Rivals.Find(node.OpponentId)
+            : null;
+        next = ApplyRivalCredits(next, node, players, result.Events, processedEvents, killerTeam);
 
         // 4b'. Memoria de los clanes rivales (ADR 0165): quién se convierte en némesis por matar a uno de los
         //      nuestros, quién se venga, qué rivales han muerto y ya no vuelven. Mismos eventos y mismo corte
@@ -266,9 +269,6 @@ internal static class MatchResolution
         //     lee para no contar «cayó en el campo» de quien murió de otra manera.
         //     BS-A: y quién ocupaba el puesto del matador rival en ESTE partido (memoria de antes), para que la
         //     esquela no nombre al jugador de datos cuando jugaba un fichaje o un némesis traspasado.
-        var killerTeam = nemesis is not null && node.OpponentId.Length > 0 && NodeKinds.IsCatalogRivalMatch(node.Kind)
-            ? nemesis.Rivals.Find(node.OpponentId)
-            : null;
         for (int d = 0; d < deathDetails.Count; d++)
         {
             next = next.WithDeathCause(
@@ -538,7 +538,8 @@ internal static class MatchResolution
     /// una unidad al contador de su par exacto.
     /// </summary>
     private static RunState ApplyRivalCredits(
-        RunState state, MapNode node, IReadOnlyList<RunPlayer> players, IReadOnlyList<MatchEvent> events, int processedEvents)
+        RunState state, MapNode node, IReadOnlyList<RunPlayer> players, IReadOnlyList<MatchEvent> events, int processedEvents,
+        RivalTeam? team)
     {
         if (node.OpponentId.Length == 0)
         {
@@ -560,6 +561,7 @@ internal static class MatchResolution
         // acaba la run, si lo hubo) y la muerte es terminal: una baja posterior sobre quien ya murió no se
         // acredita. Así "sufrió una muerte" nunca dice más que el estado final del jugador.
         var deltas = new Dictionary<string, int>();
+        var occupants = new Dictionary<string, int>();
         var dead = new HashSet<int>();
         for (int i = 0; i < processedEvents; i++)
         {
@@ -619,6 +621,13 @@ internal static class MatchResolution
                 + direction + kind;
 
             deltas[key] = deltas.TryGetValue(key, out int current) ? current + 1 : 1;
+
+            // BS-A: quién ocupaba ese puesto en este partido (memoria de antes del partido; mismo código que la esquela).
+            if (team is not null && rivalIndex < team.Players.Count
+                && RivalKiller.Encode(team, state.RivalMemory, rivalIndex) is var occupant and not 0)
+            {
+                occupants[RunState.RivalOccupantPrefix + key[RunState.RivalCreditPrefix.Length..]] = occupant;
+            }
         }
 
         if (deltas.Count == 0)
@@ -632,6 +641,13 @@ internal static class MatchResolution
         for (int i = 0; i < keys.Count; i++)
         {
             next = next.WithCounter(keys[i], next.Counter(keys[i]) + deltas[keys[i]]);
+        }
+
+        var occupantKeys = new List<string>(occupants.Keys);
+        occupantKeys.Sort(StringComparer.Ordinal);
+        for (int i = 0; i < occupantKeys.Count; i++)
+        {
+            next = next.WithCounter(occupantKeys[i], occupants[occupantKeys[i]]);
         }
 
         return next;

@@ -886,6 +886,15 @@ public sealed record RunState
     public const string DeathKillerPrefix = "deathKiller:";
 
     /// <summary>
+    /// BS-A: quién ocupaba el puesto del rival en cada crédito de <see cref="RivalCreditPrefix"/>: la clave es la del
+    /// crédito sin su prefijo (<c>rivalOccupant:&lt;opponentId&gt;:&lt;rivalIndex&gt;:&lt;ownPlayerId&gt;:&lt;hecho&gt;</c>) y el
+    /// valor, el código de <c>Systems.Rivals.RivalKiller</c> (el mismo que <see cref="DeathKillerPrefix"/>). Sólo se escribe
+    /// si el ocupante no es el jugador de datos (0 = no consta), y gana el último partido que lo toca. Clave libre: no sube
+    /// la versión.
+    /// </summary>
+    public const string RivalOccupantPrefix = "rivalOccupant:";
+
+    /// <summary>
     /// Jugadores que <b>ocupan plantilla</b> (RF-020): todos menos los muertos. El muerto se queda en
     /// <see cref="Roster"/> para el memorial (RF-122) pero deja su sitio libre: morir cuesta un jugador,
     /// no un jugador y su hueco.

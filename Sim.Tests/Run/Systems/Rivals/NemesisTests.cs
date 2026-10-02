@@ -344,6 +344,48 @@ public sealed class NemesisTests
         Assert.DoesNotContain(target.Players[moved.Slot].Name, epitaph, StringComparison.Ordinal);
     }
 
+    /// <summary>
+    /// BS-A: el villano de la Gaceta por créditos (sin némesis que lo prefiera) nombra al fichaje que ocupaba el puesto
+    /// cuando mató, y el crédito de la muerte lleva su ocupante.
+    /// </summary>
+    [Fact]
+    public void TheCreditVillainIsNamedAfterTheSigningNotTheDataPlayer()
+    {
+        var (state, nemesis) = SigningNemesis();
+        string dataName = Rivals.Find(OpponentId)!.Players[4].Name;
+        var death = RivalCredits.Against(state, OpponentId).Single(c => c.Kind == RivalCreditKind.SufferedDeath);
+        Assert.Equal(4, death.RivalIndex);
+        Assert.Equal(1, death.Occupant);
+
+        var gazette = Underleague.Sim.Run.View.GazetteView.Build(
+            state, Catalog, Systems.Nicknames, Rivals, Systems.Gazette, "es", nemesis: null);
+        Assert.NotNull(gazette.Villain);
+        Assert.Equal(nemesis.Name, gazette.Villain!.Name);
+        Assert.NotEqual(dataName, gazette.Villain.Name);
+    }
+
+    /// <summary>BS-A: una lesión causada por un fichaje también anota quién ocupaba el puesto.</summary>
+    [Fact]
+    public void AnInjuryCreditRecordsTheSigningWhoCausedIt()
+    {
+        var (state, _) = SigningNemesis();
+        var victim = state.Roster.First(p => p.PhysicalState != PhysicalState.Dead && p.Id != state.Roster[0].Id);
+        var after = Play(state, new[] { Injury(0, victim.Id, RivalId(4)) }).State;
+        var credit = RivalCredits.Against(after, OpponentId)
+            .Single(c => c.Kind == RivalCreditKind.SufferedInjury && c.OwnPlayerId == victim.Id);
+        Assert.Equal(1, credit.Occupant);
+    }
+
+    /// <summary>BS-A: con el jugador de datos en el puesto no se anota ocupante.</summary>
+    [Fact]
+    public void ADataPlayerCreditHasNoOccupant()
+    {
+        var state = BaseState();
+        var victim = state.Roster[2];
+        var after = Play(state, new[] { Death(0, victim.Id, RivalId(3)) }).State;
+        Assert.All(RivalCredits.Against(after, OpponentId), c => Assert.Equal(0, c.Occupant));
+    }
+
     /// <summary>BS-A: sin cambio de ocupante no se anota nada y la esquela nombra al jugador de datos, como antes.</summary>
     [Fact]
     public void ADataPlayerKillerLeavesNoCodeAndKeepsItsName()
