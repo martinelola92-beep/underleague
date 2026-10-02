@@ -2737,7 +2737,7 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// </summary>
     public readonly record struct BodyProbe(
         bool Visible, bool HasModel, Vector3 Position, float Yaw, string Clip, float ClipTime, float SpeedScale,
-        float InputSpeed, float NaturalSpeed, Vector2 Screen);
+        float InputSpeed, float NaturalSpeed, Vector2 Screen, Vector3 LeftToe = default, Vector3 RightToe = default);
 
     /// <summary>Número de cuerpos montados (uno por ficha de la traza). BV-A.</summary>
     public int BodyCount => _bodies.Count;
@@ -2759,9 +2759,12 @@ public partial class MatchPitchView3D : SubViewportContainer
             return new BodyProbe(body.Visible, false, center, 0f, string.Empty, -1f, 0f, 0f, 0f, screen);
         }
 
+        // Las punteras en el mundo (BV-A): el instrumento mide con ellas el patinaje del pie de apoyo y la
+        // separación del balón al pie, sin fiarse de lo que el muñeco cree que hace (Regla J).
+        model.DebugToes(out var leftToe, out var rightToe);
         return new BodyProbe(
             body.Visible, true, center, model.Rotation.Y, model.DebugClip, model.DebugClipTime, model.DebugSpeedScale,
-            model.DebugInputSpeed, model.DebugNaturalCellsPerSecond(model.DebugClip), screen);
+            model.DebugInputSpeed, model.DebugNaturalCellsPerSecond(model.DebugClip), screen, leftToe, rightToe);
     }
 
     // ------------------------------------------------------------------ marcas de perk (regla 5, ADR 0119)

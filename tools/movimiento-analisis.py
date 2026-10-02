@@ -48,6 +48,10 @@ def load_frames(path):
                 r[k] = int(r[k])
             for k in ("alpha", "timescale", "x", "z", "yaw", "clipTime", "speedScale", "inputSpeed", "naturalSpeed", "sx", "sy"):
                 r[k] = float(r[k])
+            # Columnas de la segunda pasada (punteras y balón dibujados); ausentes en registros antiguos.
+            for k in ("lx", "ly", "lz", "rx", "ry", "rz", "bx", "by", "bz"):
+                r[k] = float(r[k]) if r.get(k) not in (None, "") else float("nan")
+            r["owner"] = int(r["owner"]) if r.get("owner") not in (None, "") else -1
             rows[(r["window"], r["player"])].append(r)
     return rows
 
@@ -136,6 +140,48 @@ def frame_metrics(rows, window, label=None):
         "giro de la trayectoria entre fotogramas (p50/p90/p99 °)": (pct(turn_at_boundary, 50), pct(turn_at_boundary, 90), pct(turn_at_boundary, 99)),
         "patinaje cuerpo/pies (p10/p50/p90; 1 = pies clavados)": (pct(slide, 10), pct(slide, 50), pct(slide, 90)),
         "% fotogramas corriendo con el cuerpo quieto": 100.0 * in_place / in_place_total if in_place_total else 0,
+    }
+
+
+def foot_ball_metrics(rows, window):
+    """Segunda pasada de BV-A, medido sobre el ESQUELETO dibujado, no sobre lo que el muñeco cree hacer (Regla J):
+
+    - patinaje del pie de apoyo: el pie más bajo de los dos (el que pisa) debería estar quieto en el mundo; su
+      velocidad horizontal entre fotogramas, dividida por la del cuerpo. 0 = clavado, 1 = arrastrado con el cuerpo.
+      Por separado en locomoción y en el golpeo (la carrerilla).
+    - conducción: con el balón en su poder y el cuerpo a > 0,5 c/s, distancia horizontal del balón a la puntera más
+      cercana, y velocidad del balón RESPECTO al cuerpo (un balón que salta de un pie a otro la dispara).
+    """
+    loco_skate, kick_skate = [], []
+    sep, rel = [], []
+    for (w, p), seq in rows.items():
+        if w != window or not seq[0]["hasModel"]:
+            continue
+        for i in range(1, len(seq)):
+            a, b = seq[i - 1], seq[i]
+            if not (a["visible"] and b["visible"]) or math.isnan(b["lx"]):
+                continue
+            body = math.hypot(b["x"] - a["x"], b["z"] - a["z"]) * FPS
+            if body > 0.5 and body < 9:
+                left = a["ly"] < a["ry"]
+                if left == (b["ly"] < b["ry"]):
+                    k = "l" if left else "r"
+                    foot = math.hypot(b[k + "x"] - a[k + "x"], b[k + "z"] - a[k + "z"]) * FPS
+                    if b["clip"] in LOCO and a["clip"] in LOCO:
+                        loco_skate.append(foot / body)
+                    elif b["clip"] == "kick" and a["clip"] == "kick":
+                        kick_skate.append(foot / body)
+            if b["owner"] == p and a["owner"] == p and body > 0.5 and body < 9 and b["clip"] in LOCO:
+                d = min(math.hypot(b["bx"] - b["lx"], b["bz"] - b["lz"]), math.hypot(b["bx"] - b["rx"], b["bz"] - b["rz"]))
+                sep.append(d)
+                ra = (a["bx"] - a["x"], a["bz"] - a["z"])
+                rb = (b["bx"] - b["x"], b["bz"] - b["z"])
+                rel.append(math.hypot(rb[0] - ra[0], rb[1] - ra[1]) * FPS)
+    return {
+        "pie de apoyo / cuerpo en locomoción (p50/p90; 0 = clavado)": (pct(loco_skate, 50), pct(loco_skate, 90), len(loco_skate)),
+        "pie de apoyo / cuerpo en el golpeo (p50/p90)": (pct(kick_skate, 50), pct(kick_skate, 90), len(kick_skate)),
+        "conducción: balón-puntera más cercana, casillas (p50/p90/p99)": (pct(sep, 50), pct(sep, 90), pct(sep, 99)),
+        "conducción: velocidad del balón respecto al cuerpo, c/s (p50/p90/p99)": (pct(rel, 50), pct(rel, 90), pct(rel, 99)),
     }
 
 
@@ -303,7 +349,9 @@ def main():
         print(f"  {k}: {v}")
     for w in windows:
         print(f"== DIBUJADO, tramo '{w}' ==")
-        for k, v in frame_metrics(rows, w).items():
+        metrics = frame_metrics(rows, w)
+        metrics.update(foot_ball_metrics(rows, w))
+        for k, v in metrics.items():
             if isinstance(v, tuple):
                 v = "/".join(f"{x:.2f}" for x in v)
             elif isinstance(v, float):

@@ -103,7 +103,7 @@ public partial class BroadcastCapture
         File.WriteAllText(Path.Combine(directory, "tramos.csv"), plan.ToString());
 
         _movementLog = new StringBuilder(
-            "window,n,frame,alpha,frozen,timescale,player,team,hasModel,visible,state,x,z,yaw,clip,clipTime,speedScale,inputSpeed,naturalSpeed,sx,sy\n");
+            "window,n,frame,alpha,frozen,timescale,player,team,hasModel,visible,state,x,z,yaw,clip,clipTime,speedScale,inputSpeed,naturalSpeed,sx,sy,lx,ly,lz,rx,ry,rz,bx,by,bz,owner\n");
         RenderingServer.FramePostDraw += OnMovementPostDraw;
         foreach (var w in windows)
         {
@@ -134,6 +134,7 @@ public partial class BroadcastCapture
         var trace = screen.Trace!;
         int frame = pitch.Frame;
         var log = _movementLog;
+        var (ballAt, _, owner) = pitch.DebugBall();
         for (int i = 0; i < pitch.BodyCount && i < trace.Players.Count; i++)
         {
             var probe = pitch.ProbeBody(i);
@@ -141,7 +142,9 @@ public partial class BroadcastCapture
             log.Append(CultureInfo.InvariantCulture,
                 $"{w.Label},{_windowFrame},{frame},{pitch.Alpha:0.####},{(screen.Frozen ? 1 : 0)},{screen.TimeScaleForCapture:0.###},{i},{trace.Players[i].Team},{(probe.HasModel ? 1 : 0)},{(probe.Visible ? 1 : 0)},{trace.StateAt(f, i)},");
             log.Append(CultureInfo.InvariantCulture,
-                $"{probe.Position.X:0.#####},{probe.Position.Z:0.#####},{probe.Yaw:0.#####},{probe.Clip},{probe.ClipTime:0.####},{probe.SpeedScale:0.####},{probe.InputSpeed:0.####},{probe.NaturalSpeed:0.####},{probe.Screen.X:0.#},{probe.Screen.Y:0.#}\n");
+                $"{probe.Position.X:0.#####},{probe.Position.Z:0.#####},{probe.Yaw:0.#####},{probe.Clip},{probe.ClipTime:0.####},{probe.SpeedScale:0.####},{probe.InputSpeed:0.####},{probe.NaturalSpeed:0.####},{probe.Screen.X:0.#},{probe.Screen.Y:0.#},");
+            log.Append(CultureInfo.InvariantCulture,
+                $"{probe.LeftToe.X:0.####},{probe.LeftToe.Y:0.####},{probe.LeftToe.Z:0.####},{probe.RightToe.X:0.####},{probe.RightToe.Y:0.####},{probe.RightToe.Z:0.####},{ballAt.X:0.####},{ballAt.Y:0.####},{ballAt.Z:0.####},{owner}\n");
         }
 
         if (w.Images && _movementImages)
@@ -354,6 +357,17 @@ public partial class BroadcastCapture
                     }
                 },
             });
+        }
+
+        // 6b. Vídeo para el revisor: unos diez segundos a x1 alrededor de la recepción y el pase (imágenes a 30 fps).
+        foreach (var w in windows)
+        {
+            if (w.Label == "pase")
+            {
+                int from = Math.Max(150, w.Start - 45);
+                windows.Add(new MovementWindow { Label = "video", Start = from, End = Math.Min(frames - 1, from + 150), Focus = w.Focus, Images = true, MaxEngineFrames = 420 });
+                break;
+            }
         }
 
         // 7. x4: tres segundos reales, sin imágenes (la cifra que importa es pies frente a cuerpo).

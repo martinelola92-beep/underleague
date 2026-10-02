@@ -653,6 +653,20 @@ public sealed partial class PlayerModel : Node3D
         return perSecond * _skeleton.GlobalTransform.Basis.Scale.X;
     }
 
+    /// <summary>Las dos punteras en coordenadas del mundo, ya animadas; ceros si el modelo no tiene esqueleto. Solo BV-A.</summary>
+    public void DebugToes(out Vector3 left, out Vector3 right)
+    {
+        left = right = Vector3.Zero;
+        if (_skeleton is null || !_contactBones.TryGetValue(ContactPart.Feet, out var bones) || bones.Left < 0 || bones.Right < 0)
+        {
+            return;
+        }
+
+        var toWorld = _skeleton.GlobalTransform;
+        left = toWorld * _skeleton.GetBoneGlobalPose(bones.Left).Origin;
+        right = toWorld * _skeleton.GetBoneGlobalPose(bones.Right).Origin;
+    }
+
     /// <summary>Una línea CSV por clip montado: clave, duración en segundos, bucle y desplazamiento horneado por segundo (unidades de esqueleto). BV-A.</summary>
     public static string DebugDescribeClips()
     {
