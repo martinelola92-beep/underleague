@@ -79,7 +79,12 @@ Cinco de las trece fichas siguen produciendo el síntoma en la build actual, **t
 histórica da 5-20 veces más antes de los arreglos): BB-K (`FindSpace` ya pesa tanto como `CoverSpace`), BN-A (en juego
 abierto, mientras el portero retiene 20 ticks), BO-A (un caso de 11,5 s en `run`), BA-E (goles desde la propia línea de
 gol) y BC-G (sólo episodios cortos). BA-J y BF-C son **LIKELY**: el detector ve el comportamiento pero no hay un umbral
-de «bien» medido. Hojas de contacto y MP4 de los peores casos `run`: `Game/screenshots/detectores/hojas/`.
+de «bien» medido. Hojas de contacto (16 fotogramas recortados alrededor de los jugadores del caso) y MP4 de los peores casos `run`, en
+`Game/screenshots/detectores/hojas/`: `BO-A` (semilla 743, tick 1105-1190: el portador azul con el balón a los pies, rodeado
+de un grupo rojo durante todo el tramo), `BB-K` (775, 1800-1860: los jugadores 2 y 5 de la plantilla azul apilados sobre la
+misma casilla de la banda, el rótulo se lee «52»), `BN-A` (61, 1490-1530: cuatro compañeros pegados al portero en el instante
+de la atrapada y dispersándose a los ~10 ticks), `BA-E` (35, 1205-1245: el tiro desde la línea de fondo junto al palo que acaba
+en gol), `BB-AL` (57, 1360-1395: el salto del portero), `BC-G` (640, 1160-1205), `BF-C` (794, 385-440) y `BA-J` (7, 1815-1860).
 
 ## Lo que no se hizo / límites
 
