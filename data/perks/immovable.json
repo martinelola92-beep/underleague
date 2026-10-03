@@ -1,0 +1,38 @@
+{
+  "_doc": "BB-U, tercer perk de Bulwark (la ADR 0182 desbloquea la puerta de cola de los sumideros). ACTO: al enano de estilo Bulwark al que le entran le cuesta mas perder el balon; se ve como la entrada que no llega a resolverse a favor del rival. PAGA: tackleEvasion +50 en esa jugada, con limit per play una vez para que no se componga con otras entradas de la misma jugada (Regla I: Modifiers.AddProbability multiplica). Es el perk que BB-U tenia previsto (immovable, common, tackleEvasion con hasTag(owner,'Bulwark')), con +50 en vez de +100: 50 es el techo de la escala 5/10/15/20/25/50 de data/perks/README.md y +100 era una inmunidad sobre la base. Misma forma que elf_touch (TACKLE, scope opponent, el dueño es el rival implicado). Valor como perk: provisional, sin medir (protocolo de la ADR 0087 pendiente).",
+  "id": "immovable",
+  "name": {
+    "es": "Inamovible",
+    "en": "Immovable"
+  },
+  "rarity": "common",
+  "minAct": 1,
+  "frequency": 150,
+  "kind": "filler",
+  "axis": "identity",
+  "race": null,
+  "family": null,
+  "trigger": "TACKLE",
+  "scope": "opponent",
+  "links": [],
+  "condition": "hasTag(owner,'Bulwark')",
+  "effects": [
+    {
+      "type": "modifyProbability",
+      "target": "owner",
+      "probability": "tackleEvasion",
+      "value": 50,
+      "duration": "play"
+    }
+  ],
+  "elseEffects": [],
+  "limit": {
+    "per": "play",
+    "times": 1
+  },
+  "accumulatesAcrossMatches": false,
+  "lethal": false,
+  "positionOnly": null,
+  "tagsRequired": [],
+  "tagsForbidden": []
+}
