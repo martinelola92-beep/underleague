@@ -759,11 +759,12 @@ public sealed partial class PlayerModel : Node3D
     private const float FootLockOutSeconds = 0.08f;
 
     /// <summary>
-    /// El pie bloqueado se suelta si la cadera se le aleja más de esta fracción de la pierna (no llega sin estirarla del
-    /// todo) o si el cuerpo ha girado más de <see cref="FootLockMaxTurnDegrees"/> desde que pisó: entonces vuelve a dar el
-    /// paso animado. <b>Provisionales</b>.
+    /// El pie bloqueado se suelta si la cadera se le aleja más de esta fracción de la pierna medida en reposo (ya no llega)
+    /// o si el cuerpo ha girado más de <see cref="FootLockMaxTurnDegrees"/> desde que pisó: entonces vuelve a dar el
+    /// paso animado. <b>Provisionales</b>; con 0,95 (primer intento) el pie se soltaba y se volvía a clavar cada dos
+    /// fotogramas en plena zancada, porque en el apoyo la pierna va casi estirada (rodilla a ~160°, medido).
     /// </summary>
-    private const float FootLockMaxReach = 0.95f;
+    private const float FootLockMaxReach = 1.05f;
     private const float FootLockMaxTurnDegrees = 50f;
 
     /// <summary>Por debajo de esta mezcla espera→marcha se considera parado: los dos pies pisan. Provisional.</summary>
