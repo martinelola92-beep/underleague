@@ -365,6 +365,67 @@ public sealed class LethalPerkTests
         var perk = Catalog.Perks.Get("skullsplitter");
         Assert.Contains("una sola vida por partido", DescriptionGenerator.Describe(perk, "es", Catalog), StringComparison.Ordinal);
         Assert.Contains("one life per match", DescriptionGenerator.Describe(perk, "en", Catalog), StringComparison.Ordinal);
+
+        // Y los cuatro letales, no sólo los de contacto: el tope vale para todos (revisión independiente).
+        foreach (var lethal in Catalog.Perks.All.Where(p => p.Lethal))
+        {
+            Assert.Contains("una sola vida por partido", DescriptionGenerator.Describe(lethal, "es", Catalog), StringComparison.Ordinal);
+        }
+    }
+
+    /// <summary>
+    /// ADR 0190 y RT-021: el tope no cambia el flujo de dados. El portador gastado sigue tirando, a 0, así que
+    /// tras las mismas 80 entradas el dado del partido está en el mismo punto con el tope y sin él: la
+    /// siguiente tirada sale igual. Si alguien «optimiza» saltándose la tirada, este test cae. (Cuando sin
+    /// tope muere un segundo rival los dados SÍ divergen, y es correcto: un muerto ya no recibe entradas.)
+    /// </summary>
+    [Fact]
+    public void TheCapDoesNotChangeTheDiceStream()
+    {
+        const string SweepInjury =
+            """[{ "type": "modifyProbability", "target": "opposingTeam", "probability": "injury", "value": 30, "duration": "match" }]""";
+        string perkJson = TestPerks.Json("butcher", "TACKLE", SweepInjury, rarity: "legendary", kind: "ruleBreaker")
+            .Replace("\"lethal\": false", "\"lethal\": true, \"lethalChance\": 10000", StringComparison.Ordinal);
+        var capped = TestPerks.CatalogWith(("butcher", perkJson));
+        var uncapped = TestPerks.CatalogWithTuning("\"killsPerCarrierPerMatch\": 1", "\"killsPerCarrierPerMatch\": 0", ("butcher", perkJson));
+
+        var draws = new List<bool>[2];
+        var catalogs = new[] { capped, uncapped };
+        for (int c = 0; c < 2; c++)
+        {
+            var setup = TestPerks.Match(catalogs[c], 1, (1, new[] { "butcher" }));
+            var engine = TestPerks.Engine(catalogs[c], setup);
+            var owner = engine.PlayerById(1)!;
+            var lethality = catalogs[c].Tuning.Injury.Lethality;
+            var opposing = (owner.Team == 0 ? setup.Away : setup.Home).Lineup.Slots
+                .Select(slot => engine.PlayerById(slot.PlayerId)!)
+                .Select(p => (Player: p, Chance: Lethality.Chance(
+                    lethality, 10000, owner.Strength, p.Stamina, 100,
+                    Lethality.MatchupAbsolute(p.HomeCell, p.Team, owner.HomeCell, owner.Team))))
+                .ToList();
+
+            // Uno que muere seguro en las dos versiones y después un rival con tirada 0 (lejos del portador):
+            // sin tope se tira a 0 porque la cuenta da 0, con tope porque está gastado. El número de tiradas
+            // sólo coincide si el portador gastado sigue tirando.
+            var rivals = opposing.Where(x => x.Chance >= 4000).OrderBy(x => x.Player.Id).Take(1)
+                .Concat(opposing.Where(x => x.Chance == 0).OrderBy(x => x.Player.Id).Take(1))
+                .Select(x => x.Player)
+                .ToList();
+            Assert.Equal(2, rivals.Count);
+            foreach (var tackled in rivals)
+            {
+                for (int i = 0; i < 40; i++)
+                {
+                    engine.Effects!.Publish(new MatchEvent(
+                        EventType.Tackle, engine.Tick, owner.Team, owner.Id, -1, tackled.Id,
+                        owner.HomeCell, Zone.Own, MatchPhase.OpenPlay, engine.BiasFor(0), 0, "attempted"));
+                }
+            }
+
+            draws[c] = Enumerable.Range(0, 32).Select(_ => engine.LethalRoll(5000)).ToList();
+        }
+
+        Assert.Equal(draws[1], draws[0]);
     }
 
     /// <summary>Las dos etiquetas que exigen los letales del catálogo, para que el portador pueda llevarlos.</summary>

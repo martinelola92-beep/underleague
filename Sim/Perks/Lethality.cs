@@ -20,8 +20,9 @@ namespace Underleague.Sim.Perks;
 /// </list>
 /// <para><see cref="KillsPerCarrierPerMatch"/> (ADR 0190) no es un factor de la tirada sino su tope: un
 /// portador que ya se ha cobrado esa cantidad de vidas en el partido sigue tirando —el flujo de dados no
-/// cambia— pero con probabilidad 0. Es lo que hace que el indicador, que marca a
-/// <see cref="VictimsPerActivation"/> rivales por portador, cuente bien cuántos pueden morir. 0 = sin
+/// cambia— pero con probabilidad 0. Con los dos a 1 el indicador, que marca a <see cref="VictimsPerActivation"/>
+/// rivales por portador y no lee este campo, cuenta bien cuántos pueden morir; con otros valores se separan
+/// (el test de la ficha fija el 1). No toca la vía 1 de RF-093 (lesión grave alineada). 0 = sin
 /// tope (el comportamiento anterior a la ADR 0190, que es el control de la medición).</para>
 /// </summary>
 public sealed record LethalityTuning(

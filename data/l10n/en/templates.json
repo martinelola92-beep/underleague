@@ -5,7 +5,7 @@
     "conditionLine": "\nCondition: {condition}.",
     "limitLine": "\nLimit: {limit}.",
     "riskLine": "\nRisk: {risk}.",
-    "lethalRisk": "it marks one opponent per activation, whoever is worst off, and may kill them even if healthy",
+    "lethalRisk": "it marks one opponent per activation, whoever is worst off, and may kill them even if healthy; one life per match at most",
     "lethalContactRisk": "it may kill the opponent involved in the play, even if healthy; one life per match at most",
     "effectSeparator": ", ",
     "effectFinalSeparator": " and ",
