@@ -19,14 +19,14 @@ perks de su línea y cierra otra para el resto de la run).
 
 | Categoría | Cantidad |
 |---|---|
-| Perks (total en `/data/perks`) | 110 |
+| Perks (total en `/data/perks`) | 111 |
 | — habilidades raciales (automáticas, no ocupan slot) | 5 |
-| — perks obtenibles | 105 |
+| — perks obtenibles | 106 |
 | — letales | 4 |
 | Objetos de equipamiento | 38 |
 | Consumibles | 21 |
 
-Distribución RF-069 (objetivo 60/30/10 ± 8): relleno 58 (52,7 %) · condicional 38 (34,5 %) · rompe-reglas 14 (12,7 %)
+Distribución RF-069 (objetivo 60/30/10 ± 8): relleno 59 (53,2 %) · condicional 38 (34,2 %) · rompe-reglas 14 (12,6 %)
 
 ## Habilidades raciales
 
@@ -93,7 +93,7 @@ Cuatro líneas con un maestro cada una. El maestro exige llevar ya dos perks de 
 | **Ensayo de tirador** | `sharpshooter_drill` | Poco común | 1 | relleno | — | Al tirar, el jugador multiplica por 2 sus opciones de tirar a puerta por cada tiro (hasta 5 veces). |
 | **Punta de lanza** | `spearpoint` | Poco común | 1 | condicional | — | Al empezar el partido, el compañero de delante multiplica por 3 sus opciones de tirar a puerta. |
 
-## Perks sin línea — 76
+## Perks sin línea — 77
 
 No cuentan para ningún maestro ni cierran nada.
 
@@ -102,6 +102,7 @@ No cuentan para ningún maestro ni cierran nada.
 | **Taquillero** | `box_office` | Común | 1 | relleno | — | Al terminar el partido, +1 al contador boxOfficeMatches. |
 | **Presión diagonal** | `diagonal_press` | Común | 1 | relleno | — | Al entrar, el compañero en diagonal hacia delante y compañero en diagonal hacia atrás multiplica por 2 sus opciones de robar el balón. |
 | **Teatrero** | `diver` | Común | 1 | relleno | — | Cuando le hacen falta, criterio del árbitro +10. |
+| **Inamovible** | `immovable` | Común | 1 | relleno | — | Cuando le entran, el portador multiplica por 1,5 su resistencia a las entradas. |
 | **Pulmones de hierro** | `iron_lungs` | Común | 1 | relleno | — | Al empezar el partido, el portador +3 de resistencia por cada partido (máximo 10) durante el partido. |
 | **Ídolo local** | `local_idol` | Común | 1 | relleno | solo Forward | Al marcar, +1 al contador localIdolGoals. |
 | **Sin florituras** | `no_nonsense` | Común | 1 | relleno | — | Al empezar el partido, el portador multiplica por 1,5 sus opciones de interceptar. |
@@ -141,26 +142,26 @@ No cuentan para ningún maestro ni cierran nada.
 | **Líder nato** | `natural_leader` | Poco común | 1 | condicional | etiqueta `Leader` | Al empezar el partido, el equipo multiplica por 3 sus opciones de robar el balón. |
 | **No vuelve** | `never_tracks_back` | Poco común | 1 | condicional | solo Forward | Al empezar el partido, el portador quiere replegarse más y el portador quiere buscar espacio más. |
 | **Caño** | `nutmeg` | Poco común | 1 | condicional | — | Al encarar, el rival cae derribado. |
-| **A bocajarro** | `point_blank` | Poco común | 1 | condicional | — | Al tirar, el portador repite la jugada en el mismo instante. |
+| **A bocajarro** | `point_blank` | Poco común | 1 | condicional | — | Al rechazarse su tiro, el portador repite la jugada en el mismo instante. |
 | **Curtido en mil batallas** | `road_warrior` | Poco común | 1 | condicional | — | Al recuperar el balón, el equipo multiplica por 3 sus opciones de robar el balón. |
 | **Hombro con hombro** | `shoulder_to_shoulder` | Poco común | 1 | relleno | solo Enanos | Al empezar el partido, el portador +30 de bono porcentual a los compañeros adyacentes. |
 | **El muro que grita** | `shouting_wall` | Poco común | 1 | relleno | solo portero | Al empezar el partido, el equipo -1 de correa durante el partido. |
 | **Jugador de equipo** | `squad_player` | Poco común | 1 | condicional | — | Al empezar el partido, el equipo multiplica por 1,5 sus opciones de pasar. |
 | **Hacer de todo** | `stand_in` | Poco común | 1 | relleno | solo Humanos | En una lesión, el portador +1 de correa durante el partido. |
 | **Curtido** | `tough_hide` | Poco común | 1 | rompe-reglas | — | Al empezar el partido, el portador no paga la clínica por sus lesiones leves. |
-| **Morder el tobillo** | `ankle_bite` | Raro | 1 | condicional | — | Al entrar, lesiona a el rival. |
+| **Morder el tobillo** | `ankle_bite` | Raro | 1 | condicional | — | Al entrar, lesiona a el rival y el portador multiplica por 4 sus opciones de hacer falta. |
 | **Embestida de toro** | `bull_rush` | Raro | 1 | condicional | — | Al entrar, el portador repite la jugada en el mismo instante. |
 | **Cañón** | `cannon` | Raro | 2 | relleno | — | Al empezar el partido, el portador +3 de casillas de alcance de tiro. |
 | **Embestida** | `charge` | Raro | 2 | condicional | — | Al entrar, el portador repite la jugada en el mismo instante. |
 | **Marcha sin fin** | `deathless_march` | Raro | 2 | relleno | solo No-muertos | Al empezar el partido, el equipo multiplica por 1,5 sus opciones de robar el balón por cada partido (hasta 3 veces). |
-| **Doble disparo** | `double_shot` | Raro | 2 | condicional | — | Al tirar, el portador repite la jugada en el mismo instante. |
+| **Doble disparo** | `double_shot` | Raro | 2 | condicional | — | Al rechazarse su tiro, el portador repite la jugada en el mismo instante. |
 | **Terremoto** | `earthquake` | Raro | 2 | condicional | — | Al entrar, los rivales adyacentes cae derribado. |
 | **Sed acumulada** | `gathering_thirst` | Raro | 2 | relleno | — | Cuando le lesionan, el portador multiplica por 1,3 sus opciones de lesionar por cada gatheringThirstVictims (hasta 3 veces). |
 | **Gigante amable** | `gentle_giant` | Raro | 2 | condicional | solo Orcos | Al empezar el partido, el compañero de delante multiplica por 2 sus opciones de interceptar. |
 | **Herencia** | `inheritance` | Raro | 2 | condicional | — | En una muerte, +1 al contador inheritanceClaims. |
 | **Puerta de hierro** | `iron_gate` | Raro | 2 | rompe-reglas | solo Enanos | En una lesión, anula la lesión. |
 | **Kamikaze** | `kamikaze` | Raro | 2 | relleno | — | Al empezar el partido, el portador +15 de bono a la entrada dura y el portador +20 de bono a la probabilidad de lesión. |
-| **Último hombre** | `last_man` | Raro | 2 | condicional | solo Defender | Al tirar, el portador se reubica entre el balón y su propia portería. |
+| **Último hombre** | `last_man` | Raro | 2 | condicional | solo Defender | Cuando un tiro rival va a puerta, el portador se interpone en la trayectoria y se queda con el balón el 20 % de las veces. |
 | **Correa curtida** | `long_leash_legacy` | Raro | 2 | relleno | — | Al empezar el partido, el portador +1 de correa por cada 4 de partido (máximo 2) durante el partido. |
 | **Bloque bajo** | `low_block` | Raro | 1 | relleno | — | Al empezar el partido, el equipo -2 de correa durante el partido. |
 | **Instigador de la turba** | `mob_instigator` | Raro | 2 | rompe-reglas | — | Al hacer falta, anula la falta. |
