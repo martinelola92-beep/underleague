@@ -385,6 +385,19 @@ def main():
             elif isinstance(v, float):
                 v = f"{v:.3f}"
             print(f"  {k}: {v}")
+    # Coste del IK del pie: tiempo de proceso por fotograma en el tramo `coste`, con el IK apagado y encendido a bloques de
+    # un segundo en el mismo proceso (BV-A, B3). Un valor por fotograma (las filas por jugador lo repiten).
+    cost = {0: [], 1: []}
+    seen = set()
+    for (w, p), seq in rows.items():
+        if w != "coste":
+            continue
+        for r in seq:
+            if r["n"] not in seen and r.get("ikOff") not in (None, ""):
+                seen.add(r["n"])
+                cost[int(r["ikOff"])].append(float(r["procMs"]))
+    if cost[0] and cost[1]:
+        print(f"== COSTE: proceso por fotograma con IK {pct(cost[0], 50):.2f} ms (p90 {pct(cost[0], 90):.2f}), sin IK {pct(cost[1], 50):.2f} ms (p90 {pct(cost[1], 90):.2f}); n {len(cost[0])}/{len(cost[1])}")
     clips = {}
     try:
         with open(f"{folder}/clips.csv", newline="") as f:

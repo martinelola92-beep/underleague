@@ -115,7 +115,7 @@ public partial class BroadcastCapture
         File.WriteAllText(Path.Combine(directory, "tramos.csv"), plan.ToString());
 
         _movementLog = new StringBuilder(
-            "window,n,frame,alpha,frozen,timescale,player,team,hasModel,visible,state,x,z,yaw,clip,clipTime,speedScale,inputSpeed,naturalSpeed,sx,sy,lx,ly,lz,rx,ry,rz,bx,by,bz,owner,hipsY,kneeL,kneeR,frontL,frontR,lockL,lockR,procMs\n");
+            "window,n,frame,alpha,frozen,timescale,player,team,hasModel,visible,state,x,z,yaw,clip,clipTime,speedScale,inputSpeed,naturalSpeed,sx,sy,lx,ly,lz,rx,ry,rz,bx,by,bz,owner,hipsY,kneeL,kneeR,frontL,frontR,lockL,lockR,procMs,ikOff\n");
         RenderingServer.FramePostDraw += OnMovementPostDraw;
         foreach (var w in windows)
         {
@@ -209,7 +209,7 @@ public partial class BroadcastCapture
             log.Append(CultureInfo.InvariantCulture,
                 $"{probe.Position.X:0.#####},{probe.Position.Z:0.#####},{probe.Yaw:0.#####},{probe.Clip},{probe.ClipTime:0.####},{probe.SpeedScale:0.####},{probe.InputSpeed:0.####},{probe.NaturalSpeed:0.####},{probe.Screen.X:0.#},{probe.Screen.Y:0.#},");
             log.Append(CultureInfo.InvariantCulture,
-                $"{probe.LeftToe.X:0.####},{probe.LeftToe.Y:0.####},{probe.LeftToe.Z:0.####},{probe.RightToe.X:0.####},{probe.RightToe.Y:0.####},{probe.RightToe.Z:0.####},{ballAt.X:0.####},{ballAt.Y:0.####},{ballAt.Z:0.####},{owner},{probe.HipsY:0.####},{probe.Knees.AngleL:0.#},{probe.Knees.AngleR:0.#},{probe.Knees.FrontL:0.####},{probe.Knees.FrontR:0.####},{probe.Knees.LockL:0.##},{probe.Knees.LockR:0.##},{Performance.GetMonitor(Performance.Monitor.TimeProcess) * 1000.0:0.###}\n");
+                $"{probe.LeftToe.X:0.####},{probe.LeftToe.Y:0.####},{probe.LeftToe.Z:0.####},{probe.RightToe.X:0.####},{probe.RightToe.Y:0.####},{probe.RightToe.Z:0.####},{ballAt.X:0.####},{ballAt.Y:0.####},{ballAt.Z:0.####},{owner},{probe.HipsY:0.####},{probe.Knees.AngleL:0.#},{probe.Knees.AngleR:0.#},{probe.Knees.FrontL:0.####},{probe.Knees.FrontR:0.####},{probe.Knees.LockL:0.##},{probe.Knees.LockR:0.##},{Performance.GetMonitor(Performance.Monitor.TimeProcess) * 1000.0:0.###},{(Ui.PlayerModel.DebugFootLockOff ? 1 : 0)}\n");
         }
 
         if (w.Images && _movementImages)
@@ -511,6 +511,14 @@ public partial class BroadcastCapture
 
         // 8. Tramo largo a x1 sin imágenes: la estadística del parpadeo, con el partido tal cual (pausas incluidas).
         windows.Add(new MovementWindow { Label = "tramo", Start = 200, End = Math.Min(frames - 1, 200 + 600), Images = false, MaxEngineFrames = 1500 });
+        // 9. (el último: deja el IK como lo encuentre) Coste del IK del pie (BV-A, B3): 12 s de partido en x1 alternando IK apagado/encendido cada segundo, en el MISMO
+        // proceso, para comparar el tiempo de proceso por fotograma sin el ruido de otra ejecución (la máquina es compartida).
+        windows.Add(new MovementWindow
+        {
+            Label = "coste", Start = 300, End = Math.Min(frames - 1, 300 + 180), Images = false, MaxEngineFrames = 400,
+            OnFrame = static (s, n) => Ui.PlayerModel.DebugFootLockOff = (n / 30) % 2 == 0,
+        });
+
         return windows;
     }
 
