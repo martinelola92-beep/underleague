@@ -802,6 +802,14 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 5000
+        },
+        "followVictimWhileTackling": {
+          "description": "BV-B (i), ADR 0186: quien entra sigue a quien la recibe durante Tackling, hasta el alcance de una pierna. false = el motor de antes.",
+          "type": "boolean"
+        },
+        "whistledFoulDownsVictim": {
+          "description": "BV-B (ii), ADR 0186: en una falta pitada cae quien la recibe, y quien la comete sólo si la entrada fue dura. false = el motor de antes (cae siempre el infractor).",
+          "type": "boolean"
         }
       },
       "required": [
@@ -817,7 +825,9 @@
         "hardTackleYellowBonus",
         "hardTackleRedBonus",
         "secondYellowIsRed",
-        "shieldResistance"
+        "shieldResistance",
+        "followVictimWhileTackling",
+        "whistledFoulDownsVictim"
       ],
       "additionalProperties": false
     },

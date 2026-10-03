@@ -29,6 +29,13 @@ internal sealed class MatchEngine : IPerkWorld
     /// <summary>Margen extra de alcance al resolver una entrada (§3.7).</summary>
     private const float TackleReachMargin = 0.3f;
 
+    /// <summary>
+    /// BV-B (i), ADR 0186: a qué distancia se planta quien entra mientras sigue a quien la recibe. No es balance: es el
+    /// alcance de una pierna, por debajo del de la decisión (<c>tackleDistanceMaxCells</c> 1,0) y por encima del
+    /// contacto de dos cuerpos humanos (0,76 con dos orcos, ADR 0176), para no empujar al que la recibe.
+    /// </summary>
+    private const float TackleContactCells = 0.6f;
+
     /// <summary>Velocidad con la que queda un balón suelto tras un pase fallido (§3.7).</summary>
     private const float LooseBallSpeed = 0.1f;
 
@@ -1867,6 +1874,28 @@ internal sealed class MatchEngine : IPerkWorld
                 if (player.State == PlayerState.Dribbling)
                 {
                     Move(player, dribbling: true);
+                }
+
+                break;
+            case PlayerState.Tackling:
+                // BV-B (i), ADR 0186: QUIEN ENTRA VA A POR ÉL. Antes se quedaba quieto los TacklingTicks y el rival
+                // se alejaba: medido, la entrada se decidía a 0,71 casillas (p50) y se resolvía a 0,91, la mitad a
+                // más de 0,9 —golpes al aire—. Durante la entrada sigue a quien la recibe a su velocidad normal; la
+                // resolución y su alcance no cambian.
+                if (_tuning.Tackle.FollowVictimWhileTackling && player.TackleTarget is { OnPitch: true } victim)
+                {
+                    // Hasta el alcance de la pierna, no encima: meterse en su cuerpo sólo lo empujaría (separación de
+                    // cuerpos) y movería al que recibe en el mismo tick en que quizá dispara.
+                    Vec2 away = player.Position - victim.Position;
+                    float gap = away.Length;
+                    player.TargetPoint = gap > TackleContactCells
+                        ? victim.Position + (away * (TackleContactCells / gap))
+                        : player.Position;
+                    Move(player, dribbling: false);
+                }
+                else
+                {
+                    player.Velocity = new Vec2(0f, 0f);
                 }
 
                 break;
@@ -4519,11 +4548,42 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         bool inOwnArea = Pitch.IsInArea(tackler.Position, tackler.Team);
-        tackler.EnterState(PlayerState.KnockedDown, _tuning.States.KnockedDownTicks);
 
         bool hard = tackler.HasTrait(Trait.Aggressive)
             || tackler.HasTrait(Trait.Dirty)
             || (tackler.Strength - carrier.Strength) * 100 >= tackle.HardTackleThreshold;
+
+        // BV-B (ii), ADR 0186: EN UNA FALTA PITADA CAE QUIEN LA RECIBE. Antes caía siempre quien la cometía y la
+        // víctima seguía de pie, y en pantalla se leía como «el que entra se tira». Ahora la víctima va al suelo
+        // con el derribo de una entrada ganada (KnockdownTicksCausedBy: la fuerza del que entra), y el infractor
+        // sólo cae si la entrada fue dura —la misma «entrada dura» que ya sube la tarjeta—: es la plancha. La
+        // falta NO pitada no cambia (el infractor se derriba: es el freno medido de AZ-E).
+        if (!tackle.WhistledFoulDownsVictim)
+        {
+            tackler.EnterState(PlayerState.KnockedDown, _tuning.States.KnockedDownTicks);
+        }
+        else if (carrier.OnPitch && carrier.State is not (PlayerState.KnockedDown or PlayerState.Injured or PlayerState.SentOff))
+        {
+            if (ReferenceEquals(_ball.Owner, carrier))
+            {
+                ParkBall(carrier.Position);
+            }
+
+            carrier.EnterState(PlayerState.KnockedDown, KnockdownTicksCausedBy(tackler, _tuning.States.KnockedDownTicks));
+        }
+
+        if (!tackle.WhistledFoulDownsVictim)
+        {
+            // El motor de antes: ya derribado arriba.
+        }
+        else if (hard)
+        {
+            tackler.EnterState(PlayerState.KnockedDown, _tuning.States.KnockedDownTicks);
+        }
+        else if (tackler.State is PlayerState.Tackling or PlayerState.Blocking)
+        {
+            tackler.EnterState(PlayerState.Positioning, 0);
+        }
 
         ShiftBiasAgainst(
             tackler.Team,

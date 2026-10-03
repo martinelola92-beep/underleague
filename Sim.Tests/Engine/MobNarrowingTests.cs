@@ -24,12 +24,12 @@ public sealed class MobNarrowingTests
     // el árbol de la ADR 0167, y renovadas al rebasar sobre main (que movió el reglamentario por otras ADR); el test de abajo
     // exige además que el reglamentario coincida con el de la turba a 0/0, que es la prueba de que esta ADR no lo toca:
     // el conjunto de los partidos que no llegan a la turba, y el de TODOS los partidos.
-    // Renovadas el 3 oct 2026 por la ADR 0184 (positioningHoldBonus 0 -> 50: cambian las trayectorias de todos los
+    // Renovadas el 3 oct 2026 por la ADR 0184 (positioningHoldBonus 0 -> 50) y de la ADR 0186 (BV-B: seguir a la víctima, la falta tira a la víctima): cambian las trayectorias de todos los
     // partidos). Antes de renovarlas se comprobó que con el dato a 0 los tres valores viejos (1085505645508475356, 44,
     // 9633395058359667205) seguían saliendo: la sostenida apagada es el motor de antes, bit a bit.
-    private const ulong RegulationOnlyBefore = 12801312321570104342UL;
-    private const int RegulationOnlyMatches = 46;
-    private const ulong EveryMatchBefore = 6110102956897498372UL;
+    private const ulong RegulationOnlyBefore = 16416100900485319431UL;
+    private const int RegulationOnlyMatches = 36;
+    private const ulong EveryMatchBefore = 9855150493437270586UL;
 
     // Las mismas tres huellas antes de la ADR 0184; con positioningHoldBonus = 0 tienen que seguir saliendo.
     private const ulong RegulationOnlyBeforeAdr0184 = 1085505645508475356UL;
@@ -145,15 +145,17 @@ public sealed class MobNarrowingTests
     }
 
     /// <summary>
-    /// ADR 0184: con <c>positioningHoldBonus</c> = 0 el motor es el de antes de la sostenida, bit a bit. Las tres
-    /// huellas de antes de la ADR 0184 tienen que seguir saliendo con el dato a 0 (el reglamentario, su número de
-    /// partidos y todos los partidos con la turba a 0/0).
+    /// ADR 0184 y 0186: con <c>positioningHoldBonus</c> = 0 y las dos reglas de BV-B apagadas
+    /// (<c>followVictimWhileTackling</c>, <c>whistledFoulDownsVictim</c>) el motor es el de antes, bit a bit. Las tres
+    /// huellas de antes de la ADR 0184 tienen que seguir saliendo (el reglamentario, su número de partidos y todos los
+    /// partidos con la turba a 0/0). El arreglo de <c>SetOwner</c> (quien recoge el balón bloqueando pasa a portador)
+    /// no tiene dato: no ocurría en estos 60 partidos con el motor de antes, y por eso las huellas no lo ven.
     /// </summary>
     [Fact]
-    public void WithTheHoldOffEveryTraceIsTheOneBeforeAdr0184()
+    public void WithTheNewRulesOffEveryTraceIsTheOneBeforeAdr0184()
     {
-        var current = OscillationProbeTests.WithHold(Current, 0);
-        var noMob = OscillationProbeTests.WithHold(NoMobChanges, 0);
+        var current = Before(Current);
+        var noMob = Before(NoMobChanges);
 
         ulong regulation = FnvOffset;
         int played = 0;
@@ -173,6 +175,18 @@ public sealed class MobNarrowingTests
         Assert.Equal(RegulationOnlyBeforeAdr0184, regulation);
         Assert.Equal(RegulationOnlyMatchesBeforeAdr0184, played);
         Assert.Equal(EveryMatchBeforeAdr0184, every);
+    }
+
+    private static Catalog Before(Catalog catalog)
+    {
+        var held = OscillationProbeTests.WithHold(catalog, 0);
+        return held with
+        {
+            Tuning = held.Tuning with
+            {
+                Tackle = held.Tuning.Tackle with { FollowVictimWhileTackling = false, WhistledFoulDownsVictim = false },
+            },
+        };
     }
 
     [Fact]

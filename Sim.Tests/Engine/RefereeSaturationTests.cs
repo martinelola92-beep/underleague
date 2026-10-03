@@ -16,8 +16,13 @@ public sealed class RefereeSaturationTests
 {
     private static readonly Catalog Catalog = TestData.LoadCatalog();
 
-    /// <summary>150 en la medición de calibración; 60 aquí para que el test siga siendo rápido (~unos segundos) sin perder la conclusión: la banda ya es estable a partir de 40 semillas.</summary>
-    private const int Seeds = 60;
+    /// <summary>
+    /// 150, la muestra de la calibración. Hasta la ADR 0184 eran 60 «sin perder la conclusión», pero con 60 la mayoría se
+    /// decide por uno o dos partidos: el motor de antes daba 33 de 60 y 76 de 150 (50,7 %); con la sostenida y las reglas
+    /// de BV-B (ADR 0186), 29 de 60 y 83 de 150 (55,3 %, |criterio| medio 38,2). La conclusión que pide la ADR 0158 §3 se
+    /// sostiene con la muestra de su calibración, y el test tarda unos segundos más.
+    /// </summary>
+    private const int Seeds = 150;
 
     [Fact]
     public void ABrutalMatchWithANeutralRefereeMostlyGoesBeyondThirtyAndStaysBelowSixtyOnAverage()
