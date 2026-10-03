@@ -208,6 +208,22 @@ public sealed class RepeatTackleReachTests
         Assert.True(where.Count == 0, "dueño fuera de estado de portador o congelación: " + string.Join(", ", where));
     }
 
+    /// <summary>
+    /// BH-A, hermano del barrido de la ADR 0185: en `run:385` (datos vigentes) Caño (`nutmeg`) derribaba al defensor al
+    /// intentar el regate, el regate salía perdido y el balón pasaba a un derribado, que se levantaba en
+    /// <c>Positioning</c> con él: 411 ticks congelado hasta la turba. Ahora el balón queda suelto a sus pies. Caso fijado
+    /// por semilla con los datos vigentes: si deja de reproducirse, el Assert de Caño lo dice.
+    /// </summary>
+    [Fact]
+    public void TheNutmegOnALostDribbleNoLongerFreezes()
+    {
+        var (setup, seed, config) = WorstCaseProbeTests.Build("run", 385, Catalog);
+        var result = Simulator.Run(setup, seed, Catalog, config);
+        Assert.Contains(result.Events, e => e.Type == EventType.PerkTriggered && e.Detail == "nutmeg");
+        Assert.Equal(0, OwnerOutOfCarrierFrames(result));
+        Assert.Empty(SymptomDetectors.Freeze(DetectorTrace.From(result), out _));
+    }
+
     internal static int OwnerOutOfCarrierFrames(MatchResult result)
     {
         var tr = result.Trace!;

@@ -4399,6 +4399,19 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         Emit(EventType.DribbleLost, "lost", carrier, opponent: defender);
+
+        // BH-A, hermano encontrado en el barrido de la ADR 0185 (run:385@915, 411 ticks congelado): un perk del CONDUCTOR
+        // puede derribar al defensor en la publicación previa (Caño, `nutmeg`: setState KnockedDown sobre el `opponent`
+        // de DRIBBLE_ATTEMPTED). Si aun así el regate sale perdido, SetOwner le daba el balón a un derribado: no pasa a
+        // portador (sólo lo hacen los estados de decisión), se levantaba en Positioning con el balón y nadie se lo
+        // disputaba. Es la regla de BM-B —un derribado no lleva el balón—: el regate no cuela y el balón se queda suelto
+        // a sus pies, que es «el balón se queda en el defensa» del propio perk.
+        if (defender.State == PlayerState.KnockedDown)
+        {
+            ParkBall(defender.Position);
+            return;
+        }
+
         SetOwner(defender);
         Emit(EventType.Recovery, "dribble", defender);
     }
