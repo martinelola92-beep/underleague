@@ -98,7 +98,13 @@ public sealed class PerkArcTests
     [Fact]
     public void AMasterAppearsWhenItIsOnePieceAway()
     {
-        var master = Catalog.Perks.Masters.First(m => m.Requires!.Count >= 2);
+        // El estado inicial sale de la semilla y de lo que el generador saca del catálogo, así que añadir un
+        // perk al catálogo (BB-U, 3 oct 2026) puede dar a un titular una pieza de la línea de un maestro y
+        // dejarlo «a una pieza» sin que nadie lo pida. Se elige un maestro cuya línea el inicio NO toque:
+        // la prueba es sobre la regla de «una pieza», no sobre qué perks reparte el generador.
+        var held = PerkPool.HeldPerkIds(Start());
+        var master = Catalog.Perks.Masters.First(m =>
+            m.Requires!.Count >= 2 && !Pieces(m.Requires.Family).Any(p => held.Contains(p.Id)));
         var line = Pieces(master.Requires!.Family).Select(p => p.Id).ToList();
 
         var far = Start();

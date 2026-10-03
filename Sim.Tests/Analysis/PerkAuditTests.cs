@@ -75,7 +75,8 @@ public sealed class PerkAuditTests
         // `never_tracks_back`, `shouting_wall`). Se reparten +4 ReadyForScreening, +3 MultiTarget y +1
         // DesignReview; los cinco cubos siguen sumando el total. `ankle_bite` se retiró el mismo día por un
         // −16 que resultó ser ruido y volvió (BL-A: LIKELY +10 ± 5 con 500 plantillas × 4 semillas).
-        Assert.Equal(110, summary.Total);
+        // 111 desde el 3 oct 2026: `immovable`, el tercer perk de Bulwark (BB-U, ADR 0182).
+        Assert.Equal(111, summary.Total);
         // 25 desde el experimento de legibilidad del 25 sep 2026: `duelist` y `own_third_anchor` cambian
         // su cuota de entrada por un DERRIBO (setState sobre el rival) y salen del lote — el arnés de
         // cribado mide multiplicadores sobre el portador y no sabe atribuir un acto sobre un rival. No
@@ -86,7 +87,8 @@ public sealed class PerkAuditTests
         // ReadyForScreening (29 → 26) y second_wound desde DesignReview (21 → 20). bulwark_stance porque ahora
         // derriba al que le regatea; los otros tres estaban mal clasificados antes de este paquete. El total
         // no cambia.
-        Assert.Equal(26, summary.ByReadiness[AuditReadiness.ReadyForScreening]);
+        // 27 desde `immovable` (3 oct 2026): un multiplicador sobre el portador, como `elf_touch`.
+        Assert.Equal(27, summary.ByReadiness[AuditReadiness.ReadyForScreening]);
         Assert.Equal(31, summary.ByReadiness[AuditReadiness.MultiTarget]);
         Assert.Equal(20, summary.ByReadiness[AuditReadiness.DesignReview]);
         Assert.Equal(27, summary.ByReadiness[AuditReadiness.NotReady]);
