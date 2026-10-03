@@ -292,6 +292,14 @@ public partial class RunController : Node
     /// <summary>Aplica una decisión del jugador (alineación, compra, tratamiento, recompensa, salir del nodo).</summary>
     public void Apply(RunDecision decision)
     {
+        // BX-5, ADR 0183: soltar a un jugador cambia la plantilla, y con un partido a medias el guardado lleva el estado de
+        // ANTES de ese partido; tocarla ahora haría que al reanudar se repitiera otro partido. CloseStaleMatch lo cierra antes
+        // de cualquier decisión normal; una reproducción en curso (_replaying) no se cierra, y ahí el cambio se rechaza.
+        if (_matchOpen && _replaying && decision is ChooseReward { ReplacePlayerId: >= 0 } or BuyOffer { ReplacePlayerId: >= 0 } or HireMercenary { ReplacePlayerId: >= 0 })
+        {
+            throw new InvalidOperationException("no se puede soltar a un jugador con un partido a medias (ADR 0183)");
+        }
+
         CloseStaleMatch();
         var (state, catalog) = Require();
         State = RunEngine.Apply(state, decision, catalog, _systems);

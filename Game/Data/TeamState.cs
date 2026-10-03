@@ -94,8 +94,26 @@ public sealed class TeamState
         }
 
         string clubName = systems?.Clubs.Find(state.ClubId)?.Name.Es ?? state.ClubId;
-        return new TeamSetup(state.ClubId, clubName, state.ClubRace, players, state.Lineup);
+        return new TeamSetup(state.ClubId, clubName, state.ClubRace, players, ShownLineup(state));
     }
+
+    /// <summary>
+    /// BX-1: la alineación que Equipo enseña es <b>el once que va a jugar</b> (<c>RunLineup.Effective</c>, la misma llamada que
+    /// construye el partido), no la guardada. Antes se pintaba lo guardado —a veces menos de siete tras las bajas— y
+    /// <c>Build</c> completaba el resto con el banquillo a escondidas (RF-012d): el jugador veía seis y jugaban siete. Ahora el
+    /// relleno ya está colocado en la pizarra, marcado (<see cref="FilledIds"/>), y se puede cambiar como cualquier otro.
+    /// </summary>
+    private static Lineup ShownLineup(RunState state) =>
+        state.AvailablePlayerCount >= RunRules.MinimumAvailablePlayers ? RunLineup.Effective(state).Lineup : state.Lineup;
+
+    /// <summary>
+    /// Los que están en el once porque la alineación guardada se quedó corta y entran <b>de oficio</b> (id ascendente), para
+    /// marcarlos. Vacío sin run, o en cuanto el jugador confirma cualquier colocación: guardar el once mostrado lo hace suyo.
+    /// </summary>
+    public IReadOnlyList<int> FilledIds =>
+        _run?.State is { } state && state.AvailablePlayerCount >= RunRules.MinimumAvailablePlayers
+            ? RunLineup.Effective(state).FilledIds
+            : Array.Empty<int>();
 
     /// <summary>
     /// Carga <c>/data</c> y genera la plantilla con la semilla dada. Es el equipo de pruebas con el que

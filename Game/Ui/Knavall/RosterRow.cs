@@ -23,6 +23,7 @@ public partial class RosterRow : InkCanvas
     private PlayerDefinition? _player;
     private ItemDefinition? _item;
     private bool _starter;
+    private bool _filled;
     private bool _selected;
     private bool _held;
     private float _flash;
@@ -112,6 +113,7 @@ public partial class RosterRow : InkCanvas
         _player = player;
         _item = state.EquippedItemOf(player.Id);
         _starter = state.IsStarter(player.Id);
+        _filled = _starter && state.FilledIds.Contains(player.Id);
         QueueRedraw();
     }
 
@@ -262,6 +264,12 @@ public partial class RosterRow : InkCanvas
         }
 
         Zone(new Rect2(slotsX - 2f, slotsY - 8f, x - slotsX + 4f, 16f), new Tip(UiText.Get("ui.kn.perks"), UiText.Get("ui.kn.tip.slots"), Glyph.Perk));
+
+        if (_filled && !_held)
+        {
+            // BX-1: entra de oficio porque la alineación guardada se quedó corta; el once mostrado es el que juega.
+            Ink.Stamp(this, new Vector2(w - 78f, 12f), UiText.Get("ui.kn.filled").ToUpperInvariant(), Ink.Brown, -4f, 11, Ink.Paper);
+        }
 
         if (_held)
         {

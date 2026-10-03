@@ -922,6 +922,7 @@ public static class UiText
         ["ui.kn.selectedItem"] = "Elegido del cofre",
         ["ui.kn.pickItem"] = "Elige un objeto del cofre",
         ["ui.kn.moving"] = "Moviendo",
+        ["ui.kn.filled"] = "De oficio",
         ["ui.kn.shirt"] = "{0}",
         ["ui.kn.lineupTitle"] = "Alineación",
         ["ui.kn.onPitch"] = "En el campo",

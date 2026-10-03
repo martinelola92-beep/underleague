@@ -74,4 +74,32 @@ Etiquetas de la Regla F. Capturas en `Game/screenshots/` (`equipo-once-*`, `equi
   `ApplyPresentation` compara `result.Voice == _lastVoiceMoment` (null == null) y sale sin ocultar el pergamino, que aguantaba
   hasta que otra voz (el gol) lo pisaba. Es el único camino que lo explica y coincide con el síntoma (ocurre tras la decisión de
   sustitución que abre una lesión por tirada); `SeekTo` ya hacía la limpieza que faltaba y ahora comparten `HideVoiceLayers`.
-  No reproducido en pantalla: falta una captura de una tirada que acabe en decisión.
+  No reproducido en pantalla: falta una captura de una tirada que acabe en decisión. `PlayMomentSound` no suena dos veces por
+  esto: el arreglo solo oculta capas (no añade ninguna llamada de sonido) y la voz de después de la decisión suena como antes.
+
+### Revisión independiente (MERGE CON ARREGLOS) — respuestas
+
+- **BX-1 cerrado de verdad.** `game-design-review`: (A) mostrar el relleno marcado y editable, o (B) colocarlo ya en la pizarra.
+  Es la misma cosa si se pinta `RunLineup.Effective` (B) y se marca lo que entra de oficio (A): se hizo ambas, con **una sola
+  función** (Equipo llama a `Effective`, la misma que `Build`). Legible: el jugador ve siete, sabe cuáles entraron por falta
+  de titular («De oficio», `equipo-relleno`) y los mueve como a cualquiera; confirmar cualquier colocación guarda el once
+  mostrado y la marca desaparece. Coste: ninguno de balance (el partido juega lo mismo que antes). Degeneración: ninguna; sigue
+  existiendo «jugar con los que he puesto» (`PlayShort`), que `Effective` respeta. Test: `TheElevenEquipoShowsIsTheElevenThatPlays`.
+- **BX-5, `game-design-review` completo.** Fantasía: el cambio de cromo. Decisión: ¿quién sobra? Coste de oportunidad: el soltado
+  es un cuerpo con nivel, perks y vínculos; no hay deshacer (se dice en el panel). Interacciones: (1) *clínica/lesiones*:
+  soltar a un grave o lisiado cobra su precio de estado (25 %) o nada si no ha jugado —no es una vía de blanqueo mejor que vender
+  a mano—; (2) *ADR 0108*: el veto de «aún no ha jugado» manda, así que comprar-canterano-y-soltar no genera oro; (3) *RF-002b*:
+  quien llega entra sano, los disponibles no bajan; (4) *vínculos/duelo*: soltar rompe vínculos igual que `Release`/venta
+  (regla existente, no nueva); (5) *economía de la recompensa*: soltar a un jugador es pagar con un cuerpo lo que no se puede
+  pagar con oro, y solo se descarta (no se cobra). Degeneración posible: rotar plantilla para cazar rarezas —acotado por el
+  coste (pierdes al soltado) y por una recompensa por nodo—. Sin medición: no hay política de `/Balance` que lo use (Regla H:
+  sin cifras nuevas).
+- **Dorsales.** Criterio: el dorsal es la identidad visible del jugador en la run. Los de **muertos no se reutilizan** (siguen en
+  la plantilla como memorial, RF-122); los de **vendidos o descartados sí** (el primero libre): el jugador ya no está, y una
+  plantilla de 9-12 no puede quedar con huecos para siempre; la confusión es mínima porque quien se va deja de aparecer.
+  Tests: `ADeadPlayersNumberIsRetired_AndASoldOnesIsFreeForTheNextSigning`.
+- **ADR 0183.** `RunController.Apply` rechaza un cambio (`ReplacePlayerId`) con una reproducción en curso; con un partido abierto
+  normal, `CloseStaleMatch` ya lo confirma antes de aplicar. Es una guarda de `/Game` (el partido a medias vive en el
+  controlador); no hay test posible en `Sim.Tests`.
+- **Tests añadidos:** soltar tocado/grave/lisiado (precio frente a descarte) `ReplacingAnInjuredOrCrippledPlayer…`; guardado de
+  versión 8 migrado `ARealVersionEightSaveLoadsAndIsNumbered`.

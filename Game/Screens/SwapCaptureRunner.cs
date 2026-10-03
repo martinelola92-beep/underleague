@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using Godot;
 using Underleague.Game.Autoload;
 using Underleague.Game.Ui;
@@ -40,6 +41,13 @@ public partial class SwapCaptureRunner : Control
         }
 
         int failures = 0;
+
+        // 00. BX-1: la guardada podada a cuatro por las bajas; Equipo enseña el once que juega, con el relleno marcado.
+        run.NewRun("orc_ironworks", Race.Orc, 1UL);
+        run.SeedForCapture(state => state.WithLineup(new Lineup(state.Lineup.Slots.Take(4).ToList())));
+        var filled = await Show("res://Scenes/Equipo.tscn");
+        await Save("equipo-relleno");
+        Drop(filled);
 
         // 0. BX-4: la plantilla de una run con el dorsal fijo de cada jugador en su fila.
         run.NewRun("orc_ironworks", Race.Orc, 1UL);
