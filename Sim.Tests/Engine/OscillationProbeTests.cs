@@ -98,6 +98,9 @@ public sealed class OscillationProbeTests
         public int BallInFlight;
         public int UndoneBallInFlight;
         public int StopGo;
+
+        /// <summary>ADR 0185: los paso-0-paso con una reanudación pendiente en su fotograma (coreografía, sin arranque).</summary>
+        public int StopGoInRestart;
         public int Cuts;
 
         /// <summary>Si no es null, se apuntan aquí todas las inversiones contadas (jugador, fotograma, causa).</summary>
@@ -161,6 +164,10 @@ public sealed class OscillationProbeTests
                     if (c.Length >= RunStepCells && trace.OnPitchAt(f + 1, player))
                     {
                         census.StopGo++;
+                        if (trace.RestartAt(f) != RestartKind.None)
+                        {
+                            census.StopGoInRestart++;
+                        }
                     }
                 }
 
@@ -300,7 +307,7 @@ public sealed class OscillationProbeTests
         output.WriteLine(
             $"{label}: partidos {c.Matches} · inversiones {c.Reversals} ({c.PerPlayerSecond:F3}/s por jugador) · " +
             $"deshechas ≤{UndoTicks} {c.Undone} ({c.UndonePercent:F1} %) · balón en vuelo {c.BallInFlight} (deshechas {c.UndoneBallInFlight}) · " +
-            $"paso-0-paso {c.StopGo} · pasos de carrera {c.RunningSteps} · excluidas: cortes {c.Cuts}, legítimas {c.Legit}");
+            $"paso-0-paso {c.StopGo} (en reanudación {c.StopGoInRestart}) · pasos de carrera {c.RunningSteps} · excluidas: cortes {c.Cuts}, legítimas {c.Legit}");
         foreach (Cause cause in Enum.GetValues<Cause>())
         {
             output.WriteLine($"  causa {cause}: {c.ByCause[(int)cause]} (deshechas {c.UndoneByCause[(int)cause]})");

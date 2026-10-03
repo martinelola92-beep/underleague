@@ -155,6 +155,18 @@ public sealed class AccelerationTests
         _output.WriteLine(where);
     }
 
+    /// <summary>
+    /// ADR 0185, la cifra de cabecera: la sonda limpia de oscilación de la ADR 0184 (40 partidos de referencia, semillas 1-40)
+    /// con el arranque a 0 y a 3, con los demás datos vigentes.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "Diagnostic")]
+    public void ReversalsWithAndWithoutTheRamp()
+    {
+        OscillationProbeTests.Report(_output, "accelTicks 0", OscillationProbeTests.Measure(WithAccel(Catalog, 0), 1, 40));
+        OscillationProbeTests.Report(_output, "accelTicks 3", OscillationProbeTests.Measure(WithAccel(Catalog, 3), 1, 40));
+    }
+
     private static List<int> Steps(Catalog catalog, Vec2 start, Vec2 target, int ticks, out int ceiling, int preRunTicks = 0)
     {
         var engine = Engine(catalog, out int index, out ceiling);
