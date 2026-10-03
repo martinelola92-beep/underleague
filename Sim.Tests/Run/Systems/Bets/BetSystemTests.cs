@@ -126,7 +126,7 @@ public sealed class BetSystemTests
     {
         var withdrawn = Systems.Bets.All.Where(b => b.WithdrawnDifficulties is { Count: > 0 }).ToList();
         Assert.Equal(
-            new[] { "into_the_mob", "split_the_goals" },
+            new[] { "into_the_mob", "split_the_goals", "youth_decides" },
             withdrawn.Select(b => b.Id).OrderBy(i => i, StringComparer.Ordinal));
         Assert.All(withdrawn, b => Assert.Equal(new[] { 5 }, b.WithdrawnDifficulties));
 
@@ -177,6 +177,43 @@ public sealed class BetSystemTests
 
         double expectedReturn = comeback.FrequencyBasisPointsFor(1) / 10000.0 * payout / stake;
         Assert.InRange(expectedReturn, 0.84, 0.86);
+    }
+
+    /// <summary>
+    /// ADR 0157, enmienda del 3 oct 2026: celdas recalibradas a la frecuencia medida con <c>Blind</c> (6 semillas × 600 runs,
+    /// tras las ADR 0184/0186) y cuota <c>round(85 / p)</c>. Valor conocido: frecuencia, cobro y retorno esperado en
+    /// [0,82, 0,88] con las tres apuestas fijas (el margen de la casa es −15 %; el redondeo del oro lo mueve ±3 puntos).
+    /// </summary>
+    [Theory]
+    [InlineData(BetKind.BloodBeforeGoals, 1, 1854, 458)]
+    [InlineData(BetKind.BloodBeforeGoals, 2, 4387, 194)]
+    [InlineData(BetKind.HuntTheStar, 1, 892, 953)]
+    [InlineData(BetKind.IntoTheMob, 2, 1797, 473)]
+    [InlineData(BetKind.IntoTheMob, 3, 1772, 480)]
+    [InlineData(BetKind.EyeForEye, 3, 1243, 684)]
+    [InlineData(BetKind.Thrashing, 1, 821, 1035)]
+    [InlineData(BetKind.Thrashing, 2, 507, 1677)]
+    public void RecalibratedCellsAnnounceTheMeasuredFrequencyAndReturnInLineWithTheRest(
+        BetKind kind, int difficulty, int basisPoints, int payoutPercent)
+    {
+        var bet = Systems.Bets.Find(kind)!;
+        Assert.Equal(basisPoints, bet.FrequencyBasisPointsFor(difficulty));
+        Assert.Equal(payoutPercent, bet.PayoutPercentFor(difficulty));
+        Assert.Equal(payoutPercent, Math.Min(2000, (int)Math.Round(8500.0 / (basisPoints / 100.0), MidpointRounding.AwayFromZero)));
+        for (int act = 1; act <= RunRules.Acts; act++)
+        {
+            int stake = bet.StakeFor(act);
+            double expectedReturn = basisPoints / 10000.0 * BetSystem.PayoutFor(stake, payoutPercent) / stake;
+            Assert.InRange(expectedReturn, 0.82, 0.88);
+        }
+    }
+
+    /// <summary><c>youth_decides</c> en dificultad 5 (2,33 % medido contra 6,03 % anunciado, cuota por encima del tope) no se ofrece.</summary>
+    [Fact]
+    public void YouthDecidesOnDifficultyFiveIsWithdrawn()
+    {
+        var bet = Systems.Bets.Find(BetKind.YouthDecides)!;
+        Assert.Contains(5, bet.WithdrawnDifficulties!);
     }
 
     /// <summary>Un nodo donde toda celda elegible está retirada no ofrece nada: devuelve null, sin segunda tirada ni bucle.</summary>

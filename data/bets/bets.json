@@ -1,5 +1,5 @@
 {
-  "_doc": "ADR 0157: catalogo de apuestas del vestuario (RF-114h, RF-114i). Una por nodo de partido, derivada de (semilla, nodo) por BetSystem.OfferFor entre las apuestas cuya frecuencia medida en la dificultad del nodo es >= 2 % (BetSystem.MinOfferedBasisPoints, fijado por el revisor, provisional). hunt_the_star nombra a un jugador de CAMPO (nunca al portero: revision independiente del 29 sep 2026, ADR 0157) y una baja es una lesion o una muerte. 'kind' fija que condicion evalua BetConditions.Evaluate (definiciones exactas en el codigo y en la ADR). 'stakeByAct' es la apuesta fija en oro de los actos 1..3: 3/4/5 NO REFUTADA el 2 oct 2026 (criterio provisional, desempate) contra 2/3/4 y 4/5/6 (6 semillas x 600 runs, Blind contra Never; ADR 0157, enmienda, decision 4). 'frequencyPercentByDifficulty' es la frecuencia MEDIDA (%) de la condicion por distintivo de dificultad 1..5 (RF-012) con `Balance --bet-census` (2.400 runs de la politica contextual, semillas 1 y 7, 33.211 partidos, repetido tras la revision independiente; seccion 'Censo' de la ADR 0157). 'payoutPercentByDifficulty' es el cobro BRUTO como porcentaje de la apuesta (el oro cobrado se redondea al entero mas cercano, BetSystem.PayoutFor): MEDIDO, cuota = round(85 / p) (margen de la casa del 15 %, ADR 0157 punto 4). Los 2000 son el TOPE del esquema (85 / p lo superaba) o una celda que no se ofrece (p < 2 %): no son una cuota medida. En el texto de la condicion, {player} se sustituye por el nombre del jugador rival nombrado en la oferta (solo hunt_the_star). Enmienda del 2 oct 2026 (ADR 0157): comeback en dificultad 1 recalibrada a la frecuencia MEDIDA (7,76 %, 2.849 apuestas, politica comeback-easiest, 6 semillas x 600 runs) y cuota round(85 / 7,76) = 1095; into_the_mob y split_the_goals en dificultad 5 llevan withdrawnDifficulties [5]: no se ofrecen porque su cumplimiento medido (7,65 % y 1,65 %) cae en otra palabra de la UI que la anunciada (13,31 % y 5,64 %) con z < -2. Tono: corredor de apuestas de taberna.",
+  "_doc": "ADR 0157: catalogo de apuestas del vestuario (RF-114h, RF-114i). Una por nodo de partido, derivada de (semilla, nodo) por BetSystem.OfferFor entre las apuestas cuya frecuencia medida en la dificultad del nodo es >= 2 % (BetSystem.MinOfferedBasisPoints, fijado por el revisor, provisional). hunt_the_star nombra a un jugador de CAMPO (nunca al portero: revision independiente del 29 sep 2026, ADR 0157) y una baja es una lesion o una muerte. 'kind' fija que condicion evalua BetConditions.Evaluate (definiciones exactas en el codigo y en la ADR). 'stakeByAct' es la apuesta fija en oro de los actos 1..3: 3/4/5 NO REFUTADA el 2 oct 2026 (criterio provisional, desempate) contra 2/3/4 y 4/5/6 (6 semillas x 600 runs, Blind contra Never; ADR 0157, enmienda, decision 4). 'frequencyPercentByDifficulty' es la frecuencia MEDIDA (%) de la condicion por distintivo de dificultad 1..5 (RF-012) con `Balance --bet-census` (2.400 runs de la politica contextual, semillas 1 y 7, 33.211 partidos, repetido tras la revision independiente; seccion 'Censo' de la ADR 0157). 'payoutPercentByDifficulty' es el cobro BRUTO como porcentaje de la apuesta (el oro cobrado se redondea al entero mas cercano, BetSystem.PayoutFor): MEDIDO, cuota = round(85 / p) (margen de la casa del 15 %, ADR 0157 punto 4). Los 2000 son el TOPE del esquema (85 / p lo superaba) o una celda que no se ofrece (p < 2 %): no son una cuota medida. En el texto de la condicion, {player} se sustituye por el nombre del jugador rival nombrado en la oferta (solo hunt_the_star). Enmienda del 2 oct 2026 (ADR 0157): comeback en dificultad 1 recalibrada a la frecuencia MEDIDA (7,76 %, 2.849 apuestas, politica comeback-easiest, 6 semillas x 600 runs) y cuota round(85 / 7,76) = 1095; into_the_mob y split_the_goals en dificultad 5 llevan withdrawnDifficulties [5]: no se ofrecen porque su cumplimiento medido (7,65 % y 1,65 %) cae en otra palabra de la UI que la anunciada (13,31 % y 5,64 %) con z < -2. Enmienda del 3 oct 2026 (ADR 0157, tras la IA y las entradas de las ADR 0184 y 0186): recensado con Blind (6 semillas x 600 runs, tools/bet-aciertos.py y tools/bet-recalibrar.py); recalibradas a la frecuencia medida y cuota round(85 / p) las celdas into_the_mob d2/d3, eye_for_eye d3, hunt_the_star d1, blood_before_goals d1/d2 y thrashing d1/d2; youth_decides d5 (2,33 % medido contra 6,03 %, cuota por encima del tope) no se ofrece. Tono: corredor de apuestas de taberna.",
   "bets": [
     {
       "id": "blood_before_goals",
@@ -10,8 +10,8 @@
         "en": "The first casualty of the match (injury or death) lands before the first goal. If nobody scores, I'll settle for anyone bleeding."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [591, 223, 172, 138, 167],
-      "frequencyPercentByDifficulty": [14.38, 38.03, 49.49, 61.48, 50.92]
+      "payoutPercentByDifficulty": [458, 194, 172, 138, 167],
+      "frequencyPercentByDifficulty": [18.54, 43.87, 49.49, 61.48, 50.92]
     },
     {
       "id": "hunt_the_star",
@@ -22,8 +22,8 @@
         "en": "{player} doesn't finish the match: hurt, dead or sent off. I never said a word."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [1287, 651, 532, 478, 983],
-      "frequencyPercentByDifficulty": [6.60, 13.06, 15.98, 17.78, 8.65]
+      "payoutPercentByDifficulty": [953, 651, 532, 478, 983],
+      "frequencyPercentByDifficulty": [8.92, 13.06, 15.98, 17.78, 8.65]
     },
     {
       "id": "eye_for_eye",
@@ -34,8 +34,8 @@
         "en": "If they hurt one of yours, you hurt one of theirs, and you win on top. Revenge without victory doesn't pay."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [2000, 969, 652, 447, 883],
-      "frequencyPercentByDifficulty": [1.03, 8.77, 13.04, 19.00, 9.62]
+      "payoutPercentByDifficulty": [2000, 969, 684, 447, 883],
+      "frequencyPercentByDifficulty": [1.03, 8.77, 12.43, 19.00, 9.62]
     },
     {
       "id": "comeback",
@@ -58,8 +58,8 @@
         "en": "There is a mob overtime, the referee already halfway out the door, and you win it."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [497, 425, 463, 564, 638],
-      "frequencyPercentByDifficulty": [17.09, 19.98, 18.38, 15.07, 13.31],
+      "payoutPercentByDifficulty": [497, 473, 480, 564, 638],
+      "frequencyPercentByDifficulty": [17.09, 17.97, 17.72, 15.07, 13.31],
       "withdrawnDifficulties": [5]
     },
     {
@@ -83,8 +83,8 @@
         "en": "You win by three goals or more. Let the whole tavern know who runs the place."
       },
       "stakeByAct": [3, 4, 5],
-      "payoutPercentByDifficulty": [765, 1163, 1857, 1767, 2000],
-      "frequencyPercentByDifficulty": [11.11, 7.31, 4.58, 4.81, 2.92]
+      "payoutPercentByDifficulty": [1035, 1677, 1857, 1767, 2000],
+      "frequencyPercentByDifficulty": [8.21, 5.07, 4.58, 4.81, 2.92]
     },
     {
       "id": "split_the_goals",
@@ -109,7 +109,8 @@
       },
       "stakeByAct": [3, 4, 5],
       "payoutPercentByDifficulty": [2000, 2000, 2000, 2000, 1411],
-      "frequencyPercentByDifficulty": [0.00, 0.77, 1.80, 2.71, 6.03]
+      "frequencyPercentByDifficulty": [0.00, 0.77, 1.80, 2.71, 6.03],
+      "withdrawnDifficulties": [5]
     },
     {
       "id": "referee_blind",
