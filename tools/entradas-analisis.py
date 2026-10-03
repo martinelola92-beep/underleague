@@ -48,8 +48,9 @@ def load(folder):
     drawn = defaultdict(list)
     with open(f"{folder}/fotogramas.csv", newline="") as f:
         for r in csv.DictReader(f):
-            if r["window"] == "tramo" and r["hasModel"] == "1":
-                drawn[int(r["player"])].append(r)
+            # Los tramos cortos alrededor de cada contacto (caidaNN): cada uno es un episodio aparte.
+            if r["window"].startswith("caida") and r["hasModel"] == "1":
+                drawn[(r["window"], int(r["player"]))].append(r)
     return trace, events, drawn
 
 
@@ -150,7 +151,7 @@ def analyse(folder):
     at_contact = []
     no_clip = 0
     by_frame = {}
-    for p, seq in drawn.items():
+    for (w, p), seq in drawn.items():
         for r in seq:
             by_frame.setdefault((p, int(r["frame"])), r)
     for e in events:

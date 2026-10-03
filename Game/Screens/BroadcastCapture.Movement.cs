@@ -452,6 +452,46 @@ public partial class BroadcastCapture
             }
         }
 
+        // 6c. Contactos: un tramo corto (sin imágenes) alrededor de cada entrada o falta en que interviene un jugador con
+        // modelo, para medir la entrada, la caída y la levantada sobre todos los casos del partido y no sólo los del tramo
+        // largo (BV-A, tercera pasada). Sin solaparse, y como mucho 16.
+        if (screen.Pitch3D.DebugEvents is { } events)
+        {
+            var index = new Dictionary<int, int>();
+            for (int i = 0; i < trace.Players.Count; i++)
+            {
+                index[trace.Players[i].Id] = i;
+            }
+
+            int lastEnd = -1;
+            int made = 0;
+            for (int f = 0; f < frames && made < 16; f++)
+            {
+                int from = trace.EventFromAt(f);
+                int count = trace.EventCountAt(f);
+                for (int e = from; e < from + count && e < events.Count; e++)
+                {
+                    var ev = events[e];
+                    if (ev.Type is not (EventType.Tackle or EventType.Foul) || f - 10 <= lastEnd)
+                    {
+                        continue;
+                    }
+
+                    bool actor = index.TryGetValue(ev.Actor, out int a) && hasModel[a];
+                    bool opponent = index.TryGetValue(ev.Opponent, out int o) && hasModel[o];
+                    if (!actor && !opponent)
+                    {
+                        continue;
+                    }
+
+                    lastEnd = Math.Min(frames - 1, f + 40);
+                    windows.Add(new MovementWindow { Label = $"caida{made:00}", Start = Math.Max(1, f - 10), End = lastEnd, Images = false, MaxEngineFrames = 300 });
+                    made++;
+                    break;
+                }
+            }
+        }
+
         // 7. x4: tres segundos reales, sin imágenes (la cifra que importa es pies frente a cuerpo).
         windows.Add(new MovementWindow
         {
