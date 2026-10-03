@@ -435,6 +435,16 @@ public partial class RunController
             ? null
             : RewardView.Build(State, Catalog, Systems.Economy, Systems.Items, Data.GameData.Language);
 
+    /// <summary>
+    /// A quién se puede soltar a cambio de un fichaje con la plantilla llena (BX-5), con lo que le pasará (vender o
+    /// descartar). <paramref name="market"/> true en el mercado (vende si el veto de la ADR 0108 lo permite) y false en
+    /// una recompensa (siempre descarta). Vacío con la plantilla con hueco.
+    /// </summary>
+    public IReadOnlyList<SwapCandidate> SwapCandidates(bool market) =>
+        State is null || Systems is null
+            ? Array.Empty<SwapCandidate>()
+            : RosterSwapView.Candidates(State, market ? Systems.Economy : null);
+
     /// <summary>Surtido del nodo de mercado abierto (RF-114); null si el nodo abierto no es un mercado.</summary>
     /// <summary>La carta del nodo de evento abierto (ADR 0100), o null si no hay ninguno.</summary>
     public EventScreenView? Event() =>

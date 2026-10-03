@@ -31,7 +31,59 @@ public partial class RosterRow : InkCanvas
     [Signal]
     public delegate void ActivatedEventHandler(int playerId);
 
+    /// <summary>Se ha empezado a arrastrar a este jugador (BX-3): la pantalla lo coge, como al pulsar.</summary>
+    [Signal]
+    public delegate void DragStartedEventHandler(int playerId);
+
+    /// <summary>Se ha soltado a <paramref name="draggedId"/> sobre esta fila (BX-3).</summary>
+    [Signal]
+    public delegate void DroppedOnEventHandler(int draggedId, int targetId);
+
+    /// <summary>
+    /// La pantalla dice si soltar a ese jugador sobre este otro tiene efecto (BX-3). Es solo para el resalte: lo que pasa
+    /// de verdad al soltar lo resuelve <c>/Sim</c>.
+    /// </summary>
+    public System.Func<int, int, bool>? CanDrop { get; set; }
+
+    private bool _dropHover;
+
     public int PlayerId => _player?.Id ?? -1;
+
+    // ---- Arrastrar y soltar (BX-3) ----------------------------------------------------------------
+
+    public override Variant _GetDragData(Vector2 atPosition)
+    {
+        if (_player is null)
+        {
+            return default;
+        }
+
+        EmitSignal(SignalName.DragStarted, _player.Id);
+        SetDragPreview(LineupDrag.Preview(_player.Name));
+        return LineupDrag.Pack(_player.Id);
+    }
+
+    public override bool _CanDropData(Vector2 atPosition, Variant data)
+    {
+        bool valid = _player is not null && LineupDrag.TryUnpack(data, out int dragged) && (CanDrop?.Invoke(dragged, _player.Id) ?? false);
+        if (valid != _dropHover)
+        {
+            _dropHover = valid;
+            QueueRedraw();
+        }
+
+        return valid;
+    }
+
+    public override void _DropData(Vector2 atPosition, Variant data)
+    {
+        _dropHover = false;
+        QueueRedraw();
+        if (_player is not null && LineupDrag.TryUnpack(data, out int dragged))
+        {
+            EmitSignal(SignalName.DroppedOn, dragged, _player.Id);
+        }
+    }
 
     public bool Selected
     {
@@ -77,6 +129,16 @@ public partial class RosterRow : InkCanvas
         SetProcess(false);
     }
 
+    public override void _Notification(int what)
+    {
+        base._Notification(what);
+        if ((what == NotificationDragEnd || what == NotificationMouseExit) && _dropHover)
+        {
+            _dropHover = false;
+            QueueRedraw();
+        }
+    }
+
     public override void _Process(double delta)
     {
         _flash -= (float)delta * 1.6f;
@@ -111,6 +173,12 @@ public partial class RosterRow : InkCanvas
             DrawColoredPolygon(Ink.Rough(body, 1.2f, seed), new Color(Ink.Ochre, _flash * 0.7f));
         }
 
+        if (_dropHover)
+        {
+            // BX-3: el destino del arrastre. Verde sobre el papel, grueso, para distinguirlo de lo «cogido» (rojo, discontinuo).
+            DrawPolyline(Ink.Closed(Ink.Rough(body.Grow(3f), 1f, seed + 7)), Ink.GreenLight, 5f, true);
+        }
+
         if (_held)
         {
             var dashed = Ink.Closed(Ink.Rough(body.Grow(2f), 1f, seed + 3));
@@ -126,6 +194,17 @@ public partial class RosterRow : InkCanvas
         float side = h - 10f;
         var portrait = new Rect2(6f, 4f, side, side);
         Portrait.Draw(this, portrait, player.Race, player.Position, player.Id, dimmed: player.PhysicalState is PhysicalState.SevereInjury or PhysicalState.Dead);
+
+        // BX-4: el dorsal fijo de la run (el mismo que luce en el campo y en las tiras del partido), en la esquina
+        // opuesta al nivel, sobre una cartela negra para que no se confunda con él.
+        if (player.ShirtNumber > 0)
+        {
+            string number = UiText.Get("ui.kn.shirt", player.ShirtNumber);
+            float numberWidth = Ink.Width(Ink.Heavy, number, Ink.SizeSmall);
+            var chip = new Rect2(portrait.Position.X, portrait.Position.Y, numberWidth + 8f, Ink.Heavy.GetHeight(Ink.SizeSmall) + 2f);
+            DrawRect(chip, Ink.Black);
+            Ink.Text(this, Ink.Heavy, chip.Position + new Vector2(4f, 1f), number, Ink.SizeSmall, Ink.Paper);
+        }
 
         // Nivel sobre la esquina del retrato.
         float badge = Mathf.Clamp(h * 0.2f, 9f, 12f);
@@ -152,6 +231,7 @@ public partial class RosterRow : InkCanvas
         Ink.Text(this, Ink.Heavy, new Vector2(left, nameY), Ink.Fit(Ink.Heavy, player.Name, nameSize, textWidth), nameSize, Ink.Black);
 
         string sub = _state.Templates.Get("positions", player.Position.ToString()).ToUpperInvariant();
+
         float subY = mid + 1f;
         Ink.Text(this, Ink.Data, new Vector2(left, subY), Ink.Fit(Ink.Data, sub, Ink.SizeSmall, textWidth - 40f), Ink.SizeSmall, _selected ? Ink.Brown : Ink.Muted);
 

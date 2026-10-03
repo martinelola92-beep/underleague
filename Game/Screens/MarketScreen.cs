@@ -868,6 +868,14 @@ public partial class MarketScreen : Control
             string category = row.Category;
             int index = row.Index;
             button.Pressed += () => BuyRecruit(category, index);
+            y += 32f;
+
+            // BX-5: con la plantilla llena, fichar soltando a uno propio. El soltado es el que está marcado en «Vender»;
+            // lo que le pasa (se vende o se descarta) lo dice /Sim y la decisión viaja entera: o se hace todo o nada.
+            if (row.Block == RewardBlock.RosterFull)
+            {
+                SwapOffer(row, y, width);
+            }
         }
         else
         {
@@ -877,6 +885,48 @@ public partial class MarketScreen : Control
                 new Vector2(0f, y),
                 width,
                 Style.TextDim);
+        }
+    }
+
+    private void SwapOffer(MarketRow row, float y, float width)
+    {
+        SwapCandidate? chosen = null;
+        foreach (var candidate in _run.SwapCandidates(market: true))
+        {
+            if (candidate.PlayerId == _sellPlayerId)
+            {
+                chosen = candidate;
+            }
+        }
+
+        if (chosen is null)
+        {
+            Widgets.Body(_detailContainer, UiText.Get("ui.market.swapPick"), new Vector2(0f, y), width, Style.TextDim);
+            return;
+        }
+
+        bool sold = chosen.Outcome == SwapOutcome.Sold;
+        bool affordable = row.Mercenary || row.Free || _view.Gold + chosen.Gold >= row.Price;
+        var button = Widgets.Button(
+            _detailContainer,
+            sold
+                ? UiText.Get("ui.market.swapSold", row.Name, chosen.Name, chosen.Gold)
+                : UiText.Get("ui.market.swapReleased", row.Name, chosen.Name),
+            new Rect2(0f, y, width, 26f),
+            affordable);
+        string category = row.Category;
+        int index = row.Index;
+        bool mercenary = row.Mercenary;
+        int replace = chosen.PlayerId;
+        button.Pressed += () => Decide(mercenary ? new HireMercenary(index, replace) : new BuyOffer(category, index, -1, replace));
+        if (!affordable)
+        {
+            Widgets.Body(
+                _detailContainer,
+                UiText.Get("ui.market.swapPoor", chosen.Name, _view.Gold + chosen.Gold, row.Price),
+                new Vector2(0f, y + 30f),
+                width,
+                Style.Hole);
         }
     }
 

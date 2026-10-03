@@ -176,7 +176,8 @@ public partial class RewardScreen : Control
     private void Carriers()
     {
         Widgets.Panel(this, new Rect2(12f, 326f, 1256f, 330f));
-        Widgets.Section(this, UiText.Get("ui.reward.carrier"), new Vector2(24f, 332f), 400f);
+        bool swapping = _selected >= 0 && _view.Options[_selected] is { Kind: RewardKind.Player, Block: RewardBlock.RosterFull };
+        Widgets.Section(this, UiText.Get(swapping ? "ui.reward.swapSection" : "ui.reward.carrier"), new Vector2(24f, 332f), 400f);
 
         if (_selected < 0)
         {
@@ -185,6 +186,13 @@ public partial class RewardScreen : Control
         }
 
         var option = _view.Options[_selected];
+        if (option is { Kind: RewardKind.Player, Block: RewardBlock.RosterFull })
+        {
+            // BX-5: con la plantilla llena la recompensa no se pierde por obligación: se puede soltar a uno propio.
+            Swaps(option);
+            return;
+        }
+
         if (!option.NeedsCarrier)
         {
             Widgets.Body(this, option.Name + " · " + option.Description, new Vector2(24f, 354f), 1232f);
@@ -246,6 +254,36 @@ public partial class RewardScreen : Control
 
             int playerId = carrier.PlayerId;
             button.Pressed += () => Choose(playerId);
+        }
+    }
+
+    /// <summary>
+    /// Panel de cambio (BX-5): a quién soltar para fichar al de la recompensa. Lo que le pasa al soltado —aquí siempre
+    /// se descarta, no hay mercado— lo dice <c>/Sim</c> (<see cref="RosterSwapView"/>), y la decisión viaja entera en
+    /// <c>ChooseReward.ReplacePlayerId</c>: o se hace todo o no se hace nada.
+    /// </summary>
+    private void Swaps(RewardOptionView option)
+    {
+        Widgets.Body(this, UiText.Get("ui.reward.swapTitle", option.Name), new Vector2(24f, 352f), 1232f, Style.Hole);
+        Widgets.Body(this, UiText.Get("ui.reward.swapNote"), new Vector2(24f, 374f), 1232f, Style.TextDim);
+
+        var candidates = _run.SwapCandidates(market: false);
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            var candidate = candidates[i];
+            float x = 24f + ((i % 3) * 412f);
+            float y = 402f + ((i / 3) * 30f);
+            var button = Widgets.Button(
+                this,
+                UiText.Get(
+                    "ui.reward.swapRow",
+                    candidate.Name,
+                    UiText.Get("ui.pos." + candidate.Position),
+                    candidate.Level,
+                    UiText.Get("ui.state." + candidate.PhysicalState)),
+                new Rect2(x, y, 400f, 26f));
+            int id = candidate.PlayerId;
+            button.Pressed += () => Decide(new ChooseReward(_selected, -1, id));
         }
     }
 

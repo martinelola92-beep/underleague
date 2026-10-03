@@ -263,6 +263,8 @@ public partial class TeamScreen : Control
         _pitch.CellPressed += OnCellPressed;
         _pitch.CellReleased += OnCellReleased;
         _pitch.CellHovered += OnCellHovered;
+        _pitch.DragStarted += OnDragStarted;
+        _pitch.DragDropped += OnPitchDragDropped;
 
         _legend = new LegendView { Position = new Vector2(398f, 530f), Size = new Vector2(816f, 26f), TextColor = Ink.Brown };
         _lineupPage.AddChild(_legend);
@@ -711,6 +713,73 @@ public partial class TeamScreen : Control
         ApplyRowFlags();
     }
 
+    // ---- Arrastrar y soltar (BX-3) -----------------------------------------------------------------
+    // Mismo resultado que el clic y el mando: coger al jugador y soltarlo con Drop, que pide la colocación a /Sim
+    // (Preview/Move) y cuenta lo que pasa (aviso de perks, cartel de rechazo). El arrastre solo añade el gesto.
+
+    /// <summary>Se empieza a arrastrar a alguien, de la columna o del campo: queda cogido, como tras pulsarlo.</summary>
+    private void OnDragStarted(int playerId)
+    {
+        _focusRoster = false;
+        Select(playerId);
+        _held = playerId;
+        RefreshPitch();
+        ApplyRowFlags();
+    }
+
+    private void OnPitchDragDropped(int playerId, int column, int row)
+    {
+        var cell = new Cell(column, row);
+
+        // Soltar donde ya está (o repetir un soltar que el clic ya resolvió) no mueve nada.
+        if (_state.CellOf(playerId) == cell)
+        {
+            _held = -1;
+            RefreshPitch();
+            ApplyRowFlags();
+            return;
+        }
+
+        _held = playerId;
+        _cursor = cell;
+        Drop(_cursor);
+    }
+
+    /// <summary>
+    /// Soltar sobre una fila: si es de un titular, el arrastrado ocupa su casilla (sustituye o intercambia); si es de
+    /// un suplente y el arrastrado es titular, el suplente entra en la casilla del que arrastras.
+    /// </summary>
+    private void OnRowDroppedOn(int draggedId, int targetId)
+    {
+        if (_state.CellOf(targetId) is { } targetCell)
+        {
+            _held = draggedId;
+            Drop(targetCell);
+        }
+        else if (_state.CellOf(draggedId) is { } draggedCell)
+        {
+            _held = targetId;
+            Drop(draggedCell);
+        }
+    }
+
+    /// <summary>Solo para resaltar el destino de la fila: soltar sobre uno mismo, o suplente sobre suplente, no hace nada.</summary>
+    private bool CanDropOnRow(int draggedId, int targetId) =>
+        draggedId != targetId && (_state.IsStarter(targetId) || _state.IsStarter(draggedId));
+
+    public override void _Notification(int what)
+    {
+        base._Notification(what);
+
+        // Un arrastre que acaba en el vacío no deja a nadie «cogido»: eso solo lo hace el clic a propósito.
+        if (what == NotificationDragEnd && _held >= 0 && !GetViewport().GuiIsDragSuccessful())
+        {
+            _held = -1;
+            RefreshPitch();
+            ApplyRowFlags();
+        }
+    }
+
     private void OnCellReleased(int column, int row)
     {
         var cell = new Cell(column, row);
@@ -982,6 +1051,9 @@ public partial class TeamScreen : Control
         var row = new RosterRow { Position = new Vector2(10f, y), Size = new Vector2(RosterArea.Size.X - 20f, height) };
         _board.AddChild(row);
         row.Activated += OnRowActivated;
+        row.DragStarted += OnDragStarted;
+        row.DroppedOn += OnRowDroppedOn;
+        row.CanDrop = CanDropOnRow;
         _rows.Add(row);
     }
 
@@ -1495,6 +1567,8 @@ public partial class TeamScreen : Control
         }
 
         var bxVacant = new Cell(0, 0);
+        var bxRow = Vector2.Zero;
+        var bxTarget = Vector2.Zero;
         var steps = new (string Name, Action Setup, bool Hover)[]
         {
             ("equipo", () => { }, false),
@@ -1673,6 +1747,48 @@ public partial class TeamScreen : Control
                 _cursor = bxVacant;
                 Pad("ui_accept");
             }, false),
+            ("equipo-arrastre-0", () =>
+            {
+                // BX-3: un suplente de la columna, cogido con el ratón de verdad (eventos de ratón sintéticos, no el
+                // flujo de mando: lo que se prueba es el arrastre nativo de Godot).
+                Pad("ui_cancel");
+                _toast.Post(Array.Empty<ToastLine>());
+                SetTab(Tab.Lineup);
+                int bench = FindOutfieldBenchPlayer();
+                bxRow = _rows[IndexOfCard(bench)].GetGlobalRect().GetCenter();
+                bxTarget = _pitch.GlobalPosition + _pitch.CenterOf(FindOutfieldStarterCell());
+                MouseTo(bxRow);
+                MouseButton(true, bxRow);
+            }, false),
+            ("equipo-arrastre-1", () =>
+            {
+                // Se mueve hasta pasar el umbral del arrastre y se llega a la casilla de un titular.
+                for (int i = 1; i <= 12; i++)
+                {
+                    MouseTo(bxRow.Lerp(bxTarget, i / 12f), true);
+                }
+            }, false),
+            ("equipo-arrastre-2", () => MouseTo(bxTarget + new Vector2(2f, 1f), true), false),
+            ("equipo-arrastre-3", () => MouseButton(false, bxTarget + new Vector2(2f, 1f)), false),
+            ("equipo-arrastre-fila-0", () =>
+            {
+                // BX-3, al revés: un titular cogido en el campo y soltado sobre la fila de un suplente.
+                var from = _pitch.GlobalPosition + _pitch.CenterOf(FindOutfieldStarterCell());
+                int bench = FindOutfieldBenchPlayer();
+                bxRow = _rows[IndexOfCard(bench)].GetGlobalRect().GetCenter();
+                bxTarget = from;
+                MouseTo(from);
+                MouseButton(true, from);
+            }, false),
+            ("equipo-arrastre-fila-1", () =>
+            {
+                for (int i = 1; i <= 12; i++)
+                {
+                    MouseTo(bxTarget.Lerp(bxRow, i / 12f), true);
+                }
+            }, false),
+            ("equipo-arrastre-fila-2", () => MouseTo(bxRow + new Vector2(2f, 1f), true), false),
+            ("equipo-arrastre-fila-3", () => MouseButton(false, bxRow + new Vector2(2f, 1f)), false),
         };
 
         string directory = ProjectSettings.GlobalizePath("res://screenshots");
@@ -1697,6 +1813,36 @@ public partial class TeamScreen : Control
         }
 
         GetTree().Quit();
+    }
+
+    private Vector2 _syntheticMouse;
+
+    /// <summary>Solo para capturas (BX-3): mueve el ratón con un evento de ratón de verdad, el que dispara el arrastre nativo.</summary>
+    private void MouseTo(Vector2 position, bool pressed = false)
+    {
+        Input.WarpMouse(position);
+        var previous = _syntheticMouse;
+        _syntheticMouse = position;
+        Input.ParseInputEvent(new InputEventMouseMotion
+        {
+            Position = position,
+            GlobalPosition = position,
+            Relative = position - previous,
+            ButtonMask = pressed ? MouseButtonMask.Left : 0,
+        });
+    }
+
+    /// <summary>Solo para capturas (BX-3): pulsa o suelta el botón izquierdo en ese punto.</summary>
+    private void MouseButton(bool pressed, Vector2 position)
+    {
+        Input.ParseInputEvent(new InputEventMouseButton
+        {
+            ButtonIndex = Godot.MouseButton.Left,
+            Pressed = pressed,
+            Position = position,
+            GlobalPosition = position,
+            ButtonMask = pressed ? MouseButtonMask.Left : 0,
+        });
     }
 
     /// <summary>Inyecta una acción como si viniera del mando, por el mismo camino que la entrada real.</summary>

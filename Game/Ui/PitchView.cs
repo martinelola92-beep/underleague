@@ -29,6 +29,14 @@ public partial class PitchView : Control
     [Signal]
     public delegate void CellHoveredEventHandler(int column, int row);
 
+    /// <summary>Se ha empezado a arrastrar a un jugador desde una casilla (BX-3): la pantalla lo coge, como al pulsar.</summary>
+    [Signal]
+    public delegate void DragStartedEventHandler(int playerId);
+
+    /// <summary>Se ha soltado un jugador arrastrado sobre una casilla (BX-3), venga de la columna o de otra casilla.</summary>
+    [Signal]
+    public delegate void DragDroppedEventHandler(int playerId, int column, int row);
+
     /// <summary>Datos de la plantilla y la alineación que se está pintando.</summary>
     public TeamState? State { get; set; }
 
@@ -101,6 +109,59 @@ public partial class PitchView : Control
     public Cell CellAt(Vector2 point) => new(Mathf.FloorToInt(point.X / CellSize), Mathf.FloorToInt(point.Y / CellSize));
 
     public override void _Ready() => MouseFilter = MouseFilterEnum.Stop;
+
+    // ---- Arrastrar y soltar (BX-3) ----------------------------------------------------------------
+
+    /// <summary>
+    /// Empieza un arrastre desde una casilla con jugador. El clic con soltar en otra casilla (que ya existía) sigue
+    /// valiendo: el arrastre de Godot solo arranca si el ratón se mueve con el botón pulsado, y soltar sobre la casilla
+    /// de origen no hace nada.
+    /// </summary>
+    public override Variant _GetDragData(Vector2 atPosition)
+    {
+        var player = State?.At(CellAt(atPosition));
+        if (player is null)
+        {
+            return default;
+        }
+
+        EmitSignal(SignalName.DragStarted, player.Id);
+        SetDragPreview(LineupDrag.Preview(player.Name));
+        return LineupDrag.Pack(player.Id);
+    }
+
+    /// <summary>
+    /// Mientras se arrastra por encima, el cursor sigue al ratón: la pantalla ya enseña con él, y sin tocar nada, dónde
+    /// caería la ficha y qué quedaría en cada casilla (RF-045: previsualización). Acepta las casillas del campo propio.
+    /// </summary>
+    public override bool _CanDropData(Vector2 atPosition, Variant data)
+    {
+        if (!LineupDrag.TryUnpack(data, out _))
+        {
+            return false;
+        }
+
+        var cell = CellAt(atPosition);
+        if (cell.Column < 0 || cell.Column >= Pitch.PlacementColumns || cell.Row < 0 || cell.Row >= Pitch.Rows)
+        {
+            return false;
+        }
+        if (cell != Cursor)
+        {
+            EmitSignal(SignalName.CellHovered, cell.Column, cell.Row);
+        }
+
+        return true;
+    }
+
+    public override void _DropData(Vector2 atPosition, Variant data)
+    {
+        if (LineupDrag.TryUnpack(data, out int playerId))
+        {
+            var cell = CellAt(atPosition);
+            EmitSignal(SignalName.DragDropped, playerId, cell.Column, cell.Row);
+        }
+    }
 
     public override void _GuiInput(InputEvent @event)
     {
