@@ -14,8 +14,36 @@ namespace Underleague.Sim.Tests.Analysis;
 /// jugaban jamás, y cualquier cambio en <c>data/consumables/</c> era invisible para las 43 puertas (así
 /// se coló CAT-A, el vendaje que protegía al rival).
 /// </summary>
-public sealed class ConsumableLoopTests
+public sealed class ConsumableLoopTests : IClassFixture<ConsumableLoopTests.ContextualRuns>
 {
+    private readonly ContextualRuns _runs;
+
+    public ConsumableLoopTests(ContextualRuns runs) => _runs = runs;
+
+    /// <summary>
+    /// Las runs contextuales sin observador de las semillas 1..12, ya jugadas (técnica «compartir lo que se repite»):
+    /// <c>ThePolicyBuysConsumables</c> y <c>TheConsumablesBoughtActuallyReachAMatch</c> juegan las mismas doce y leen
+    /// contadores distintos del resultado. La run es función pura de la semilla; el fixture se suelta al acabar.
+    /// </summary>
+    public sealed class ContextualRuns
+    {
+        private readonly Dictionary<ulong, RunPlayResult> _bySeed = new();
+
+        public RunPlayResult Get(ulong seed)
+        {
+            lock (_bySeed)
+            {
+                if (!_bySeed.TryGetValue(seed, out var result))
+                {
+                    result = Play(seed);
+                    _bySeed[seed] = result;
+                }
+
+                return result;
+            }
+        }
+    }
+
     private static RunPlayResult Play(ulong seed, PurchaseDoctrine doctrine = PurchaseDoctrine.Contextual, MatchObserver? observer = null)
     {
         var catalog = TestData.LoadCatalog();
@@ -36,7 +64,7 @@ public sealed class ConsumableLoopTests
         int bought = 0;
         for (ulong seed = 1; seed <= 12; seed++)
         {
-            bought += Play(seed).ConsumablesBought;
+            bought += _runs.Get(seed).ConsumablesBought;
         }
 
         Assert.True(bought > 0, "en doce runs no se ha comprado un solo consumible: el mercado no los ofrece o la política no los mira");
@@ -79,7 +107,7 @@ public sealed class ConsumableLoopTests
         int activations = 0;
         for (ulong seed = 1; seed <= 12; seed++)
         {
-            activations += Play(seed).ConsumablesUsed;
+            activations += _runs.Get(seed).ConsumablesUsed;
         }
 
         Assert.True(
