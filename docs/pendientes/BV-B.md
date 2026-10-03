@@ -3,7 +3,7 @@
 **Estado:** **Parte `/Game` implementada (3 oct 2026, tercera pasada de BV-A)**, medida antes/después con 3 semillas (tabla
 abajo). **Parte `/Sim` arreglada (3 oct 2026, [ADR 0186](../decisiones/0186-la-entrada-llega-y-la-falta-tira-a-la-victima.md))**:
 quien entra sigue a quien la recibe durante `Tackling` y en la falta pitada cae la víctima (el infractor sólo si fue
-dura); sección «`/Sim`: arreglo» al final. Quedan anotados: BN-A sube un poco con 0184+0186 (sin aislar) y `elf_none` sale de la banda D-29 por seguir a la víctima (ADR 0186). Hermanas: [BV-A](./BV-A.md) (movimiento de los modelos), BI-H
+dura); sección «`/Sim`: arreglo» al final. Quedan anotados: BN-A sube con la ADR 0184 (separado por dato, LIKELY) y `elf_none` sale de la banda D-29 por seguir a la víctima; escapar del alcance de la decisión no lo arregla (ADR 0186, enmienda). Hermanas: [BV-A](./BV-A.md) (movimiento de los modelos), BI-H
 (contacto con el balón), ADR 0173 (pausa breve en lo que para el juego).
 
 ## Observación (revisor, vía coordinador)

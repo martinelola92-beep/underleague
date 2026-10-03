@@ -179,7 +179,10 @@ mover ninguna banda:**
    contextual: antes +1,28 · +0,97 · +0,76; final −0,25 · +0,76 · +0,49. Compras por mercado, contextual − ahorradora:
    antes +0,05 · +0,06 · +0,08; final +0,03 · +0,09 · +0,05 (las doctrinas siguen comprando distinto). **No se mueve**:
    el signo sólo cambia en la semilla que fija la puerta. Decisión del revisor.
-3. `RaceBalanceTests.NoLaunchRaceDominatesOrUnderperformsWithoutPerks` (D-29, 40-60 %): `elf_none` 39,17. Es de la
-   ADR 0186, no de ésta; ver allí.
+3. `RaceBalanceTests.NoLaunchRaceDominatesOrUnderperformsWithoutPerks` (D-29, 40-60 %): `elf_none` 39,17 (39,08 tras
+   la enmienda de la 0186). Es de la ADR 0186, no de ésta; ver allí.
+
+**BN-A** (amontonamiento sobre el portero) sube con esta ADR, LIKELY: separado por dato en la ADR 0186 (`ref` 0,60 → 0,72
+con la sostenida sola).
 
 El bucle de tests está verde (RT-024 dentro).

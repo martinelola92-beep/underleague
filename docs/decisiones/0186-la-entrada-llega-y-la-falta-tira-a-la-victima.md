@@ -31,9 +31,10 @@ Dos datos en `tuning.tackle`, `false` = el motor de antes (bit a bit, lo fija
    del contacto de dos cuerpos). La resolución y su alcance no cambian. Es la opción «seguir a la víctima» de
    `docs/referencia-motores-futbol.md` frente a «volver a comprobar el alcance al resolver», que convertiría en fallo
    sin contacto lo que el jugador ve como entrada; seguirle hace que llegue.
-   **Por qué 0,6 y no encima:** la primera versión le seguía hasta su posición y lo metía en su cuerpo; la separación
-   de cuerpos empujaba al que recibía en el mismo tick en que disparaba, y el detector de tiros sin ángulo dejó de
-   cuadrar con el contador del motor (`SymptomDetectorsValidationTests`, 108 frente a 81-104). Con 0,6 cuadra.
+   **Por qué 0,6:** con 0,8 (por encima del contacto de dos orcos, 0,76) la mitad de las entradas vuelven a resolverse
+   a más de 0,9 casillas en el fotograma del suceso. El detector de tiros sin ángulo (`SymptomDetectorsValidationTests`)
+   que dejó de cuadrar con el contador del motor era del **instrumento**: medía la apertura al final del tick y el tiro
+   sale al principio; ahora la mide en el fotograma anterior (Regla J, `SymptomDetectors.GoalsWithoutAngle`).
 2. `whistledFoulDownsVictim` = **true**: en una falta **pitada** cae quien la recibe, con el derribo de una entrada
    ganada (`KnockdownTicksCausedBy`, la fuerza de quien entra); si llevaba el balón, se le escapa (un derribado no lo
    lleva, BM-B). Quien la comete **sólo cae si la entrada fue dura** —la misma «entrada dura» que ya sube la tarjeta
@@ -99,3 +100,35 @@ raza. Propuesta para el revisor (sin implementar ni medir): que quien entra siga
 exigir el alcance de la decisión (`tackleDistanceMaxCells`, sin el margen de 0,3) —así la velocidad sigue sirviendo para
 escapar de una entrada, que es la identidad del elfo— o un dato por raza; las dos cambian una regla y necesitan su
 propia medición.
+
+## Enmienda (3 oct 2026): escapar del alcance de la decisión — REJECTED como arreglo de `elf_none`
+
+Propuesta aceptada por el revisor para proteger a las razas rápidas: `tuning.tackle.escapeBeyondDecisionReach` = **true**,
+al resolver la víctima tiene que seguir dentro de `tackleDistanceMaxCells` (1,0) sin el margen de 0,3; si se ha ido
+más allá, la entrada falla. Test de valor conocido `AVictimWhoEscapedTheDecisionReachMakesTheTackleFail` (a 1,15 falla,
+a 0,85 se resuelve; con el dato apagado, a 1,15 se resuelve). Las entradas resueltas a más de 0,9 al empezar el tick no
+vuelven: 5 de 1.250.
+
+**No arregla `elf_none`** (REJECTED como causa, medido): semillas 1-3, 39,08 · 39,90 · 39,90 (media 39,6), frente a
+39,17 · 39,65 · 39,62 sin ella y 41,92 · 42,75 · 41,62 en `main`. Con quien entra siguiendo a la víctima, la distancia
+al resolver ya casi nunca pasa de 1,0, así que el margen no era lo que dejaba escapar al elfo: lo que le quita la
+ventaja es que le sigan. La regla se queda (es legible: si te escapas del alcance, la entrada falla) porque no empeora
+nada: lote final contra el de antes de la enmienda, s1 goles 2,475 → 2,474, entradas 9,28 → 9,27, faltas 7,09 → 6,94,
+lesiones 0,795 → 0,789; s2 goles 2,083 → 2,087, entradas 11,25 → 11,22, lesiones 0,468 → 0,464 (errores típicos
+0,013 / 0,04 / 0,009). Runs completas (720 runs): muertes por partido 0,152 ± 0,008 (`main`) → **0,155 ± 0,008**;
+lesiones propias por run 3,70 → 4,04 ± 0,15; `runWinRate` 12,9 / 16,7 / 16,3 (media 15,3; `main` 16,8).
+
+**`elf_none` sigue en rojo** y queda como decisión del revisor. Lo que lo movería es otra regla (que quien entra no
+pueda seguir a uno más rápido que él, o un dato por raza) o un ajuste de raza: ninguna se hace sin su propia medición.
+
+**BN-A, separado por dato** (barrido de 100 partidos, casos por partido, trazas `ref` / `run`): `main` 0,60 / 0,42;
+final 0,76 / 0,57; sólo 0186 (sostenida a 0) 0,62 / 0,53; sólo 0184 (reglas de BV-B apagadas) 0,72 / 0,56. En `ref` la
+subida es de la **ADR 0184** (LIKELY: 0,60 → 0,72 con ella sola, 0,62 con 0186 sola); en `run` las dos suben algo y no
+se separan del ruido (±0,07). No se arregla ahora. BB-K y BO-A sin cambio distinguible (BB-K 0,79 → 0,86; BO-A 0,02 →
+0,06, ±0,02).
+
+**Puertas afectadas** (`RaceBalance`, `Statistical`, `FullRunGate`, una pasada): 4 rojas, sin mover ninguna banda:
+`elf_none` 39,08 (D-29); `betterTeamWinRate` 60-40 = 90,96 en la semilla 1 (×2 tests; ocho semillas pareadas en la
+ADR 0184: +2,4 ± 1,3); `TheThreeDoctrinesBuyDifferently` en la semilla 1 (ahorradora 15,81 frente a contextual 16,00;
+tres semillas, ahorradora − contextual +0,07 · −0,19 · −0,26; compras por mercado, contextual − ahorradora +0,09 · +0,04
+· +0,04: siguen comprando distinto).
