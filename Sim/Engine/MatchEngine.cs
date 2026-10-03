@@ -3544,6 +3544,17 @@ internal sealed class MatchEngine : IPerkWorld
 
     private bool _repeatingTackle;
 
+    /// <summary>
+    /// Alcance con el que se RESUELVE una entrada (ADR 0186, enmienda: sin el margen de 0,3 si
+    /// <c>escapeBeyondDecisionReach</c>). Es también con el que la repetición de <c>extraAction</c> elige blanco
+    /// (<see cref="RepeatTackle"/>, <see cref="NearestReachableRival"/>). BH-A (barrido del 3 oct, `run:130@1025`):
+    /// la repetición elegía con el margen y la resolución lo quitaba; un rival entre 1,0 y 1,3 era blanco y a la vez
+    /// «escapado», y esa rama dejaba a quien acababa de ganar el balón en <c>Positioning</c> con él en los pies: un
+    /// dueño que no decide como portador, quieto 280 ticks hasta el final.
+    /// </summary>
+    private float TackleResolveReach => _catalog.Ai.Context.TackleDistanceMaxCells
+        + (_tuning.Tackle.EscapeBeyondDecisionReach ? 0f : TackleReachMargin);
+
     /// <summary>Cierra la repetición armada de una entrada que el test publicó a mano (BM-B).</summary>
     /// <summary>ADR 0186: resuelve ya una entrada de <paramref name="tacklerIndex"/> sobre <paramref name="victimIndex"/>, estén donde estén.</summary>
     internal void ResolveTackleForTest(int tacklerIndex, int victimIndex)
@@ -3627,7 +3638,7 @@ internal sealed class MatchEngine : IPerkWorld
             return false;
         }
 
-        float reach = _catalog.Ai.Context.TackleDistanceMaxCells + TackleReachMargin;
+        float reach = TackleResolveReach;
         var previous = tackler.TackleTarget;
         var target = previous is not null
             && previous.OnPitch
@@ -3665,7 +3676,7 @@ internal sealed class MatchEngine : IPerkWorld
     /// </summary>
     private MatchPlayer? NearestReachableRival(MatchPlayer tackler)
     {
-        float reach = _catalog.Ai.Context.TackleDistanceMaxCells + TackleReachMargin;
+        float reach = TackleResolveReach;
         MatchPlayer? best = null;
         float bestDistance = 0f;
         for (int i = 0; i < _players.Length; i++)
@@ -4281,8 +4292,7 @@ internal sealed class MatchEngine : IPerkWorld
         // ADR 0186, enmienda (elf_none): ESCAPAR SIRVE. Quien entra sigue a la víctima, pero al resolver ésta tiene que
         // seguir dentro del alcance con el que se decidió la entrada, sin el margen; si se ha ido más allá, la entrada
         // falla (no hay contacto ni suceso). La velocidad vuelve a servir para escapar de una entrada.
-        float reach = _catalog.Ai.Context.TackleDistanceMaxCells
-            + (_tuning.Tackle.EscapeBeyondDecisionReach ? 0f : TackleReachMargin);
+        float reach = TackleResolveReach;
         if (carrier is null || !carrier.OnPitch || Vec2.Distance(tackler.Position, carrier.Position) > reach)
         {
             // El rival se fue de su alcance antes de que la entrada llegara: no hay contacto ni evento.
