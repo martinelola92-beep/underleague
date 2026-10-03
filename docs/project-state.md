@@ -125,6 +125,11 @@ semillas × 300 runs): muertes por partido 0,154/0,132 → 0,128/0,108; runs con
 para la política que no lee el ojeo 16,3/15,0 % → 7,3/3,7 %. Queda AY-A: el porcentaje del ojeo sigue por debajo
 (35 % enseñado contra 84 % de que muera alguien frente a Partecráneos). Ficha `docs/pendientes/BX-20.md`.
 
+**Parón al decidir en vivo (BX-19, 4 oct):** HECHO, ADR 0191. Cada decisión (orden, consumible, sustitución) simulaba
+el partido dos veces, en el hilo principal y con el `/Sim` del `Debug` sin optimizar: 0,5-3,9 s congelado. Ahora una
+simulación (`MatchPlaybacks.PlayAndEnter`), `/Sim` optimizado siempre y la simulación en un `Task` con catálogo propio:
+≤ 1 ms en el clic y ≤ 14 ms al aplicar en el hilo principal, partido igual byte a byte. Medir: `-- paron` del arnés.
+
 **SIGUIENTE (3 oct):** la cola de la noche está vacía. Decisiones abiertas del revisor (antes de responderlas):
 - tope de seguridad del herrero sobre un titular (ADR 0164);
 - «nunca todos los sumideros» por acto (ADR 0182);

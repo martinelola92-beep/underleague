@@ -4,6 +4,7 @@ using Underleague.Sim.Run;
 using Underleague.Sim.Run.Bosses;
 using Underleague.Sim.Run.Save;
 using Underleague.Sim.Run.Systems;
+using Underleague.Sim.Run.Systems.Consumables;
 using Underleague.Sim.Run.View;
 
 namespace Underleague.Sim.Tests.Run.View;
@@ -17,6 +18,9 @@ namespace Underleague.Sim.Tests.Run.View;
 public sealed class PlayAndEnterTests
 {
     private static readonly Underleague.Sim.Data.Catalog Catalog = TestData.LoadCatalog();
+    private readonly Xunit.Abstractions.ITestOutputHelper _output;
+
+    public PlayAndEnterTests(Xunit.Abstractions.ITestOutputHelper output) => _output = output;
 
     private static IEnumerable<(string Name, MatchDecisions Decisions, int Watched)> DecisionSets()
     {
@@ -57,44 +61,106 @@ public sealed class PlayAndEnterTests
             string.Join(",", playback.Setup.Home.Substitutions.Select(s => $"{s.Tick}:{s.OutPlayerId}:{s.InPlayerId}")),
             string.Join(",", playback.Setup.Away.Substitutions.Select(s => $"{s.Tick}:{s.OutPlayerId}:{s.InPlayerId}")));
 
+    /// <summary>
+    /// Las decisiones que dependen del partido (responder al primer punto del jugador sustituyendo, dejando el hueco o
+    /// dejándole seguir, y el consumible manual) se sacan de la reproducción sin decisiones, como hace la pantalla.
+    /// </summary>
+    private static IEnumerable<(string Name, MatchDecisions Decisions, int Watched)> DerivedSets(
+        RunState state, int nodeId, IRunSystems systems)
+    {
+        yield return ("vendaje-300", MatchDecisions.None with { ManualActivations = new[] { new ManualActivation("field_bandage", 300) } }, 0);
+        // El primer partido de una run rara vez lesiona a uno propio sin órdenes: se busca el punto en el partido de
+        // cada juego de decisiones sin suelo, y se responde sobre ese mismo juego.
+        SubstitutionPoint? point = null;
+        var basis = MatchDecisions.None;
+        foreach (var (_, candidate, watched) in DecisionSets())
+        {
+            if (watched > 0)
+            {
+                continue;
+            }
+
+            var playback = MatchPlaybacks.Of(state, nodeId, Catalog, systems, trace: false, candidate);
+            point = SubstitutionPoints.Pending(playback.Setup, playback.Result, playback.PlayerTeam, Catalog, candidate.Declines);
+            if (point is not null)
+            {
+                basis = candidate;
+                break;
+            }
+        }
+
+        if (point is null)
+        {
+            yield break;
+        }
+
+        if (point.DefaultCandidateId >= 0)
+        {
+            yield return ("sustituye", basis with
+            {
+                Substitutions = new[] { new Substitution(point.Tick, point.OutPlayerId, point.DefaultCandidateId) },
+            }, 0);
+        }
+
+        yield return ("hueco", basis with { Declines = new[] { new DeclinedSubstitution(point.Tick, point.OutPlayerId) } }, 0);
+        if (point.CanPlayOn)
+        {
+            var after = RunLineup.AttributesWithExtraMinorInjuries(state, Catalog, point.OutPlayerId, 1);
+            yield return ("sigue", basis with { PlayOns = new[] { new PlayOn(point.Tick, point.OutPlayerId, after) } }, 0);
+        }
+    }
+
     [Fact]
     public void OneSimulationGivesTheSameMatchAndTheSameRunAsTwo()
     {
         var files = TestData.LoadAllFiles();
         int fast = 0;
         int fallback = 0;
-        foreach (ulong seed in new ulong[] { 20260905, 20260906, 20260907, 20260908, 1, 2, 3, 42 })
+        var kinds = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (var (club, race) in new[] { ("orc_ironworks", Race.Orc), ("human_abattoir", Race.Human) })
         {
-            var systems = new BossRunSystems(BossCatalog.FromJson(files), StandardRunSystems.FromJson(files));
-            var setup = StandardRunSystems.FromJson(files).NewRunSetup("orc_ironworks", Race.Orc, files);
-            var state = systems.AssignBosses(RunEngine.Start(setup, seed, Catalog, systems));
-            var node = RunEngine.AvailableNodes(state).First(n => n.IsMatch);
-            foreach (var (name, decisions, watched) in DecisionSets())
+            foreach (ulong seed in new ulong[] { 20260905, 20260906, 20260907, 20260908, 1, 2, 3, 42 })
             {
-                // Antes (RunController.Answer hasta BX-19): reproducción y entrada por separado.
-                var playbackBefore = MatchPlaybacks.OfResolvingBlockedPoints(
-                    state, node.Id, Catalog, systems, trace: true, decisions, watched, out var resolvedBefore);
-                var entryBefore = RunEngine.EnterMatch(state, node.Id, Catalog, systems, resolvedBefore);
-
-                var (playback, entry) = MatchPlaybacks.PlayAndEnter(state, node.Id, Catalog, systems, decisions, watched, out var resolved);
-
-                Assert.Equal(Fingerprint(playbackBefore), Fingerprint(playback));
-                Assert.Equal(resolvedBefore.Substitutions, resolved.Substitutions);
-                Assert.Equal(Fingerprint(entryBefore), Fingerprint(entry));
-
-                if (SubstitutionPoints.Pending(playback.Setup, playback.Result, playback.PlayerTeam, Catalog, resolved.Declines) is null)
+                var systems = new BossRunSystems(BossCatalog.FromJson(files), StandardRunSystems.FromJson(files));
+                var setup = StandardRunSystems.FromJson(files).NewRunSetup(club, race, files);
+                var state = systems.AssignBosses(RunEngine.Start(setup, seed, Catalog, systems)).WithTakenConsumable("field_bandage");
+                var node = RunEngine.AvailableNodes(state).First(n => n.IsMatch);
+                foreach (var (name, decisions, watched) in DecisionSets().Concat(DerivedSets(state, node.Id, systems)))
                 {
-                    fast++;
-                }
-                else
-                {
-                    fallback++;
+                    // Antes (RunController.Answer hasta BX-19): reproducción y entrada por separado.
+                    var playbackBefore = MatchPlaybacks.OfResolvingBlockedPoints(
+                        state, node.Id, Catalog, systems, trace: true, decisions, watched, out var resolvedBefore);
+                    var entryBefore = RunEngine.EnterMatch(state, node.Id, Catalog, systems, resolvedBefore);
+
+                    var (playback, entry) = MatchPlaybacks.PlayAndEnter(state, node.Id, Catalog, systems, decisions, watched, out var resolved);
+
+                    Assert.Equal(Fingerprint(playbackBefore), Fingerprint(playback));
+                    Assert.Equal(resolvedBefore.Substitutions, resolved.Substitutions);
+                    Assert.Equal(Fingerprint(entryBefore), Fingerprint(entry));
+                    kinds.Add(name);
+
+                    if (SubstitutionPoints.Pending(playback.Setup, playback.Result, playback.PlayerTeam, Catalog, resolved.Declines) is null)
+                    {
+                        fast++;
+                    }
+                    else
+                    {
+                        fallback++;
+                    }
                 }
             }
         }
 
-        // Regla J: los dos caminos se han ejercitado de verdad, si no la igualdad no prueba nada del que falta.
+        // Regla J: los dos caminos y las cinco clases de decisión se han ejercitado de verdad; si no, la igualdad no
+        // prueba nada de lo que falta. (Forzar el camino rápido con un punto pendiente hace fallar este test: comprobado
+        // al escribirlo, ADR 0191.)
         Assert.True(fast > 0, $"ningún caso por el camino rápido ({fallback} por el de respaldo)");
         Assert.True(fallback > 0, $"ningún caso por el camino de respaldo ({fast} por el rápido)");
+        foreach (var kind in new[] { "sustituye", "hueco", "sigue", "vendaje-300", "ofensiva-200" })
+        {
+            Assert.True(kinds.Contains(kind), $"falta {kind}: {string.Join(", ", kinds)}");
+        }
+
+        _output.WriteLine($"camino rápido {fast}, de respaldo {fallback}");
     }
 }

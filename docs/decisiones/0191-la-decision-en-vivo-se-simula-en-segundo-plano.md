@@ -73,12 +73,24 @@ enseña, así que el fotograma siguiente ya puede ser distinto. Lo único válid
 | Hilo principal en el clic (Godot `Debug`, 18 decisiones) | 0,5-3,9 s | **≤ 3 ms** |
 | Fotograma en que se aplica (pantalla + guardado) | — (dentro del bloqueo) | **6-15 ms** (< 1 fotograma a 60 Hz) |
 | Simulación de fondo, Release | 37-105 ms en el hilo principal | 19-55 ms fuera de él (≈ 1-3 fotogramas sostenidos a 60 Hz, el campo se sigue dibujando) |
-| Partido del hilo de fondo frente al del hilo principal | — | **igual en 18/18** (huella de eventos y traza) |
+| Partido del hilo de fondo frente al del hilo principal | — | **igual en 18/18** (huella de eventos y traza, y el `RunSave` del estado de después) |
 
-`PlayAndEnterTests` (RT-024): 8 semillas × 5 juegos de decisiones (ninguna, órdenes, suelo de lo visto) dan **byte a
-byte** el mismo `RunSave`, resumen, eventos, traza y sustituciones que las dos llamadas de antes, por los dos caminos; y
-el test falla si se fuerza el camino rápido con un punto pendiente (instrumento validado, Regla J). Bucle de
-`Sim.Tests` sin puertas: 1.958/1.958. Capturas `paron-tras-orden.png`, `consumible-2-usado.png`.
+`PlayAndEnterTests` (RT-024): 2 clubes × 8 semillas × las cinco clases de decisión (órdenes, suelo de lo visto,
+consumible manual, y —sobre el primer punto del jugador que aparezca— sustituir, dejar el hueco y «que siga jugando») dan
+**byte a byte** el mismo `RunSave`, resumen, eventos, traza y sustituciones que las dos llamadas de antes, por los dos
+caminos (101 por el rápido, 4 por el de respaldo en esos primeros partidos; en actos posteriores, con más lesiones, el de
+respaldo será más frecuente —LIKELY, sin medir—, y entonces la simulación de fondo cuesta lo de antes, pero fuera del hilo
+principal). Forzar el camino rápido con un punto pendiente hace fallar el test (ejecutado dos veces al escribirlo; Regla J).
+Bucle de `Sim.Tests` sin puertas: 1.958/1.958. Capturas `paron-tras-orden.png`, `consumible-2-usado.png`.
+
+Las cifras de «antes» en Godot salen de una instrumentación temporal de `RunController.Answer` (cronómetros por parte)
+que no se ha dejado en el árbol; el arnés `-- paron` que queda mide el camino nuevo.
+
+**Tras la revisión independiente:** `BroadcastScreen` y la vista de depuración `MatchScreen` completan al entrar la
+decisión pendiente (salir con F3 a mitad de una simulación enseñaba el partido viejo); el test cubre las cinco clases de
+decisión y dos clubes; el arnés compara también el estado de después. Anotado, sin cambiar: si `/Sim` lanzara una
+excepción con la decisión, ahora sale al aplicarla (o en `Save`/`CommitMatch`) y no en el clic; y la bandeja de sustitución
+sigue visible los milisegundos que dura la simulación (sin efecto: la respuesta ya se tomó).
 
 Sin lote de `/Balance` (`balance-measure`): no cambia ningún peso, probabilidad ni partido; la igualdad se mide en tests.
 
