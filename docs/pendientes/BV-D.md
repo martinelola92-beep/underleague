@@ -69,6 +69,8 @@ reproduce las cifras de la ADR 0186: 0,789 / 0,464):
 | base (140 / 60) | 0,789 ± 0,009 | 0,464 ± 0,007 | 9,27 | 11,22 | 2,474 | 2,087 |
 | E1: limpio 0, falta 200 (la falta igual) | 0,659 ± 0,008 | 0,334 ± 0,006 | 9,32 | 11,25 | 2,490 | 2,098 |
 | E2: 0 / 60 (base común a 0) | 0,573 ± 0,008 | 0,277 ± 0,005 | 9,37 | 11,28 | 2,508 | 2,109 |
+| 90 / 110 | 0,742 ± 0,009 | 0,412 ± 0,007 | 9,29 | 11,24 | 2,479 | 2,088 |
+| 75 / 125 | 0,726 ± 0,009 | 0,396 ± 0,006 | 9,30 | 11,24 | 2,482 | 2,091 |
 | 55 / 145 | 0,707 ± 0,009 | 0,375 ± 0,006 | 9,30 | 11,25 | 2,485 | 2,093 |
 | objetivo (antes de la 0184) | 0,692 | 0,395 | | | | |
 
@@ -81,8 +83,20 @@ Runs completas (`--full-runs 240`, semillas 1-3, contextual, 720 runs; `base` re
 | brazo | lesiones propias / run | graves / run | muertes / partido | `runWinRate` |
 |---|---|---|---|---|
 | base | 4,04 ± 0,15 | 2,02 | 0,155 ± 0,007 | 15,3 (12,9 / 16,7 / 16,2) |
+| 90 / 110 | 3,50 ± 0,14 | 1,76 | 0,155 ± 0,007 | 16,2 (14,6 / 18,3 / 15,8) |
+| 75 / 125 | 3,25 ± 0,13 | 1,60 | 0,156 ± 0,007 | 16,7 (13,8 / 20,4 / 15,8) |
 | 55 / 145 | 3,12 ± 0,12 | 1,52 | 0,153 ± 0,007 | 16,0 (14,6 / 19,2 / 14,2) |
 | objetivo (antes de la 0184) | 3,70 ± 0,14 | | 0,152 ± 0,008 | 16,8 |
 
 **Las dos cifras objetivo no las devuelve el mismo valor** (CONFIRMED con los dos lotes): la run responde al contacto
 limpio con más fuerza que el partido de referencia (con 55 la referencia queda en +2 % / −5 % y la run en −16 %).
+
+**Criterio para elegir (fijado antes de mirar el resultado de 90):** las tres cifras de antes —s1, s2 y la run— pesan
+igual, y se elige el valor (múltiplo de 5) que hace **menor la peor desviación relativa** de las tres. Desviación con
+cada valor (s1 / s2 / run): 140 → +14,0 / +17,5 / +9,2 %; **90 → +7,2 / +4,3 / −5,4 %**; 75 → +4,9 / +0,3 / −12,2 %;
+55 → +2,2 / −5,1 / −15,7 %. Interpolando, 85 da +6,5 / +3,0 / −7,6 y 100 da +8,6 / +6,9 / −2,5: **el mínimo está en 90**.
+Con 90, la run (3,50 frente a 3,70 ± 0,14) y la s2 (0,412 frente a 0,395, ≈ 1,7 e.t.) vuelven dentro del ruido; la s1
+queda a mitad de camino (0,742 frente a 0,692). Una sola palanca no puede devolver las tres a la vez.
+
+Las muertes por partido no se mueven con ningún valor (0,153-0,156, banda 0,11-0,22): la vía 1 (reincidir con una grave
+sin tratar) baja con las lesiones, pero la domina la letalidad de perks (ADR 0048), que no pasa por esta fórmula.
