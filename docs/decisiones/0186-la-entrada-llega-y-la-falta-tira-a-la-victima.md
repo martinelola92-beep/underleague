@@ -75,7 +75,7 @@ Detectores (`tools/barrido-detectores.sh`, 100 partidos, `main` → final, casos
 BB-K 0,79 ± 0,13 → 0,87 ± 0,12 / 0,64 → 0,73; BO-A 0,02 → 0,04 / 0,04 → 0,02; **BN-A 0,60 ± 0,08 → 0,72 ± 0,09 /
 0,42 ± 0,06 → 0,56 ± 0,08**. BB-K y BO-A sin cambio distinguible del ruido. **BN-A sube en las dos trazas** (≈ 1-1,4
 errores típicos en cada una): LIKELY un empeoramiento leve, sin aislar entre 0184 y 0186; queda anotado en BV-B para la
-siguiente pasada. Mejoran BC-G (0,13 → 0,06) y BA-E (0,27 → 0,18).
+siguiente pasada. Mejora BC-G (0,13 → 0,06). (BA-E no se compara: su detector cambió de fotograma en esta misma ADR.)
 
 ## Nota de `game-design-review` (diez preguntas)
 
@@ -132,3 +132,34 @@ se separan del ruido (±0,07). No se arregla ahora. BB-K y BO-A sin cambio disti
 ADR 0184: +2,4 ± 1,3); `TheThreeDoctrinesBuyDifferently` en la semilla 1 (ahorradora 15,81 frente a contextual 16,00;
 tres semillas, ahorradora − contextual +0,07 · −0,19 · −0,26; compras por mercado, contextual − ahorradora +0,09 · +0,04
 · +0,04: siguen comprando distinto).
+
+## Revisión independiente (3 oct 2026): `elf_none`, efectos de segundo orden y tests
+
+**`elf_none`, en la causa (`game-design-review` de «quien entra sigue a la víctima» frente a las razas que escapan).**
+La propuesta del revisor —que quien entra siga como mucho a su propia velocidad— **ya es lo que hace el motor**: el
+seguimiento usa `Move` con `SpeedPerTick` de quien entra (atributo `Speed`, cansancio, turba). Test de valor conocido
+`AFasterVictimOutrunsTheTackleAndASlowerOneIsCaught`: una víctima 0,06 casillas/tick más rápida sale del alcance de 1,0
+y la entrada falla; una 0,06 más lenta es alcanzada. **Por qué no basta (medido, `WhoOutrunsTheTackler`, 100 partidos):**
+en las entradas al portador (972 de 1.250) la víctima casi no corre durante la entrada —p50 0,04 casillas frente a 0,09
+de quien entra—, porque quien lleva el balón y tiene a alguien encima protege o arma un pase; sólo en 253 corre más que
+quien entra. Lo que el elfo perdió no es escapar corriendo sino que las entradas que antes se quedaban cortas a quien
+estaba casi quieto ahora llegan: +5 % de entradas resueltas. Y el elfo, por su ficha de raza, «pierde si le tocan»
+(fuerza −6; `data/races/elf.json`), sin velocidad propia de raza (`speed` 0). **No hay regla de velocidad que lo
+devuelva sin quitar a todos lo que BV-B arregló.** `elf_none` queda en rojo (39,08 / 39,90 / 39,90; banda D-29 40-60,
+**no se mueve**: su suelo no tiene otra procedencia que la propia puerta). Ficha: [BV-C](../pendientes/BV-C.md).
+
+**Efectos de segundo orden, anotados y sin arreglar:**
+
+- `duelist` (`TACKLE` → tumba al rival 18 ticks) y `dirty_play` (`FOUL` → lesiona y tumba al rival) **pierden efecto
+  visible** en la falta pitada: la víctima ya cae siempre. La lesión de `dirty_play` sigue siendo suya; el derribo es
+  redundante. Sin medir en `perkValue`.
+- `blood_scent` (sesgo de entrada hacia derribados) **gana blancos**: hay más rivales en el suelo tras una falta.
+- Faltas +4-5 % y lesiones propias por run 3,70 → 4,04 ± 0,15 (`--full-runs 240`, 720 runs): **toca la ADR 0048,
+  condición 3** (reducir el riesgo con la alineación): hay más contacto efectivo, así que la exposición crece algo para
+  todos. La muerte sigue en banda (0,155 ± 0,008 por partido). El revisor decidió bajar las lesiones por otro sitio.
+
+**Tests de la revisión:** `FoulByFoulTheHardOnesTopplesTheOffenderAndTheBallIsDropped` (falta a falta: con rasgo de
+entrada dura cae el infractor en las 274; en las mismas plantillas sin esos rasgos y con el umbral de fuerza fuera de
+alcance, en ninguna de 61; la víctima que llevaba el balón lo suelta en las 99; ningún sacador de falta en el suelo en
+6.520 fotogramas de saque). El test del jefe del acto 3 ya no depende de una semilla: recorre 40 fijas hasta el primer
+partido ganado.
