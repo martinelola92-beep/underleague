@@ -51,6 +51,7 @@ public static class MedicalSystem
         ArgumentNullException.ThrowIfNull(economy);
         var node = NodeGuards.RequireOpen(state, NodeKind.Clinic, "tratar a un jugador");
         var player = state.GetPlayer(decision.PlayerId);
+        RequireNotCrippled(player, decision);
         bool minor = player.PhysicalState == PhysicalState.MinorInjury && player.MinorInjuries > 0;
         if (player.PhysicalState != PhysicalState.SevereInjury && !minor)
         {
@@ -202,6 +203,11 @@ public static class MedicalSystem
     {
         ArgumentNullException.ThrowIfNull(player);
         ArgumentNullException.ThrowIfNull(prostheses);
+        if (player.Prostheses.Count >= RunRules.MaxProstheses)
+        {
+            return false;
+        }
+
         var occupied = OccupiedSlots(player);
         for (int i = 0; i < prostheses.All.Count; i++)
         {
@@ -230,6 +236,7 @@ public static class MedicalSystem
         ArgumentNullException.ThrowIfNull(prostheses);
         var node = NodeGuards.RequireOpen(state, NodeKind.Clinic, "acudir al herrero");
         var player = state.GetPlayer(decision.PlayerId);
+        RequireNotCrippled(player, decision);
         if (player.PhysicalState != PhysicalState.SevereInjury)
         {
             throw new ArgumentException(
@@ -283,7 +290,7 @@ public static class MedicalSystem
     public const int BlacksmithStreamSpan = 10_000 - BlacksmithStreamBase;
 
     /// <summary>Prótesis que hacen falta para que el jugador gane la etiqueta <c>Automaton</c> (RF-095c).</summary>
-    public const int ProsthesesForAutomaton = 3;
+    public const int ProsthesesForAutomaton = RunRules.MaxProstheses;
 
     /// <summary>Etiqueta de un jugador con alguna prótesis (ADR 0164).</summary>
     public const string ScrapTag = "Scrap";
@@ -349,7 +356,7 @@ public static class MedicalSystem
     public static bool NeedsTreatment(RunPlayer player)
     {
         ArgumentNullException.ThrowIfNull(player);
-        return player.PhysicalState == PhysicalState.SevereInjury
+        return (player.PhysicalState == PhysicalState.SevereInjury && !player.IsCrippled)
             || (player.PhysicalState == PhysicalState.MinorInjury && player.MinorInjuries > 0);
     }
 
@@ -370,6 +377,16 @@ public static class MedicalSystem
     {
         var definition = player.ToDefinition(catalog, applyMinorInjuryPenalty: false);
         return ProgressionRules.HasImmunity(definition, catalog, ImmunityKind.MinorInjuryClinicCost);
+    }
+
+    private static void RequireNotCrippled(RunPlayer player, object decision)
+    {
+        if (player.IsCrippled)
+        {
+            throw new ArgumentException(
+                $"el jugador {player.Id} está lisiado ({RunRules.MaxProstheses} prótesis y lesión grave): no tiene cura (ADR 0187)",
+                nameof(decision));
+        }
     }
 
     /// <summary>Un escalón hacia abajo: leve → grave, grave → muerto (ADR 0048, ADR 0099).</summary>

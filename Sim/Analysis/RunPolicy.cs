@@ -1045,7 +1045,7 @@ public static class RunPolicy
         var risky = new List<RunPlayer>();
         for (int i = 0; i < state.Roster.Count; i++)
         {
-            if (state.Roster[i].PhysicalState == PhysicalState.SevereInjury)
+            if (state.Roster[i].PhysicalState == PhysicalState.SevereInjury && !state.Roster[i].IsCrippled)
             {
                 risky.Add(state.Roster[i]);
             }
@@ -1584,7 +1584,7 @@ public static class RunPolicy
         for (int i = 0; i < state.Roster.Count; i++)
         {
             var player = state.Roster[i];
-            if (player.PhysicalState == PhysicalState.SevereInjury
+            if (player.PhysicalState == PhysicalState.SevereInjury && !player.IsCrippled
                 && (state.AvailablePlayerCount < options.TreatWhileAvailableBelow || Value(player, options) >= options.TreatFromValue))
             {
                 bill += economy.ClinicCost;
@@ -3473,7 +3473,7 @@ public static class RunPolicy
     {
         for (int i = 0; i < state.Roster.Count; i++)
         {
-            if (state.Roster[i].PhysicalState == PhysicalState.SevereInjury)
+            if (state.Roster[i].PhysicalState == PhysicalState.SevereInjury && !state.Roster[i].IsCrippled)
             {
                 return true;
             }
@@ -3488,7 +3488,7 @@ public static class RunPolicy
         for (int i = 0; i < state.Roster.Count; i++)
         {
             var player = state.Roster[i];
-            if (player.PhysicalState != PhysicalState.SevereInjury)
+            if (player.PhysicalState != PhysicalState.SevereInjury || player.IsCrippled)
             {
                 continue;
             }

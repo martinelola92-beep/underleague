@@ -250,6 +250,15 @@ public sealed record RunPlayer(
     /// </summary>
     public bool IsAvailable => PhysicalState is PhysicalState.Healthy or PhysicalState.MinorInjury;
 
+    /// <summary>
+    /// Lisiado (ADR 0187, decisión del revisor del 3 oct 2026): un jugador con <see cref="RunRules.MaxProstheses"/>
+    /// prótesis que sufre una lesión grave ya no tiene cura —ni médico, ni matasanos, ni herrero, ni tarifa
+    /// plana— y no puede alinearse, ni siquiera arriesgándose (RF-093 vía 1). Sigue en la plantilla: vínculos,
+    /// venta a precio de lesión grave. <b>Derivado</b>, sin campo propio: es grave con el tope de prótesis, de
+    /// modo que no puede desincronizarse del estado y un guardado anterior lo calcula al cargar.
+    /// </summary>
+    public bool IsCrippled => PhysicalState == PhysicalState.SevereInjury && Prostheses.Count >= RunRules.MaxProstheses;
+
     /// <summary>Copia con otro estado físico.</summary>
     public RunPlayer WithPhysicalState(PhysicalState state) => this with { PhysicalState = state };
 
@@ -430,6 +439,12 @@ public static class RunRules
     /// <c>data/</c> con un ADR, no se cambia aquí en silencio (RT-057).
     /// </summary>
     public const int MinorInjuryPenaltyPercent = 15;
+
+    /// <summary>
+    /// Tope de prótesis por jugador (ADR 0187, decisión del revisor): la tercera lo vuelve <c>Automaton</c>
+    /// (RF-095c) y a partir de ahí una lesión grave lo deja lisiado (<see cref="RunPlayer.IsCrippled"/>).
+    /// </summary>
+    public const int MaxProstheses = 3;
 
     /// <summary>Experiencia extra de un canterano, en porcentaje (RF-114c).</summary>
     public const int YouthExperienceBonusPercent = 33;

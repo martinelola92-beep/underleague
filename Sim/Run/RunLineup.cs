@@ -138,7 +138,7 @@ public static class RunLineup
         for (int i = 0; i < slots.Count; i++)
         {
             var player = state.FindPlayer(slots[i].PlayerId);
-            if (player is { PhysicalState: PhysicalState.SevereInjury })
+            if (player is { PhysicalState: PhysicalState.SevereInjury, IsCrippled: false })
             {
                 next = next.WithCounter(
                     RiskCounterPrefix + player.Id.ToString(System.Globalization.CultureInfo.InvariantCulture), 1);
@@ -157,7 +157,7 @@ public static class RunLineup
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(player);
         return player.IsAvailable
-            || (player.PhysicalState == PhysicalState.SevereInjury
+            || (player.PhysicalState == PhysicalState.SevereInjury && !player.IsCrippled
                 && state.Counter(RiskCounterPrefix + player.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)) > 0);
     }
 

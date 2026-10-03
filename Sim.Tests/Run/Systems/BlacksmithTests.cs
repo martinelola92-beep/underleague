@@ -231,9 +231,11 @@ public sealed class BlacksmithTests
         for (ulong seed = 1; seed <= 60; seed++)
         {
             var (state, patient) = ClinicWithSevere(seed);
-            // Ocupa todas las ranuras menos una: la única prótesis posible es la de esa ranura.
-            string free = slots[(int)(seed % (ulong)slots.Count)];
-            var occupied = slots.Where(s => s != free).Select(s => new RunProsthesis(s, "manual")).ToList();
+            // ADR 0187: con el tope de tres prótesis, el caso alcanzable es el de dos ranuras ocupadas (antes se
+            // ocupaban todas menos una, un jugador que ya no puede existir). La tercera nunca repite ranura.
+            int firstTaken = (int)(seed % (ulong)slots.Count);
+            var taken = new[] { slots[firstTaken], slots[(firstTaken + 1 + (int)(seed / 7 % 3)) % slots.Count] }.Distinct().ToList();
+            var occupied = taken.Select(s => new RunProsthesis(s, "manual")).ToList();
             var prepared = patient with { Prostheses = occupied };
             state = state.WithPlayer(prepared);
             var after = Forge(state, patient.Id, 5).GetPlayer(patient.Id);
@@ -243,7 +245,7 @@ public sealed class BlacksmithTests
             }
 
             Assert.Equal(occupied.Count + 1, after.Prostheses.Count);
-            Assert.Equal(free, after.Prostheses[^1].Slot);
+            Assert.DoesNotContain(after.Prostheses[^1].Slot, taken);
             Assert.Equal(after.Prostheses.Count, after.Prostheses.Select(p => p.Slot).Distinct().Count());
         }
     }

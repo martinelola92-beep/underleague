@@ -36,6 +36,12 @@ public sealed record CasualtyRow(int PlayerId, string PlayerName, Position Posit
 
     /// <summary>Id de la reliquia de <see cref="RelicName"/>, vacío si no hay.</summary>
     public string RelicId { get; init; } = string.Empty;
+
+    /// <summary>
+    /// True si esta lesión grave deja al jugador lisiado (ADR 0187): tenía el tope de prótesis y ya no tiene cura.
+    /// El informe tiene que decirlo, porque la plantilla pierde un jugador sin que nadie lo haya visto.
+    /// </summary>
+    public bool Crippled { get; init; }
 }
 
 /// <summary>
@@ -603,6 +609,7 @@ public static class PostMatchView
             {
                 RelicId = relic?.Id ?? string.Empty,
                 RelicName = relic is null ? string.Empty : NameIn(relic.Name, language),
+                Crippled = kind == CasualtyKind.SevereInjury && stateAfterMatch.GetPlayer(matchEvent.Actor).IsCrippled,
             });
         }
 
