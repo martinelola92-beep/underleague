@@ -3,7 +3,7 @@
 **Estado:** **Parte `/Game` implementada en dos pasadas (3 oct 2026)**, medidas antes/después con 3 semillas (tablas en
 «Implementación» y «Segunda pasada»: trayectoria Hermite, zancada en fase con el desplazamiento, mirar al balón, balón al pie
 rodando, golpeo soltado al arrancar, congelación sin retroceso). H8 (oscilación) arreglada en `/Sim` el 3 oct (ADR 0184,
-sección «H8 en `/Sim`»); H4 (aceleración) queda propuesta en la ADR 0185. Siguen abiertos IK de pie en los giros y clips
+sección «H8 en `/Sim`»); H4 (aceleración) encendida el 3 oct en juego abierto (ADR 0185, `accelTicks` 3: inversiones 0,092 → 0,010/s). Siguen abiertos IK de pie en los giros y clips
 de retroceso/lateral. Diagnóstico del 2 oct: ocho causas CONFIRMED con el instrumento nuevo. Hermanas: [BB-K](./BB-K.md) (baile de dos compañeros; queda `FindSpace`),
 [BI-C](./BI-C.md) (root motion), [BI-H](./BI-H.md) (balón anclado al hueso), [BA-K](./BA-K.md) (cortes de teletransporte).
 
