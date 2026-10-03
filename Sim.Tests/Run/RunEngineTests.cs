@@ -182,20 +182,31 @@ public class RunEngineTests
     [Fact]
     public void WinningTheThirdBoss_WinsTheRun()
     {
-        // RF-002: la run termina en victoria al derrotar al jefe del acto 3.
+        // RF-002: la run termina en victoria al derrotar al jefe del acto 3. Lo que se comprueba es la REGLA (ganar el
+        // jefe del acto 3 cierra la run en victoria), no que una semilla concreta gane un partido: con calidad 80 contra
+        // 20 se gana casi siempre, pero el partido depende del motor, y cada cambio de IA movía la semilla elegida
+        // (ADR 0053; ADR 0186: la 4115 pasó a perder). Se recorren semillas fijas hasta el primer partido ganado
+        // —determinista— y se exige que exista (medido: 39 de 40 semillas 4100-4139 ganan).
         var systems = new TestRunSystems { OpponentQuality = 20 };
-        // La semilla se elige para que el partido se gane: con calidad 80 contra 20 se gana casi
-        // siempre, pero "casi" no es "siempre", y el id del nodo de jefe -del que sale la semilla del
-        // partido- se movió con el mapa de cuatro carriles (ADR 0053). ADR 0186: con la 4115 este partido se pierde
-        // (medido: 39 de 40 semillas 4100-4139 ganan; la 4115 es la única derrota), así que pasa a la 4116.
-        var state = RunStateBuilder.From(TestRuns.Setup(quality: 80), 4116, Catalog)
-            .AtAct(3)
-            .BeforeBoss()
-            .Build();
+        for (ulong seed = 4100; seed < 4140; seed++)
+        {
+            var state = RunStateBuilder.From(TestRuns.Setup(quality: 80), seed, Catalog)
+                .AtAct(3)
+                .BeforeBoss()
+                .Build();
 
-        state = RunEngine.Enter(state, state.CurrentMap.BossNodeId, Catalog, systems);
+            state = RunEngine.Enter(state, state.CurrentMap.BossNodeId, Catalog, systems);
+            var outcome = RunEngine.Outcome(state);
+            Assert.True(outcome.IsOver, $"semilla {seed}: el partido del jefe del acto 3 debía cerrar la run, gane o pierda");
+            if (outcome.Kind == RunOutcomeKind.Victory)
+            {
+                return;
+            }
 
-        Assert.Equal(RunOutcomeKind.Victory, RunEngine.Outcome(state).Kind);
+            Assert.Equal(DefeatCause.BossMatchLost, outcome.Cause);
+        }
+
+        Assert.Fail("ninguna de las 40 semillas fijas ganó el jefe del acto 3 con calidad 80 contra 20");
     }
 
     [Fact]

@@ -3555,6 +3555,15 @@ internal sealed class MatchEngine : IPerkWorld
         ResolveTackle(tackler);
     }
 
+    /// <summary>ADR 0186: un tick de la entrada en curso de <paramref name="tacklerIndex"/> (sigue a la víctima si la regla está encendida).</summary>
+    internal void TacklingStepForTest(int tacklerIndex, int victimIndex)
+    {
+        var tackler = _players[tacklerIndex];
+        tackler.TackleTarget = _players[victimIndex];
+        tackler.EnterState(PlayerState.Tackling, 3);
+        ExecuteAction(tackler);
+    }
+
     internal void FinishRepeatedTackleForTest(MatchPlayer tackler) => FinishRepeatedTackle(tackler, wasFoul: false, won: false, deferredFall: false);
 
     /// <summary>

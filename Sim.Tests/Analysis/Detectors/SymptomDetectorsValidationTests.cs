@@ -468,7 +468,8 @@ public sealed class SymptomDetectorsValidationTests
         }
 
         Assert.True(engine > 50, $"muestra demasiado pequeña: {engine}");
-        // ±10 %: la traza graba la posición al FINAL del tick y el motor la mide al lanzar.
+        // ±10 %: el detector mide la apertura en el fotograma anterior al suceso, que es donde dispara el tirador (ADR
+        // 0186); queda la holgura de antes porque el motor la redondea en centésimas y la traza no.
         Assert.InRange(detector, (long)(engine * 0.9) - 2, (long)(engine * 1.1) + 2);
         Assert.InRange(shotsDetector, (long)(shotsEngine * 0.9) - 2, (long)(shotsEngine * 1.1) + 2);
     }
