@@ -94,3 +94,22 @@ Barrido de la tarde: **0,024 → 0,047 ± 0,007** tramos de más de 3 s por part
 
 Queda abierta la causa de fondo de siempre (por qué se vuelve a elegir proteger con la misma presión, BI-D/BJ-A) y el
 defensa cuyo punto de cobertura cae encima del portador.
+
+### Efectos de segundo orden del tope exacto (revisión independiente, 3 oct 2026)
+
+Medido con el mismo árbol y el tope exacto encendido o apagado (interruptor temporal, retirado), semillas pareadas:
+
+- **Portadores fuertes** (`--builds X --vs Y`, 4.000 partidos, semillas 1-4, victoria con → sin): `orc_none` contra
+  `human_none` 59,10/58,40/62,40/63,48 frente a 59,23/58,70/62,60/63,92 (**−0,27** de media, mismo signo en las cuatro);
+  `dwarf_none` contra `human_none` 63,17/59,25/65,38/71,10 frente a 62,38/58,17/65,15/71,00 (**+0,55**). Entradas por
+  partido iguales (±0,05). No hay una pérdida común para quien protege con fuerza: un cuarto de punto o medio, con signos
+  opuestos entre las dos razas de fuerza. Sin efecto relevante.
+- **`elf_out_of_zone`** contra `elf_none` (4.000, semillas 1-4): 52,30/54,20/53,40/53,48 frente a 52,25/53,83/53,33/53,23,
+  **+0,19** de media, mismo signo en las cuatro. Es la dirección que la saca del techo de 45 de la puerta (45,18), y del
+  tamaño de lo que la saca. LIKELY que el tope contribuye; no se mueve la banda.
+- **`TheThreeDoctrinesBuyDifferently`** (oro sin gastar, ahorradora − contextual, 240 runs por doctrina, semillas 1-4):
+  con el tope exacto −0,47 / +0,64 / −0,74 / +0,67 (media +0,03); sin él +0,86 / +2,28 / −0,38 / +1,72 (media +1,12).
+  **El tope estrecha el margen en ~1,1 puntos, mismo signo en las cuatro semillas (CONFIRMED como efecto, causa sin
+  aislar)**: deja a las dos doctrinas empatadas en oro sobrante y la puerta, de una sola semilla, cae a un lado o al otro.
+  Compras por mercado, contextual − ahorradora, +0,02 a +0,08 en los dos brazos: siguen comprando distinto. No se mueve la
+  puerta ni su semilla; decisión del revisor (la puerta pide un orden que el juego ya no separa).

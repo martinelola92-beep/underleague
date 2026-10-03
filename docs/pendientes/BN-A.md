@@ -130,3 +130,7 @@ vayan hacia el portero, sino que estaban allí defendiendo y salen andando. Volv
 sostenga la cobertura dentro de su propia área —tocar la ADR 0184—, (b) salir del área cerrada más deprisa que andando
 —tocar RF-053 en la ADR 0152—, o (c) aceptar que el detector de base cuenta defensa legítima y vigilar la fila
 persistente.
+
+**Por defecto, (c)** (coordinador, 3 oct 2026, tras la revisión independiente): la ficha sigue **abierta**; se vigila la
+fila «BN-A amontonamiento que sigue a los 10 ticks» del barrido (hoy 0,084 / 0,068) y no se toca la regla mientras el
+revisor no elija (a) o (b).
