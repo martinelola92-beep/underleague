@@ -123,3 +123,9 @@ banda sólo `betterTeamWinRate` 60-40, la conocida.
   con las ADR 0184/0186 y volvió a verde con la 0188; el signo cambia por semilla (ver ADR 0184, «Puertas»). Sin medir
   aparte con más semillas.
 - Dentro de `BadBuildsLoseToTheirBaseline`, ya roja, aparece `elf_out_of_zone` 45,18 (techo 45; `main` < 45).
+
+**Tras la revisión independiente** (guarda de la entrada sin contacto, catálogo por hilo en los tests, `immovable` en
+`dwarf_fortress`): barrido de 1.000 idéntico al de arriba (BH-A 0 / 0, BO-A 0,005 / 0,002, BN-A 0,780 / 0,646, fila
+persistente 0,084 / 0,068). Puertas afectadas (`BuildGate`, `FullRunGate`, `RaceBalance`, `Statistical`): 7 rojas, las de
+antes con `EveryCatalogPerkIsAssignedInSomeBuild` ya en verde. Efectos del tope exacto con cuatro semillas, en
+[BO-A](../pendientes/BO-A.md).
