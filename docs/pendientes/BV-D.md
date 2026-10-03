@@ -47,7 +47,7 @@ muerte (RF-093 vía 1) si la víctima salió con lesión grave sin tratar
 | `severeShare` ↓ | sólo la gravedad | menos graves, mismas lesiones | baja vía 1 | — no devuelve el recuento |
 | rasgos (`Dirty`, `Resilient`) / cuotas de perk | lo que se anuncia | igual | — | es justo lo que no se toca |
 | `actScalePercent`, `eliteScalePercent` | sólo la run | igual | vía 1 | no devuelve el partido de referencia |
-| **`onTackleBase` ↓ y `onFoulBase` ↑ en lo mismo** | sólo el **contacto limpio**; la falta y el perk `injure` quedan **bit a bit** | igual | vía 1 | intacta: la falta lesiona lo mismo, la entrada limpia menos |
+| **`onTackleBase` ↓ y `onFoulBase` ↑ en lo mismo** | sólo el **contacto limpio**; la falta y el perk `injure` quedan **bit a bit** | igual | vía 1 | gana en relativo: la falta lesiona lo mismo; la limpia del `Dirty` baja un 4 % y la de un limpio un 35 % (ADR 0188) |
 
 ## Hipótesis sobre cuánto puede dar cada palanca
 
@@ -91,12 +91,24 @@ Runs completas (`--full-runs 240`, semillas 1-3, contextual, 720 runs; `base` re
 **Las dos cifras objetivo no las devuelve el mismo valor** (CONFIRMED con los dos lotes): la run responde al contacto
 limpio con más fuerza que el partido de referencia (con 55 la referencia queda en +2 % / −5 % y la run en −16 %).
 
-**Criterio para elegir (fijado antes de mirar el resultado de 90):** las tres cifras de antes —s1, s2 y la run— pesan
+**Criterio para elegir (escrito junto con los resultados; el mínimo en 90 es LIKELY, la run tiene ±4 %):** las tres cifras de antes —s1, s2 y la run— pesan
 igual, y se elige el valor (múltiplo de 5) que hace **menor la peor desviación relativa** de las tres. Desviación con
 cada valor (s1 / s2 / run): 140 → +14,0 / +17,5 / +9,2 %; **90 → +7,2 / +4,3 / −5,4 %**; 75 → +4,9 / +0,3 / −12,2 %;
-55 → +2,2 / −5,1 / −15,7 %. Interpolando, 85 da +6,5 / +3,0 / −7,6 y 100 da +8,6 / +6,9 / −2,5: **el mínimo está en 90**.
+55 → +2,2 / −5,1 / −15,7 %. Interpolando (no medido), 85 da +6,5 / +3,0 / −7,6 y 100 da +8,6 / +6,9 / −2,5: **el mínimo está en 90**.
 Con 90, la run (3,50 frente a 3,70 ± 0,14) y la s2 (0,412 frente a 0,395, ≈ 1,7 e.t.) vuelven dentro del ruido; la s1
 queda a mitad de camino (0,742 frente a 0,692). Una sola palanca no puede devolver las tres a la vez.
 
 Las muertes por partido no se mueven con ningún valor (0,153-0,156, banda 0,11-0,22): la vía 1 (reincidir con una grave
 sin tratar) baja con las lesiones, pero la domina la letalidad de perks (ADR 0048), que no pasa por esta fórmula.
+
+## Qué ve el jugador: ¿se distingue la lesión por falta de la limpia? (leído, Regla I; sin captura)
+
+- `MatchMomentView` (regla 3) **funde** la falta y la lesión del mismo tick en un momento (comparten persona) y lo
+  encabeza la lesión (nivel 2-3 frente a 1): el sello del pregón (`BroadcastScreen`, `ui.pregon.stamp.minorInjury`) y el
+  sonido (`MomentSounds`: dolor, no silbato) son **los mismos** en los dos casos.
+- Lo que sí distingue la falta: el gesto del árbitro en la vista 3D (`MatchPitchView3D`, `RefereeCue.Foul` / `Unseen`,
+  que lee el `FOUL` directamente), la caída (ADR 0186: en la falta pitada cae la víctima; en la no pitada, el infractor)
+  y la línea `FOUL` del registro (`MatchLogView`) antes de la de `INJURY`.
+- **LIKELY: la diferencia existe pero es secundaria**; el sello no dice «por falta». Con la ADR 0188 casi toda la lesión
+  sale de faltas y de jugadores `Dirty`, así que un sello «lesión por falta» haría legible la regla. Sin implementar (es
+  `/Game`, encargo aparte).
