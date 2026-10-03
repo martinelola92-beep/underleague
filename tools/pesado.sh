@@ -22,4 +22,6 @@ secs="$1"; shift
 lock=/home/martinelola92/underleague/out/.pesado.lock
 mkdir -p "$(dirname "$lock")"
 echo "[pesado] esperando turno ($(date +%H:%M:%S)): $*" >&2
-exec flock "$lock" bash -c 'echo "[pesado] turno obtenido ($(date +%H:%M:%S))" >&2; exec timeout "$0" "$@"' "$secs" "$@"
+# -o: el comando no hereda el descriptor del candado. Sin él, el servidor de compilación de Roslyn
+# (VBCSCompiler), que sobrevive al build, se quedaba el candado para siempre (3 oct 2026: 9 min bloqueado).
+exec flock -o "$lock" bash -c 'echo "[pesado] turno obtenido ($(date +%H:%M:%S))" >&2; exec timeout "$0" "$@"' "$secs" "$@"
