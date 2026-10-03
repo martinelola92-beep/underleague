@@ -48,6 +48,25 @@ independiente, rebase y merge a `main`, push):
    - en `/Sim` con ADR: aceleración (H4) y oscilación (H8).
    Ver `docs/pendientes/BV-A.md`.
 
+**BUILD DE LA MAÑANA (3 oct, 05:15)**: `.exe` en el Escritorio, `main` dfd6875. Lleva:
+- animación 3D en tres pasadas (BV-A, BV-B): locomoción continua, trayectoria Hermite, mirada, balón rodando, entradas sincronizadas con el contacto, caídas que se levantan, inclinación y cabeza al balón;
+- F3 opcional en Ajustes;
+- «Continuar» que no borra el guardado.
+
+NO lleva la ADR 0184 (sostenida de colocación contra la indecisión, rama `worktree-agent-a7895ebc657f51442`). Funciona (42,4 → 14,6 %) pero entradas +18-22 %, lesiones +10-17 % y runWinRate 16,8 → 13,5. Hay dos puertas rojas y un dueño que perseguía su balón, con una guarda sin causa conocida. Decide el revisor tras jugar.
+
+Barrido de detectores (`tools/barrido-detectores.sh`, `docs/analisis/barrido-detectores-2026-10-03.md`):
+- reaparecen reducidos: BB-K, BN-A, BO-A, BA-E y BB-A;
+- queda abierta en `/Sim`: BV-B (entradas que se resuelven a >0,9 casillas; en falta pitada cae el infractor y no la víctima).
+
+Siguiente:
+- opinión del revisor sobre la sensación;
+- decidir la ADR 0184;
+- ADR 0185 (arranque y frenada);
+- IK de pies;
+- tope de 3 prótesis con lisiado;
+- ajuste de `into_the_mob` d2/d3 y `eye_for_eye` d3.
+
 **DECISIONES DEL REVISOR (3 oct, madrugada):**
 1. F3 (vista 2D) pasa a ser opcional en el menú de ajustes. **HECHO (3 oct):** `GameSettings.Match2DKey`, apagada por defecto, casilla en Ajustes; con ella apagada F3 no hace nada en la retransmisión.
 2. `Continue()` hace lo habitual: no borra el guardado; escritura atómica y anti-recarga por suelo/semilla. **HECHO (3 oct, enmienda de la ADR 0183):** `Continue` no borra, `WriteSave` es temporal + rename, y se guarda en cada transición también con el nodo abierto (cierra el camino de recarga de la compra/evento). RT-061 reescrito.
