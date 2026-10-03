@@ -513,7 +513,9 @@ public sealed partial class PlayerModel : Node3D
         }
 
         var forward = new Vector2(Mathf.Sin(_yaw), Mathf.Cos(_yaw));
-        float signed = step.Dot(forward) < -0.25f * distance ? -distance : distance;
+        // Hacia atrás sólo cuando reculaba mirando al balón: en un giro a la carrera el cuerpo va un instante «de
+        // espaldas» al muñeco que aún está girando, y ahí la zancada no debe invertirse (visto en la hoja del giro).
+        float signed = _faceBall && step.Dot(forward) < -0.25f * distance ? -distance : distance;
         _phase = Mathf.PosMod(_phase + (signed / cycle), 1f);
 
         float length = Mathf.Lerp(ClipLength("jog"), ClipLength("run"), jogToRun);
