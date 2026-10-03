@@ -1,8 +1,9 @@
 # BV-B — Entradas, faltas y caídas: lo que se ve y lo que viene de `/Sim`
 
 **Estado:** **Parte `/Game` implementada (3 oct 2026, tercera pasada de BV-A)**, medida antes/después con 3 semillas (tabla
-abajo). **Abierto en `/Sim`** (sin tocar, anotado con semilla y tick): entradas que se resuelven desde lejos y la falta
-pitada en la que cae quien la comete y no quien la recibe. Hermanas: [BV-A](./BV-A.md) (movimiento de los modelos), BI-H
+abajo). **Parte `/Sim` arreglada (3 oct 2026, [ADR 0186](../decisiones/0186-la-entrada-llega-y-la-falta-tira-a-la-victima.md))**:
+quien entra sigue a quien la recibe durante `Tackling` y en la falta pitada cae la víctima (el infractor sólo si fue
+dura); sección «`/Sim`: arreglo» al final. Quedan anotados: BN-A sube un poco con 0184+0186 (sin aislar) y `elf_none` sale de la banda D-29 por seguir a la víctima (ADR 0186). Hermanas: [BV-A](./BV-A.md) (movimiento de los modelos), BI-H
 (contacto con el balón), ADR 0173 (pausa breve en lo que para el juego).
 
 ## Observación (revisor, vía coordinador)
@@ -77,3 +78,19 @@ El pack de Mixamo ya tenía `trip`, `fallen`, `standing up` y la plancha: el def
 
 Hojas: `Game/screenshots/movimiento/hoja-caida-v3-antes.png` / `-despues.png` (el mismo bloqueo con falta, semilla 20260905,
 fotogramas 36-81 cada 3: antes `trip` y de pie de golpe; después plancha, deslizamiento y levantada).
+
+
+## `/Sim`: arreglo (3 oct 2026, ADR 0186)
+
+| | Hipótesis | Etiqueta | Medida |
+|---|---|---|---|
+| (i)a | Quien entra se queda quieto los `TacklingTicks` (rama por defecto de `ExecuteAction`) y la víctima se aleja | **CONFIRMED** | `TackleReachTests` (100 partidos de referencia): con la regla apagada, 324 de 1.280 entradas a más de 0,9 casillas al empezar el tick de la resolución (p50 0,74); siguiéndole hasta 0,6, 14 de 1.269 (p50 0,64) |
+| (i)b | El margen de 0,3 sobre el alcance de la decisión permite resolver hasta 1,3 | Contribuye, **no se toca** | Con la víctima seguida casi ninguna entrada lo usa: 14 de 1.269 por encima de 0,9 al empezar el tick |
+| (i)c | Seguirle hasta su posición | **REJECTED** (medido) | Lo metía en su cuerpo: la separación empujaba al tirador en el mismo tick y `SymptomDetectorsValidationTests` (tiros sin ángulo, traza contra motor) dejó de cuadrar (108 frente a 81-104). Con 0,6 cuadra |
+| (ii) | La regla de `ResolveFoul` derriba siempre al infractor y nunca a la víctima | **CONFIRMED** (leído y medido) | Regla apagada: víctima en el suelo en 26 de 317 faltas pitadas (otras causas), infractor en las 317. Con la regla: víctima en las 315 de 315 e infractor en 294 (las faltas las hacen casi siempre jugadores con rasgo de entrada dura) |
+
+`/Game` no se toca: ya presenta la caída por estado (`FallFor`). Efecto en el partido, en la ADR 0186: entradas +3 %,
+faltas +4-5 %, lesiones hasta +5 %, goles −3 %; muertes por partido 0,149 → 0,159 ± 0,008 (en banda).
+
+**Abierto:** BN-A (amontonamiento sobre el portero) 0,60 → 0,72 por partido en `ref` y 0,42 → 0,56 en `run` de `main` al
+final (≈ 1-1,4 errores típicos en cada traza), sin aislar entre 0184 y 0186.

@@ -1,6 +1,6 @@
 # 0184 — Una colocación se sostiene (BV-A H8)
 
-Fecha: 3 oct 2026 · Estado: **aceptada, con dos puertas en rojo para decisión del revisor** (ver «Puertas») · Requisitos: RT-089, RT-093, RT-096, RT-097, RT-098 · Ficha: [BV-A](../pendientes/BV-A.md) ·
+Fecha: 3 oct 2026 · Estado: **aceptada por el revisor** («arreglar ya que la IA deje de dudar; las lesiones ya las bajaremos por otro sitio»); puertas en rojo explicadas en «Puertas» · Requisitos: RT-089, RT-093, RT-096, RT-097, RT-098 · Ficha: [BV-A](../pendientes/BV-A.md) ·
 Hermanas: [ADR 0176](0176-dos-companeros-no-cubren-el-mismo-punto.md) (BB-K), [ADR 0177](0177-el-designado-de-un-balon-quieto-va-a-por-el.md) (BC-G) ·
 Siguiente paso: [ADR 0185](0185-arranque-y-frenada.md) (H4)
 
@@ -127,9 +127,7 @@ brazo): muertes por run **1,401 ± 0,074 → 1,308 ± 0,070**, por partido **0,1
 **Hermano encontrado midiendo (CONFIRMED, latente).** Con la sostenida a 50, `StalledDuelTests` cazó a un dueño del
 balón en `Positioning` (estado sin pases ni regate) que eligió perseguir su propio balón y se quedó 414 ticks en
 `Chasing` con un rival encima (semilla 70). Con la sostenida a 0, cero fotogramas así en 100 partidos: el mecanismo
-existía sin activarse. Guarda en `MatchEngine.UpdatePlayer` —el dueño del balón decide como portador—, del tipo de la
-de BB-O; no cambia ningún partido con el dato a 0 (lo fijan las huellas). **Sin aislar** el camino por el que el dueño
-acaba en `Positioning` (no es el fin del derribo: probado y descartado).
+existía sin activarse. La causa y el arreglo están en «Hermano encontrado midiendo», abajo.
 
 **Atribución por cara** (semilla 1, versión con fugas a 60, cada cara sola y las otras apagadas): la sostenida entre
 colocaciones sola: entradas 7,63 → 8,20, goles 2,48 → 2,33; el borde exterior solo: nada medible; el hueco de
@@ -151,36 +149,37 @@ jugador clavado mientras el juego pasa — aparece con 100 y por eso la dosis es
 pisa perseguir, entrar, presionar, bloquear ni pasar (test de rejilla); 10 sonda limpia con control y contraste RT-098,
 escenarios montados, lote de dos semillas, runs completas y puertas.
 
+## Hermano encontrado midiendo: quien recoge el balón bloqueando (CONFIRMED, anterior a esta ADR)
+
+La guarda que la primera corrección puso en `MatchEngine.UpdatePlayer` («el dueño del balón decide como portador») ya
+no existe: se encontró la causa. Censo nuevo de repliegues de reserva (`UtilityCensus.Fallbacks`, contabilidad pura):
+`SetOwner` dejaba en `Blocking` a quien recogía el balón a mitad de un bloqueo; su decisión no encontraba ninguna acción
+legal, caía al repliegue de reserva y lo pasaba a `Positioning` con el balón (sin pases ni regate), y perseguía su
+propio balón. 0 casos en 200 partidos con la sostenida a 0 y 2 con ella a 50, siempre desde `Blocking`: el mecanismo es
+anterior y la sostenida sólo cambió las trayectorias que lo alcanzan. Arreglado en `SetOwner` (`Blocking` se suma a
+`Positioning`/`Chasing`/`Tackling`); con el arreglo, 0 repliegues de reserva en 200 partidos
+(`NoDecisionFallsBackToTheReserveRetreat`) y `StalledDuelTests` en verde sin la guarda.
+
 ## Puertas
 
-Con el código final (`positioningHoldBonus` = 50), las puertas afectadas (`StatisticalTests`, `FullRunGateTests`,
-`MatchOrder`): **3 rojas**, todas de las dos causas que la revisión pidió volver a medir. `MatchOrder` `DefensiveConcedes`
-pasa (en `main` estaba roja). El bucle de tests (`Category!=Gate&Category!=Diagnostic`) está verde, con el determinismo
-RT-024 dentro. El conjunto completo de puertas no se ha vuelto a pasar tras el arreglo; la pasada de la primera versión
-(40, con fugas) daba BossGate curva y BuildGate ×3 iguales a `main`.
+**Con el código final (0184 + 0186), `Category=Gate` completa una vez (48 tests, 12 m 09 s): 8 rojas.** Conocidas de
+`main`: BossGate curva (ahora sólo `eternal_crown_excellent` 42,48) y BuildGate ×3 (`elf_brawler` 46,88,
+`orc_violence` 53,36). `MatchOrder` pasa (en `main` estaba roja). **Nuevas, explicadas aquí y en la ADR 0186, sin
+mover ninguna banda:**
 
-**Quedan como decisión del revisor, sin cerrar como ruido:**
+1. `StatisticalTests` ×2, `betterTeamWinRate` 60-40 = 92,17 (1.000 partidos, semilla 1; banda 70-90). Ocho semillas
+   pareadas, antes → final (1 y 2 con 10.000 partidos, 3-8 con 2.000): 86,31→93,16 · 98,50→98,98 · 90,09→87,69 ·
+   84,38→91,89 · 77,48→81,08 · 84,38→87,99 · 86,49→86,19 · 100,00→99,70. Media **88,5 → 90,8**, diferencia pareada
+   **+2,4 ± 1,3** (≈ 1,9 errores típicos). **No se mueve la banda** (RT-057 lo permitía): tres de las ocho semillas ya
+   estaban por encima de 90 sin ningún cambio, la puerta mide una sola pareja de plantillas por semilla (BB-P) y la
+   media de antes ya rozaba el techo; subir el techo por un efecto de 1,9 errores típicos sería ajustar la banda a la
+   plantilla. Lo que lo arreglaría es medir la puerta sobre varias plantillas (BB-P). Decisión del revisor.
+2. `FullRunGateTests.TheThreeDoctrinesBuyDifferently` (semilla 1): la ahorradora acaba con 15,17 % de oro sin gastar y
+   la contextual con 15,42 % (la puerta pide ahorradora > contextual). Pareado, tres semillas de 240 runs, ahorradora −
+   contextual: antes +1,28 · +0,97 · +0,76; final −0,25 · +0,76 · +0,49. Compras por mercado, contextual − ahorradora:
+   antes +0,05 · +0,06 · +0,08; final +0,03 · +0,09 · +0,05 (las doctrinas siguen comprando distinto). **No se mueve**:
+   el signo sólo cambia en la semilla que fija la puerta. Decisión del revisor.
+3. `RaceBalanceTests.NoLaunchRaceDominatesOrUnderperformsWithoutPerks` (D-29, 40-60 %): `elf_none` 39,17. Es de la
+   ADR 0186, no de ésta; ver allí.
 
-1. `StatisticalTests.BetterTeamWinRateIsInRange` y `NoMandatoryMetricIsOutOfRange`: `betterTeamWinRate` 60-40 =
-   **93,98** en 1.000 partidos de la semilla 1 (banda 70-90). Ocho semillas pareadas, base → 50 (1 y 2 con 10.000
-   partidos, 3-8 con 2.000): 86,31→91,66 · 98,50→99,04 · 90,09→87,09 · 84,38→88,29 · 77,48→78,38 · 84,38→90,09 ·
-   86,49→86,19 · 100,00→99,70. Media **88,5 → 90,1**; diferencia pareada **+1,6 ± 1,1** (error típico entre
-   semillas). La fila 60-50 en las mismas ocho: 75,2 → 76,2. Tres de ocho semillas ya estaban por encima de 90 en la
-   base (BB-P).
-2. `FullRunGateTests.TheThreeDoctrinesBuyDifferently`: con la semilla 1, la contextual compra 1,27 por mercado y la
-   ahorradora 1,28 (la puerta exige contextual > ahorradora). Pareado, `--full-runs 240`, semillas 1-3, contextual −
-   ahorradora en compras por mercado: base +0,05 · +0,06 · +0,08; con 50 −0,01 · +0,08 · +0,07. Y ahorradora −
-   contextual en oro sin gastar: base +1,28 · +0,97 · +0,76; con 50 −0,14 · +1,38 · +0,19. La semilla 1 cambia de
-   signo; las otras dos no.
-
-**Ninguna banda se relaja.** No se elige un valor del dato para ponerlas en verde: con 40, 50 y 60 caían en verde o en
-rojo puertas distintas (40: oscilación 15,4 %, por encima del objetivo; 60: `RefereeSaturationTests` 24 de 60 frente a
-33 en la base), lo que señala filas sensibles a la plantilla y no una dosis buena. H4 (ADR 0185) no se implementa en
-esta tanda: con dos puertas abiertas, otra primitiva de movimiento encima no se podría atribuir.
-
-**Tests que cambian (y por qué):** `MobNarrowingTests` renueva sus tres huellas (cambian todas las trayectorias) y
-gana `WithTheHoldOffEveryTraceIsTheOneBeforeAdr0184`, que fija las de antes con el dato a 0.
-`RefereeTraitsEngineTests.ANeutralRefereeDoesSendOffOnASecondYellow_Precondition` pasa de 250 a 500 semillas: la roja
-por doble amarilla sale en 6 de 500 partidos con el dato a 0, 8 con 40 y 3 con 50 (primera en la semilla 311), un
-suceso de Poisson de ~1 por cada 100 semillas con el que una ventana de 250 fallaba por mala suerte; la afirmación no
-cambia.
+El bucle de tests está verde (RT-024 dentro).

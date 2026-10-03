@@ -295,7 +295,8 @@ tenía dos fugas que la revisión independiente encontró; corregidas, y medido 
 **Hermano encontrado midiendo (CONFIRMED):** un dueño del balón podía quedar en `Positioning` (sin pases ni regate),
 elegir perseguir su propio balón y quedarse en `Chasing` con un rival encima (414 ticks, semilla 70, lo cazó
 `StalledDuelTests` con la sostenida a 50). Con ella a 0, cero fotogramas así en 100 partidos: mecanismo latente, sin
-activación antes. Guarda en `MatchEngine.UpdatePlayer`: el dueño del balón decide como portador. **Sin aislar**: por
-qué camino llega el dueño a `Positioning` (no es el fin del derribo: probado y descartado).
+activación antes. **Causa CONFIRMED** con un censo de repliegues de reserva: `SetOwner` dejaba en `Blocking` a quien
+recogía el balón a mitad de un bloqueo y su decisión caía al repliegue de reserva (`Positioning` con el balón).
+Arreglado en `SetOwner`; la guarda provisional se quitó (ADR 0184, «Hermano encontrado midiendo»).
 
 Lote, muertes, puertas y efecto en el juego: en la ADR 0184.
