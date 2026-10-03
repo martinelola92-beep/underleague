@@ -1,8 +1,9 @@
 # BV-A — Los modelos 3D no se mueven con naturalidad: «parpadeo» de animaciones por ticks
 
-**Estado:** **Parte `/Game` implementada (3 oct 2026)**, medida antes/después con 3 semillas (tabla en
-«Implementación»). Queda abierto lo que pide `/Sim` (H4 aceleración, H8 oscilación) para una ADR posterior, y la
-trayectoria C1 (punto 5, no hecho). Diagnóstico del 2 oct: ocho causas CONFIRMED con el instrumento nuevo. Hermanas: [BB-K](./BB-K.md) (baile de dos compañeros; queda `FindSpace`),
+**Estado:** **Parte `/Game` implementada en dos pasadas (3 oct 2026)**, medidas antes/después con 3 semillas (tablas en
+«Implementación» y «Segunda pasada»: trayectoria Hermite, zancada en fase con el desplazamiento, mirar al balón, balón al pie
+rodando, golpeo soltado al arrancar, congelación sin retroceso). Queda abierto lo que pide `/Sim` (H4 aceleración, H8
+oscilación, que es lo que sigue dando giros de 180°), IK de pie en los giros y clips de retroceso/lateral. Diagnóstico del 2 oct: ocho causas CONFIRMED con el instrumento nuevo. Hermanas: [BB-K](./BB-K.md) (baile de dos compañeros; queda `FindSpace`),
 [BI-C](./BI-C.md) (root motion), [BI-H](./BI-H.md) (balón anclado al hueso), [BA-K](./BA-K.md) (cortes de teletransporte).
 
 ## Observación (revisor, literal)
@@ -152,6 +153,91 @@ aún lo nota, la palanca es la ventana (±2 ticks) y el filtro (0,12 s), a costa
 Hojas en `Game/screenshots/movimiento/`, `hoja-<momento>-antes.png` y `-despues.png` en el **mismo fotograma**
 (mismo partido, mismo `n`, opción `--desde` de `tools/movimiento-analisis.py`). Comprobado a x1, x4 (tramo `x4`) y en
 pausa (tramo `pausa`).
+
+## Segunda pasada (3 oct 2026, noche, sólo `/Game`)
+
+Commits `92681bd`, `c4129cd` (instrumento), `25bcd9b`, `2457f70`, `2675a0f`, `b11c15a`. Nada vuelve a `/Sim`
+(RT-014): el render sigue leyendo sólo la traza, también ticks vecinos ya calculados.
+
+**Instrumento ampliado (Regla J).** `fotogramas.csv` graba ahora las dos punteras y el balón **dibujados** en el mundo, y
+`tools/movimiento-analisis.py` mide sobre el esqueleto, no sobre lo que el muñeco cree hacer: *pie de apoyo / cuerpo* = velocidad
+horizontal de la puntera que pisa (la más baja, a < 0,015 casillas del suelo) entre la del cuerpo (0 clavado, 1 arrastrado); en
+la conducción, distancia balón–puntera más cercana y velocidad del balón respecto al cuerpo; y el giro de la trayectoria **a
+velocidad de marcha** (> 0,6 c/s) con el reloj dibujado avanzando. Validado en la carrera recta (respuesta conocida): el pie
+apoyado da 0,02–0,3 c/s con el cuerpo a 2,1 c/s. La métrica vieja *cuerpo/pies* queda tautológica tras el cambio 2 (los pies
+avanzan por construcción lo que el cuerpo) y no se usa. Además graba un tramo `video` de ~10 s a 30 fps.
+
+**Qué se hizo:**
+
+1. **Trayectoria (H3)** — `MatchPitchView3D.Trajectory`: Hermite cúbica entre los ticks `f` y `f+1` que **pasa por cada posición
+   de tick**, tangente en cada tick en la dirección media de los dos tramos (Catmull-Rom en dirección) y de módulo ≤ el tramo,
+   lo que la hace monótona a lo largo del tramo (Fritsch-Carlson): sin sobrepasar el tick. Recta a paso constante = lineal
+   exacta; ida y vuelta = frena a 0 en el tick; arranque de parado = media velocidad. Vecinos fuera del campo o teletransporte
+   (BA-K) no cuentan.
+2. **Zancada en fase (H5, carrerilla)** — trote y carrera ya no van en un `BlendSpace1D` con relojes propios: se **colocan cada
+   fotograma en la misma fase** (`AnimationNodeTimeSeek`), con la fase 0 en el instante de cada clip en que la puntera izquierda
+   va más adelantada (medido al cargar: 0,208 s en el trote, 0,198 s en la carrera). La fase avanza con el **desplazamiento
+   dibujado** del cuerpo entre la zancada de un ciclo (desplazamiento horneado × duración del clip): es la *distance matching*
+   de los motores comerciales ([UE, *Distance Matching / Stride Warping*](https://dev.epicgames.com/documentation/en-us/unreal-engine/pose-warping-in-unreal-engine);
+   sincronía por marcadores de pie). Hacia atrás sólo retrocede si recula mirando al balón.
+3. **Mirar (H9)** — corriendo, hacia donde va (como antes); por debajo de 0,9 c/s (sale a 1,3; el receptor de un pase en vuelo, a
+   1,9) **mira al balón**; de lado (70–110° entre marcha y balón) mira a donde va porque no hay clip lateral; derribado no gira.
+   El retroceso de cara al balón es la zancada al revés: **no hay clip de retroceso** en el pack de Mixamo ni en la UAL2 de
+   Quaternius (43 clips, ninguno de fútbol ni de marcha atrás; mirado en el GLB). Todas las cifras, **provisionales**.
+4. **Balón al pie (H11)** — deja de anclarse a la puntera más cercana (que cambiaba de pie cada paso). Va delante, en la
+   dirección del muñeco, a la distancia de la puntera adelantada de la zancada (medida) + radio, tocado una vez por ciclo y
+   rodando 0,10 casillas por delante entre toques (provisional), desde el cuerpo **dibujado**. En el golpeo se lleva a la
+   puntera del contacto (medida a 0,20 s). Al soltar y al recibir se funde 2 ticks con la posición de la traza (antes saltaba
+   del pie al centro del cuerpo). Y el balón tiene paneles y **rueda** lo que avanza (antes era una esfera lisa).
+5. **Golpeo**: la hipótesis de partida («el pasador se mueve durante `Passing` y el clip es en el sitio») queda **REJECTED**
+   con el instrumento: en 5 de 6 golpeos del tramo el cuerpo está **quieto** durante `Passing` y `/Sim` lo echa a correr en el
+   mismo tick en que sale el balón; el patinaje estaba en el **remate** (0,20–0,30 s del clip, cuerpo a 2,2 c/s). Arreglo: si
+   arranca, el golpeo se suelta en el contacto con un fundido de 0,08 s (provisional).
+6. **Congelaciones**: `BroadcastScreen` forzaba `Alpha = 0` al congelar; con el resto de tick acumulado en 0,5 todos los
+   jugadores **retrocedían medio tick** de golpe y volvían a saltar al reanudar (eran los 180° del p99 de la trayectoria en las
+   pausas), y la medida del ritmo lo tomaba por un salto. Ahora la imagen congelada se queda donde estaba.
+
+### Antes / después (3 semillas: 20260905 · 20260906 · 20260907; tramo largo de 600 ticks a x1)
+
+| Hipótesis | Métrica | Antes (HEAD `51a5482`) | Después | Etiqueta |
+|---|---|---|---|---|
+| H5 | Pie de apoyo / cuerpo en locomoción, p50 (p90) | 0,47 (1,28) · 0,38 (1,19) · 0,39 (1,16) | **0,33 (1,15) · 0,23 (1,07) · 0,25 (1,12)** | Mejorada; no es 0: giros, mezcla con la espera y pose sin raíz (ver abajo) |
+| H6 | Corriendo con el cuerpo quieto | 4,5 · 3,3 · 4,0 % | **0 · 0 · 0 %** | Arreglada |
+| H7 | Golpeo: fotogramas deslizando > 1 c/s | 38 · 35 · 56 % | **15 · 25 · 41 %** | Mejorada; el resto son golpeos en carrera de verdad |
+| H3 | Giro de la trayectoria a > 0,6 c/s, p90 / p99 | 13,4°/166° · 11,8°/155° · 14,7°/172° | 14,3°/162° · 14,0°/143° · 14,5°/169° | **El p99 no baja: son inversiones REALES de la traza** (H8, `/Sim`), ver abajo |
+| H3 | Fotogramas a > 0,6 c/s con giro 60–120° (semilla 1) | 78 | 59 | Las esquinas se reparten en giros pequeños (5–30°: 346 → 919) |
+| H11 | Conducción: velocidad del balón respecto al cuerpo, p50 / p90 c/s | 0,95/2,39 · 0,66/4,38 · 0,92/3,35 | **0,47/0,94** · 1,38/3,83 · **0,54**/3,82 | Mejor en mediana; la cola es el balón girando con el cuerpo |
+| H11 | Conducción: balón–puntera más cercana, p50 casillas | 0,05 · 0,02 · 0,03 | 0,26 · 0,26 · 0,22 | **Cambio de diseño**, no regresión: antes iba pegado a la puntera (y saltaba de pie); ahora rueda ~0,5 m por delante y se toca cada zancada |
+| H2 | Fotogramas con giro de yaw > 30° | 0,06 · 0,02 · 0,02 % | 0,09 · 0,24 · 0,12 % | Sube algo: los que miran al balón giran más; sigue < 0,25 % |
+
+**Por qué la spline no baja el p99 (CONFIRMED con la traza)**: los quiebros de 160–180° a velocidad son **inversiones de la
+traza**, no esquinas: p. ej. jugador 3, ticks 794→795→796: 9,361 → 9,217 → 9,361 (vuelve por donde vino a 2,2 c/s). Una curva
+que tiene que pasar por los tres ticks no puede evitar el giro de 180°; sólo hace que frene hasta 0 en el tick en vez de rebotar
+a toda velocidad. Eso es H8, de `/Sim` (lo lleva la otra pista). Con dos fotogramas por tick (30 fps), una esquina de θ se ve
+como dos giros de ~θ/2: el histograma lo confirma (los giros medios se parten en pequeños), a 60 fps reales serían ~θ/4.
+
+**Por qué el pie de apoyo no llega a 0**: (a) al girar, el muñeco rota sobre su centro y arrastra el pie apoyado (720°/s ×
+0,1 casillas ≈ 1,2 c/s); (b) a poca velocidad la pose es mezcla con la espera, que tiene los pies quietos respecto al cuerpo;
+(c) los clips son en el sitio con la cadera fijada a su valor inicial, y la cadera horneada no avanzaba a velocidad constante
+dentro del ciclo. En la carrera recta (validación) el pie apoyado sí queda clavado (0,02–0,3 c/s a 2,1 c/s). Lo siguiente sería
+IK de pie (FABRIK3D/`CCDIK3D` de Godot 4.6) para clavar el apoyo en los giros: **no hecho**.
+
+**Referencias consultadas**: distance matching y stride warping para que los pies sigan al desplazamiento
+([Unreal, Pose Warping](https://dev.epicgames.com/documentation/en-us/unreal-engine/pose-warping-in-unreal-engine)); sync
+groups/markers para mezclar ciclos de distinta duración en fase (Unreal, *sync markers*); snapshot interpolation con Hermite
+—pasa por las muestras y empalma velocidades— ([Gaffer on Games](https://gafferongames.com/post/snapshot_interpolation/),
+[Hermite splines in networked games](https://generalreasoning.com/blog/2025/08/23/hermite-splines.html)). Aquí no hay velocidad
+en la traza, así que la tangente sale de los ticks vecinos (Catmull-Rom) y se acota para no pasarse.
+
+**Animaciones nuevas (punto 5): no se añadieron.** El pack actual (Mixamo, 15 clips) no tiene retroceso, lateral, arranque,
+frenada ni celebración; la UAL2 de Quaternius que ya está en el repo (CC0) tampoco (es de aventura). Retargetear otra biblioteca
+cambiaría los nombres de huesos de los que dependen el balón, el contacto y la fijación de la raíz (`mixamorig_*`), y no cabía
+en el plazo con garantías. Queda como siguiente paso: retroceso y lateral son los que más se notarían, ahora que el muñeco mira al balón.
+
+**Material**: hojas `hoja-<momento>-v2-antes.png` / `-v2-despues.png` (mismo partido y mismo fotograma, `--desde`) y
+`hoja-conduccion-v2-*.png` (recorte ampliado del receptor y conductor), y el vídeo `movimiento-antes.mp4` /
+`movimiento-despues.mp4` (10 s a 30 fps, x1, semilla 20260905, recepción y pase), todo en `Game/screenshots/movimiento/`.
+`ffmpeg` 7.0.2 estático en `~/.local/bin` (del paquete `imageio-ffmpeg` de PyPI).
 
 ## Riesgos
 
