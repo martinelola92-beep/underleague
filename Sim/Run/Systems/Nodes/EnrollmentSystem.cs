@@ -1,5 +1,6 @@
 using Underleague.Sim.Model;
 using Underleague.Sim.Run.Systems.Economy;
+using Underleague.Sim.Run.Systems.Market;
 
 namespace Underleague.Sim.Run.Systems.Nodes;
 
@@ -81,5 +82,39 @@ public static class EnrollmentSystem
         }
 
         return state.WithoutPlayer(player.Id);
+    }
+
+    /// <summary>
+    /// Hace sitio para un fichaje que sustituye a uno propio (BX-5). <b>No es una regla nueva</b>: es la de siempre, aplicada
+    /// a quien se elige soltar. Con <paramref name="economy"/> (el mercado) se <b>vende</b> si el veto de la ADR 0108 lo
+    /// permite —<see cref="MarketSystem.CanSell"/>, al precio de <see cref="MarketSystem.SalePrice"/>— y, si no, se
+    /// <b>descarta</b> sin cobrar (<see cref="Release"/>); sin él (una recompensa, donde no hay mercado) siempre se descarta.
+    ///
+    /// <para>Sólo vale con la plantilla <b>llena</b> (con hueco, soltar a alguien sería elegir perder un cuerpo por nada) y
+    /// nunca con un muerto. No aplica el mínimo de RF-002b de <see cref="Release"/> porque quien llega ocupa su sitio al
+    /// instante y entra sano: los disponibles no bajan. Quien llama lo hace dentro de la misma decisión, así que si el
+    /// fichaje falla después el estado no se ha tocado.</para>
+    /// </summary>
+    public static RunState MakeRoomFor(RunState state, int replacePlayerId, EconomyConfig? economy)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        if (state.HasRosterSpace)
+        {
+            throw new ArgumentException(
+                "no hay nada que sustituir: la plantilla tiene hueco (BX-5, RF-020)", nameof(replacePlayerId));
+        }
+
+        var player = state.GetPlayer(replacePlayerId);
+        if (player.PhysicalState == PhysicalState.Dead)
+        {
+            throw new ArgumentException(
+                $"el jugador {player.Id} está muerto: no ocupa plantilla y no se puede soltar (RF-093, RF-122)",
+                nameof(replacePlayerId));
+        }
+
+        var without = state.WithoutPlayer(player.Id);
+        return economy is not null && MarketSystem.CanSell(player)
+            ? without.AddGold(MarketSystem.SalePrice(player, economy))
+            : without;
     }
 }

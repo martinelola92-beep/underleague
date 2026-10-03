@@ -110,13 +110,20 @@ public sealed record DeclineBet : RunDecision;
 /// <param name="Category">Categoría del surtido: jugadores, perks, equipamiento o consumibles (RF-114).</param>
 /// <param name="OfferIndex">Índice dentro de la categoría, 0..3.</param>
 /// <param name="TargetPlayerId">Jugador que recibe el perk o el objeto comprado (RF-114e); -1 si no aplica.</param>
-public sealed record BuyOffer(string Category, int OfferIndex, int TargetPlayerId = -1) : RunDecision;
+/// <param name="ReplacePlayerId">
+/// BX-5: con la plantilla llena y una oferta de jugador, el jugador propio al que se <b>suelta a cambio</b>; -1 si no
+/// hay cambio. Es la misma regla de siempre en una sola decisión atómica: se vende si el veto de la ADR 0108 lo
+/// permite (<c>MarketSystem.CanSell</c>, al precio de <c>SalePrice</c>) y si no se descarta sin cobrar
+/// (<see cref="ReleasePlayer"/>). Si algo falla después, el estado no cambia: nadie se queda sin el suyo y sin el nuevo.
+/// </param>
+public sealed record BuyOffer(string Category, int OfferIndex, int TargetPlayerId = -1, int ReplacePlayerId = -1) : RunDecision;
 
 /// <summary>Vende un jugador de la plantilla (RF-114f). Paquete X.</summary>
 public sealed record SellPlayer(int PlayerId) : RunDecision;
 
 /// <summary>Ficha al mercenario indicado del surtido (RF-110..113). Paquete X.</summary>
-public sealed record HireMercenary(int OfferIndex) : RunDecision;
+/// <param name="ReplacePlayerId">Como en <see cref="BuyOffer"/>: el jugador propio al que se suelta a cambio, o -1 (BX-5).</param>
+public sealed record HireMercenary(int OfferIndex, int ReplacePlayerId = -1) : RunDecision;
 
 /// <summary>
 /// Trata a un jugador en la clínica (RF-094). Con <paramref name="Risky"/> es el matasanos de la ADR 0099:
@@ -155,7 +162,11 @@ public sealed record ChooseTrainingSession(int SessionIndex, int TargetPlayerId 
 /// <summary>Elige una de las tres recompensas tras ganar un partido (RF-071). Paquete X.</summary>
 /// <param name="OptionIndex">Opción elegida, 0..2.</param>
 /// <param name="CarrierPlayerId">Si la recompensa es un perk, jugador que lo porta; -1 si no aplica.</param>
-public sealed record ChooseReward(int OptionIndex, int CarrierPlayerId = -1) : RunDecision;
+/// <param name="ReplacePlayerId">
+/// BX-5: con la plantilla llena y una recompensa de jugador, el jugador propio al que se <b>descarta a cambio</b>
+/// (<see cref="ReleasePlayer"/>: aquí no hay mercado donde vender, así que no se cobra); -1 si no hay cambio.
+/// </param>
+public sealed record ChooseReward(int OptionIndex, int CarrierPlayerId = -1, int ReplacePlayerId = -1) : RunDecision;
 
 /// <summary>
 /// <b>Rechaza</b> la recompensa ofrecida y se va con las manos vacías (ADR 0043). RF-071 obligaba a

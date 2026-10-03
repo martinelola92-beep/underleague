@@ -4,6 +4,7 @@ using Underleague.Sim.Run.Systems.Consumables;
 using Underleague.Sim.Run.Systems.Economy;
 using Underleague.Sim.Run.Systems.Equipment;
 using Underleague.Sim.Run.Systems.Items;
+using Underleague.Sim.Run.Systems.Nodes;
 
 namespace Underleague.Sim.Run.Systems.Market;
 
@@ -44,8 +45,8 @@ public static class MarketSystem
 
         return decision.Category switch
         {
-            MarketCategories.Player => BuyPlayer(state, offers.Recruits, decision, catalog, requirePayment: true),
-            MarketCategories.Youth => BuyPlayer(state, offers.Youths, decision, catalog, requirePayment: false),
+            MarketCategories.Player => BuyPlayer(state, offers.Recruits, decision, catalog, economy, requirePayment: true),
+            MarketCategories.Youth => BuyPlayer(state, offers.Youths, decision, catalog, economy, requirePayment: false),
             MarketCategories.Perk => BuyPerk(state, offers.Perks, decision, catalog, economy),
             MarketCategories.Item => BuyItem(state, offers.Items, decision, economy, items),
             MarketCategories.Consumable => BuyConsumable(state, offers.Consumables, decision),
@@ -61,6 +62,7 @@ public static class MarketSystem
         var node = NodeGuards.RequireOpen(state, NodeKind.Market, "fichar a un mercenario");
         var offers = MarketOfferGenerator.Generate(state, node, catalog, economy, items, consumables);
         var offer = AtIndex(offers.Mercenaries, decision.OfferIndex, "mercenario");
+        state = MakeRoomIfReplacing(state, decision.ReplacePlayerId, economy, "fichar a un mercenario");
         RequireRosterSpace(state, "fichar a un mercenario");
         return RunNames.Admit(state, offer.Player, catalog);
     }
@@ -146,9 +148,13 @@ public static class MarketSystem
         return percent;
     }
 
-    private static RunState BuyPlayer(RunState state, IReadOnlyList<PlayerOffer> offers, BuyOffer decision, Catalog catalog, bool requirePayment)
+    private static RunState BuyPlayer(RunState state, IReadOnlyList<PlayerOffer> offers, BuyOffer decision, Catalog catalog, EconomyConfig economy, bool requirePayment)
     {
         var offer = AtIndex(offers, decision.OfferIndex, "jugador");
+
+        // BX-5: con la plantilla llena se puede fichar soltando a uno propio. Se hace sitio ANTES de comprobar el oro: lo
+        // que se cobra por vender cuenta para pagar, igual que vendiendo a mano y comprando después.
+        state = MakeRoomIfReplacing(state, decision.ReplacePlayerId, economy, "fichar");
 
         // RF-020 (ADR 0046): el canterano gratuito tampoco crece la plantilla por la cara. Que no cueste
         // oro no quiere decir que no cueste un hueco, y el hueco es el recurso escaso.
@@ -248,6 +254,25 @@ public static class MarketSystem
                 $"no se puede {action}: la plantilla está llena ({state.RosterSize} de {state.RosterCapacity}, RF-020). "
                     + "Hay que vender o descartar a alguien primero, o comprar un hueco en un nodo de inscripción");
         }
+    }
+
+    /// <summary>
+    /// BX-5: si la decisión trae un jugador al que soltar a cambio, hace sitio con la regla de siempre (vender si se
+    /// puede, descartar si no; <see cref="EnrollmentSystem.MakeRoomFor"/>). Sin él, no toca nada.
+    /// </summary>
+    private static RunState MakeRoomIfReplacing(RunState state, int replacePlayerId, EconomyConfig economy, string action)
+    {
+        if (replacePlayerId < 0)
+        {
+            return state;
+        }
+
+        if (state.HasRosterSpace)
+        {
+            throw new ArgumentException($"no hay nada que sustituir al {action}: la plantilla tiene hueco (BX-5, RF-020)");
+        }
+
+        return EnrollmentSystem.MakeRoomFor(state, replacePlayerId, economy);
     }
 
     private static void RequireGold(RunState state, int price)

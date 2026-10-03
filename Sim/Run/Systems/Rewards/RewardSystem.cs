@@ -171,7 +171,7 @@ public static class RewardSystem
         var next = options[decision.OptionIndex] switch
         {
             PerkRewardOption perk => ApplyPerk(state, perk, decision, catalog),
-            PlayerRewardOption player => TakePlayer(state, player, catalog),
+            PlayerRewardOption player => TakePlayer(state, player, decision.ReplacePlayerId, catalog),
             ItemRewardOption item => ApplyItem(state, item, decision, economy, items),
             var other => throw new InvalidOperationException($"tipo de recompensa no reconocido: {other.GetType().Name}"),
         };
@@ -236,8 +236,15 @@ public static class RewardSystem
     /// 0046). Con la plantilla llena la opción no se puede cobrar y la salida es <see cref="Decline"/>:
     /// aquí no hay mercado en el que vender, así que un cuerpo de más no entra por la puerta de atrás.
     /// </summary>
-    private static RunState TakePlayer(RunState state, PlayerRewardOption option, Catalog catalog)
+    private static RunState TakePlayer(RunState state, PlayerRewardOption option, int replacePlayerId, Catalog catalog)
     {
+        // BX-5: la salida que faltaba cuando no hay mercado donde vender: soltar a uno propio a cambio (se descarta, no
+        // se cobra), dentro de esta misma decisión.
+        if (replacePlayerId >= 0)
+        {
+            state = Nodes.EnrollmentSystem.MakeRoomFor(state, replacePlayerId, economy: null);
+        }
+
         if (!state.HasRosterSpace)
         {
             throw new InvalidOperationException(
