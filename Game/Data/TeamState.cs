@@ -489,6 +489,37 @@ public sealed class TeamState
     public Lineup Preview(int playerId, Cell target) => PlacementView.WithPlayerAt(Lineup, Players, playerId, target);
 
     /// <summary>
+    /// Por qué un movimiento no se va a poder hacer (BX-1), o null si se puede: la clave de texto y su argumento. La
+    /// regla es la de <c>/Sim</c> —<c>RunLineup.CanStart</c> y <see cref="PlacementView.WithPlayerAt"/>—; aquí solo se
+    /// pregunta cuál de ellas es la que dice que no, para contárselo al jugador en vez de dejarlo en silencio.
+    /// </summary>
+    public (string Key, string Name)? RefusalOf(int playerId, Cell target)
+    {
+        var player = Find(playerId);
+        if (player is null)
+        {
+            return null;
+        }
+
+        if (_run?.State?.FindPlayer(playerId) is { } member && (member.IsCrippled || member.PhysicalState == PhysicalState.Dead))
+        {
+            return ("ui.team.refuse.out", player.Name);
+        }
+
+        if (!ReferenceEquals(Preview(playerId, target), Lineup))
+        {
+            return null;
+        }
+
+        if (!PlacementView.CanPlace(player.Position, target))
+        {
+            return ("ui.team.refuse.cell", player.Name);
+        }
+
+        return !IsStarter(playerId) && At(target) is null ? ("ui.team.refuse.full", player.Name) : null;
+    }
+
+    /// <summary>
     /// Aplica el movimiento. La regla es de <c>/Sim</c>; aquí solo se pide y se guarda el resultado.
     /// <para>
     /// Con una run detrás, la alineación no se guarda en esta clase: se le manda al motor como
@@ -499,6 +530,11 @@ public sealed class TeamState
     /// </summary>
     public bool Move(int playerId, Cell target)
     {
+        if (RefusalOf(playerId, target) is { Key: "ui.team.refuse.out" })
+        {
+            return false;
+        }
+
         var next = Preview(playerId, target);
         if (ReferenceEquals(next, Lineup))
         {

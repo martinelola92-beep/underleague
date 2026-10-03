@@ -661,6 +661,13 @@ public partial class BroadcastScreen : Control
         _residueMoment = null;
         _lastStampMoment = null;
         _lastVoiceMoment = null;
+
+        // BX-6: el director es nuevo y su voz es null, igual que _lastVoiceMoment justo arriba, así que
+        // ApplyPresentation lo toma por «sin cambios» y NO oculta lo que seguía a la vista: el pergamino de la
+        // tirada del destino (o de la lesión) de la decisión se quedaba hasta que otra voz —un gol— lo pisaba.
+        // Es la misma limpieza que SeekTo.
+        HideVoiceLayers();
+        _stamp.Visible = false;
         _synced = -1;
 
         // La reproducción cambia con la sustitución (docs/ui/README §4/RA-027): BindPlayback ya reconstruyó
@@ -761,9 +768,7 @@ public partial class BroadcastScreen : Control
             PlayMomentSound(result.Voice);
         }
 
-        _banner.Visible = false;
-        _band.Visible = false;
-        _edict.Visible = false;
+        HideVoiceLayers();
 
         // El acta se queda pegada (arriba) mientras el partido no haya terminado de verdad: si se llega
         // aquí es porque _matchEnded acaba de reponerse a false (SeekTo de una captura, o un director
@@ -774,6 +779,14 @@ public partial class BroadcastScreen : Control
         {
             PresentVoice(result.Voice);
         }
+    }
+
+    /// <summary>Oculta los pergaminos de la voz alta (estandarte, banda, bando); ni el sello (lo presenta ApplyPresentation justo antes) ni el acta final.</summary>
+    private void HideVoiceLayers()
+    {
+        _banner.Visible = false;
+        _band.Visible = false;
+        _edict.Visible = false;
     }
 
     private void PresentStamp(MatchMoment moment)
@@ -2076,9 +2089,7 @@ public partial class BroadcastScreen : Control
 
         // Con _lastVoiceMoment a null, un fotograma sin voz no se distingue de «sin cambios» en
         // ApplyPresentation: lo que quedara a la vista de antes del salto se oculta aquí.
-        _banner.Visible = false;
-        _band.Visible = false;
-        _edict.Visible = false;
+        HideVoiceLayers();
         _record.Visible = false;
         _stamp.Visible = false;
 

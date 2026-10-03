@@ -64,6 +64,9 @@ public partial class TeamScreen : Control
 
     private readonly List<RosterRow> _rows = new();
 
+    /// <summary>Cuántos titulares tenía la plantilla cuando se pintaron los brochazos «Titulares»/«Suplentes» (BX-2).</summary>
+    private int _rosterStarters = -1;
+
     private TeamState _state = null!;
     private TeamHeader _header = null!;
     private RosterBoard _board = null!;
@@ -745,11 +748,16 @@ public partial class TeamScreen : Control
             // El "antes" se toma con la alineación todavía sin tocar: el aviso compara dos fotos, no
             // recalcula nada (RT-014). Las dos las hace Sim.Perks.LineupPerkPreviewer.
             var before = LineupPerkPreviewer.Preview(_state.Lineup, _state.Players, _state.Catalog);
+            var refusal = _state.RefusalOf(player, target);
             if (_state.Move(player, target))
             {
                 Announce(player, before, LineupPerkPreviewer.Preview(_state.Lineup, _state.Players, _state.Catalog));
                 RefreshCards();
                 Flash(player);
+            }
+            else if (refusal is { } why)
+            {
+                _toast.Post(new[] { new ToastLine(UiText.Get(why.Key, why.Name), Style.LinkBroken) });
             }
         }
 
@@ -941,6 +949,7 @@ public partial class TeamScreen : Control
     private void BuildRoster()
     {
         int starters = _state.Lineup.Slots.Count;
+        _rosterStarters = starters;
         int total = _state.Players.Count;
         const float Banner = 40f;
         float available = RosterArea.Size.Y - 24f - (Banner * 2f) - 8f;
@@ -998,6 +1007,20 @@ public partial class TeamScreen : Control
     /// <summary>Rellena las filas. Se llama al cambiar la alineación o los objetos, no al mover el cursor.</summary>
     private void RefreshCards()
     {
+        // BX-2: los brochazos «Titulares» y «Suplentes» están clavados a la altura que tocaba cuando se construyó la
+        // plantilla. Al entrar un suplente en una casilla libre cambia cuántos titulares hay: las filas se reenlazaban
+        // bien (OrderedRoster) pero el que subía seguía cayendo bajo «Suplentes». Si el reparto cambia, se rehace.
+        if (_rosterStarters != _state.Lineup.Slots.Count)
+        {
+            foreach (var old in _rows)
+            {
+                old.QueueFree();
+            }
+
+            _rows.Clear();
+            BuildRoster();
+        }
+
         int index = 0;
         var ordered = OrderedRoster();
         foreach (var row in _rows)
@@ -1471,6 +1494,7 @@ public partial class TeamScreen : Control
             }
         }
 
+        var bxVacant = new Cell(0, 0);
         var steps = new (string Name, Action Setup, bool Hover)[]
         {
             ("equipo", () => { }, false),
@@ -1622,6 +1646,32 @@ public partial class TeamScreen : Control
                 SetTab(Tab.Chest);
                 _chestPick = "worn_boots";
                 RefreshItems();
+            }, false),
+            ("equipo-once-corto", () =>
+            {
+                // BX-1/BX-2: la alineación podada por una baja (seis titulares). Una captura del antes.
+                _toast.Post(Array.Empty<ToastLine>());
+                SetTab(Tab.Lineup);
+                Select(-1);
+                var slots = new List<LineupSlot>(_state.Lineup.Slots);
+                int last = slots.FindLastIndex(slot => _state.Find(slot.PlayerId)?.Position != SimPosition.Goalkeeper);
+                bxVacant = slots[last].HomeCell;
+                slots.RemoveAt(last);
+                _state = TeamState.Of(_state.Catalog, _state.Team with { Lineup = new Lineup(slots) });
+                _pitch.State = _state;
+                RefreshCards();
+                RefreshPitch();
+            }, false),
+            ("equipo-once-completo", () =>
+            {
+                // BX-2: un suplente entra en la casilla libre y la columna izquierda lo sube a «Titulares».
+                int bench = FindOutfieldBenchPlayer();
+                _focusRoster = true;
+                _rosterIndex = IndexOfCard(bench);
+                Pad("ui_accept");
+                _focusRoster = false;
+                _cursor = bxVacant;
+                Pad("ui_accept");
             }, false),
         };
 

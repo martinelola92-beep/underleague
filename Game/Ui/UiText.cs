@@ -50,6 +50,12 @@ public static class UiText
         ["ui.team.perkOnOther"] = "✔ {0} de {1} se activa",
         ["ui.team.perkOffOther"] = "✘ {0} de {1} se desactiva",
 
+        // Lo que Equipo no deja hacer, dicho (BX-1): un movimiento que no ocurre sin explicación es lo que el
+        // revisor vivió como «no me dejaba alinear».
+        ["ui.team.refuse.out"] = "{0} no puede jugar: no se puede alinear a un lisiado ni a un muerto",
+        ["ui.team.refuse.full"] = "Ya hay siete titulares: suelta sobre uno de ellos para cambiarlo",
+        ["ui.team.refuse.cell"] = "{0} no puede ir en esa casilla",
+
         // Modo de zonas: el vocabulario que usan los perks de inicio y de vínculo, dibujado sobre la
         // cuadrícula que describen. Los nombres de los tercios y de las bandas NO están aquí: salen de
         // data/l10n/<idioma>/templates.json, que es de donde salen también las descripciones de los perks.
