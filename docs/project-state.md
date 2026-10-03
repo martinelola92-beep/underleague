@@ -78,7 +78,7 @@ Prioridad absoluta: IA y animaciones 3D para la build de la mañana del 3 oct (d
 **SIGUIENTE (3 oct):** la cola de la noche está vacía. Decisiones abiertas del revisor (antes de responderlas):
 - tope de seguridad del herrero sobre un titular (ADR 0164);
 - «nunca todos los sumideros» por acto (ADR 0182);
-- tercer perk de Bulwark desbloqueado (BB-U);
+- tercer perk de Bulwark: hecho el 3 oct (`immovable`, BB-U cerrada; valor provisional, sin medir como perk);
 - `into_the_mob` d2/d3 y `eye_for_eye` d3 sobrestimadas (ADR 0157).
 Para acelerar: subir `processors`/`memory` de `.wslconfig` cuando el revisor tenga acceso al PC.
 
@@ -1033,7 +1033,7 @@ nada) y `DirectionCheck`. Informe de decisión por perk: `docs/analisis/informe-
 
 **Catálogo cuadrado por raza y rasgo (decisión del revisor).** 102 perks. Las cinco razas con **2 perks
 opcionales** cada una (la habilidad racial no cuenta); `Brute`, `Fine`, `Cold` y `Neutral` con **3**.
-`Bulwark` se queda en **2**: el tercero rompe la puerta de economía (BB-U). Regla nueva del revisor, ya
+`Bulwark` se quedó en **2**: el tercero parecía romper la puerta de economía (BB-U); cerrado el 3 oct con `immovable`, tras la ADR 0182. Regla nueva del revisor, ya
 auditada sobre los 102: **un perk no puede tener dos condiciones de raza o rasgo** — `unlikely_bulwark`
 era el único infractor y se sustituyó por `duelist`. `Dwarf`, `Elf` y `Undead` reciben un 5 % de `Neutral`
 (tenían 0 %) para que los perks de ese estilo no fueran inalcanzables.
