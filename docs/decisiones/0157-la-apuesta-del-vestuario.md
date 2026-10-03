@@ -543,6 +543,8 @@ queda anotado como hallazgo (z −3,5 y −3,4, misma palabra).
 
 ## Enmienda del 3 oct 2026: recensado tras la IA y las entradas (ADR 0184, 0186) y recalibración de las celdas que mentían
 
+**Fuente de la orden.** La decisión del revisor del 3 oct fue «Ajusta» (las tres celdas pedidas); «que lo anunciado sea verdad» es la del 2 oct (decisiones 2 y 5). Recalibrar además otras celdas fuera de Bonferroni lo encargó el orquestador como **aplicación** de esa decisión, no el revisor celda a celda.
+
 **Orden del revisor.** Ajustar `into_the_mob` d2/d3 y `eye_for_eye` d3 (hermanos abiertos de la enmienda del 2 oct) y, con el censo nuevo, cualquier otra celda que haya
 cambiado de palabra o se haya vuelto rentable más allá de Bonferroni: «que lo anunciado sea verdad».
 
@@ -599,5 +601,11 @@ muestra pequeña (721-750 apuestas) tocan z +2,5/+2,6 con neto ≈ 0/+151 (`bloo
 `clean_hands` d4 y `blood_before_goals` d3, rentables en la etapa de 2 semillas, dejaron de serlo con 6 (no están en la tabla).
 
 **Etiquetas (Regla F).** CONFIRMED (6 semillas × 600 runs, `Blind`, con la versión `ad53f44`): `hunt_the_star` d1 y `blood_before_goals` d1 estaban infravaloradas y eran rentables a ciegas;
-`thrashing` d1/d2 sobrestimaban; tras la recalibración dejan de serlo en semillas nuevas. LIKELY: que el cambio de IA/entradas (ADR 0184 y 0186) mueva estas frecuencias; no hay experimento que
+`thrashing` d1/d2 sobrestimaban. LIKELY (no CONFIRMED): que tras la recalibración dejen de serlo en semillas nuevas; la validación con 6001/7001 tiene ~750 apuestas por celda, ET ≈ 1 punto, y sólo detecta errores de 2 puntos o más. LIKELY: que el cambio de IA/entradas (ADR 0184 y 0186) mueva estas frecuencias; no hay experimento que
 lo separe de que el censo anterior se calibrase con otra población (`Never`) o con menos semillas. REJECTED (bajo la versión actual, 6 semillas): «`eye_for_eye` d3 cambia de palabra» y «`into_the_mob` d3 sobrestima más allá del ruido».
+
+**Cierre de la revisión independiente (3 oct 2026).**
+- *Potencia de la comprobación (6001 y 7001):* ~750-1.000 apuestas por celda, ET ≈ 0,8-1,7 puntos; sólo habría detectado errores de ≥ 2 puntos. «Ninguna se aleja de |z| 2,0» es compatible con un error residual de hasta ese tamaño; no prueba que la celda esté exacta.
+- *Palabra en el borde, no demostrada:* `thrashing` d2 (5,07 ± 0,43 %: a 0,07 del corte de «rara vez» < 5 %) y `eye_for_eye` d3 (12,43 ± 0,69 %: a 0,43 del corte de «a menudo» ≥ 12 %). Su palabra puede ser la otra con un ET.
+- *`comeback` d1 recalibrada con el censo nuevo* (mismo defecto que `into_the_mob` d2: 7,76 anunciado contra 6,85 ± 0,47 medido, retorno ≈ 0,75): frecuencia 7,76 → **6,85** %, cobro 1.095 → **1.241** (`round(85 / 6,85)`); con 3/4/5 se cobran 37/50/62 de oro, retorno 0,845-0,856. Sustituye a la recalibración del 2 oct (decisión 5; su medida 7,76 % salía de la política `comeback-easiest`, 2.849 apuestas, en la versión anterior). `BetSystemTests.ComebackOnDifficultyOneReturnsInLineWithTheRest` actualizado (685 pb, 1241, 37/50/62).
+- *Procedencia vigente de `bets.json`:* con **`Blind`** (versión ad53f44, 6 × 600) quedan `comeback` d1, `into_the_mob` d2/d3, `eye_for_eye` d3, `hunt_the_star` d1, `blood_before_goals` d1/d2 y `thrashing` d1/d2. **Siguen con `Never`** (censo de las semillas 1 y 7, anterior a las ADR 0184/0186) todas las demás celdas, incluidas las no tocadas `comeback` d5 y `hunt_the_star` d5 (z +1,6 y +1,9, ruido compatible).

@@ -40,7 +40,7 @@ public sealed record BetCensusResult(
 ///
 /// <para><b>Aviso al recensar.</b> Si se recensa y se vuelcan las frecuencias en <c>bets.json</c>, la celda
 /// <c>comeback</c> d1 recupera el valor de este censo (política <c>Never</c>, 6,25 % y cobro 1.360 %) y pierde la
-/// recalibración del 2 oct 2026 (7,76 % y 1.095 %, medida con <c>Blind</c>; ADR 0157, enmienda de cierre,
+/// recalibración del 2 oct 2026 (7,76 % y 1.095 %, y desde el 3 oct 6,85 % y 1.241 %, medida con <c>Blind</c>; ADR 0157, enmienda de cierre,
 /// decisión 5), y lo mismo ocurre con las celdas recalibradas con <c>Blind</c> el 3 oct 2026 (<c>into_the_mob</c> d2/d3,
 /// <c>eye_for_eye</c> d3, <c>hunt_the_star</c> d1, <c>blood_before_goals</c> d1/d2, <c>thrashing</c> d1/d2; ADR 0157,
 /// enmienda del 3 oct; <c>BetSystemTests.RecalibratedCellsAnnounceTheMeasuredFrequencyAndReturnInLineWithTheRest</c>).

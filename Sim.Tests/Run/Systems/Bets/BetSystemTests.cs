@@ -159,19 +159,19 @@ public sealed class BetSystemTests
     }
 
     /// <summary>
-    /// ADR 0157, enmienda del 2 oct (decisión 5), valor conocido: <c>comeback</c> en dificultad 1 anuncia la
-    /// frecuencia medida (7,76 %) y paga round(85 / 7,76) = 1095 %: 33, 44 y 55 de oro por 3, 4 y 5 apostados.
-    /// Su retorno esperado queda en -14,6 %, en línea con el resto (-15 % de diseño).
+    /// ADR 0157, decisión 5 (2 oct) y enmienda del 3 oct, valor conocido: <c>comeback</c> en dificultad 1 anuncia la
+    /// frecuencia medida con <c>Blind</c> tras las ADR 0184/0186 (6,85 %; el 7,76 % del 2 oct ya sobrestimaba) y paga
+    /// round(85 / 6,85) = 1241 %: 37, 50 y 62 de oro por 3, 4 y 5 apostados. Retorno esperado ≈ -15 %.
     /// </summary>
     [Theory]
-    [InlineData(1, 3, 33)]
-    [InlineData(2, 4, 44)]
-    [InlineData(3, 5, 55)]
+    [InlineData(1, 3, 37)]
+    [InlineData(2, 4, 50)]
+    [InlineData(3, 5, 62)]
     public void ComebackOnDifficultyOneReturnsInLineWithTheRest(int act, int stake, int payout)
     {
         var comeback = Systems.Bets.Find(BetKind.Comeback)!;
-        Assert.Equal(776, comeback.FrequencyBasisPointsFor(1));
-        Assert.Equal(1095, comeback.PayoutPercentFor(1));
+        Assert.Equal(685, comeback.FrequencyBasisPointsFor(1));
+        Assert.Equal(1241, comeback.PayoutPercentFor(1));
         Assert.Equal(stake, comeback.StakeFor(act));
         Assert.Equal(payout, BetSystem.PayoutFor(stake, comeback.PayoutPercentFor(1)));
 
