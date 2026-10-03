@@ -48,3 +48,21 @@ venta de un grave ya vale un cuarto (RF-114f, `PlayerSaleStatePercent`). El tech
    enseña su riesgo (ADR 0099) y la clínica enseña el 3/3, así que queda dentro de lo anunciado.
 10. **Cómo se demuestra.** `CrippledTests` (valor conocido, control, guardado anterior), captura de la clínica y la
     ficha, y `--full-runs` contra `main` (sección siguiente).
+
+## Medición (3 oct 2026)
+
+`/Balance --full-runs 300` en las semillas 1 y 1001 (900 runs por celda con las tres doctrinas; resumen de la principal),
+rama contra `main` (`3128e81`, exportado con `git archive` y compilado aparte). Métrica nueva `crippledPerRun` (plantilla
+final; los vendidos o muertos no cuentan).
+
+| semilla | runWinRate (tope / main) | deathsPerRun | prosthesesPerRun | automatonsPerRun | maxProsthesesOnOnePlayer | crippledPerRun |
+|---|---|---|---|---|---|---|
+| 1 | 17,33 / 17,33 | 1,29 / 1,29 | 0,24 / 0,24 | 0,00 / 0,00 | 2 / 2 | 0,00 |
+| 1001 | 16,00 / 16,00 | 1,28 / 1,28 | n/d | 0,00 / 0,00 | 2 / 2 | 0,00 |
+
+**`runs.csv` byte a byte idéntico a `main` en las dos semillas** (CONFIRMED por `cmp`): nadie llega a tres prótesis con la
+política automática (máximo 2, igual que en la ADR 0164), así que ninguna rama nueva se ejecuta. **Lo medido es que la
+regla no se activa con esta política, no que su efecto sea nulo**: con una persona que concentre prótesis (el caso que
+la ADR 0164 dejó sin representar) el efecto es el que dicen los tests de valor conocido, y no hay lote que lo mida.
+Si más adelante la política concentra, `automatonsPerRun` y `crippledPerRun` son los indicadores. Sin cifra provisional
+nueva: el tope (3) es la decisión del revisor y coincide con el hito del `Automaton` de RF-095c.

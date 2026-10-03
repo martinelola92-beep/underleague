@@ -64,13 +64,12 @@ Siguiente:
 - decidir la ADR 0184;
 - ADR 0185 (arranque y frenada);
 - IK de pies;
-- tope de 3 prótesis con lisiado;
 - ajuste de `into_the_mob` d2/d3 y `eye_for_eye` d3.
 
 **DECISIONES DEL REVISOR (3 oct, madrugada):**
 1. F3 (vista 2D) pasa a ser opcional en el menú de ajustes. **HECHO (3 oct):** `GameSettings.Match2DKey`, apagada por defecto, casilla en Ajustes; con ella apagada F3 no hace nada en la retransmisión.
 2. `Continue()` hace lo habitual: no borra el guardado; escritura atómica y anti-recarga por suelo/semilla. **HECHO (3 oct, enmienda de la ADR 0183):** `Continue` no borra, `WriteSave` es temporal + rename, y se guarda en cada transición también con el nodo abierto (cierra el camino de recarga de la compra/evento). RT-061 reescrito.
-3. Herrero: tope de 3 prótesis; a partir de ahí, el jugador queda lisiado.
+3. Herrero: tope de 3 prótesis; a partir de ahí, el jugador queda lisiado. **HECHO (3 oct, ADR 0187):** lisiado = grave con 3 prótesis (derivado, sin cambio de esquema); sin cura ni alineación, sigue en la plantilla; avisado en clínica, ficha e informe. Lote: idéntico a `main` (la política no llega a 3).
 4. Sumideros: se balanceará el coste al final; por ahora vale.
 5. Bulwark: a criterio.
 6. Apuesta: ajustar `into_the_mob` d2/d3 y `eye_for_eye` d3.
