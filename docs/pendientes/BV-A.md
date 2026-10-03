@@ -271,7 +271,7 @@ B1-B4 no lo tocan); giros de yaw > 30° 0,09 · 0,24 · 0,12 % → 0,09 · 0,24 
 **H8 pasa a CONFIRMED con causa en `/Sim`** y queda arreglada. Sonda `Sim.Tests/Engine/OscillationProbeTests.cs`
 (`Category=Diagnostic`): inversión = dos pasos de carrera (≥ 0,09 casillas) a más de 135°; deshecha = otro paso a más
 de 135° del de salida en ≤ 4 ticks. Validada con valor conocido (test `TheReversalInstrumentAnswersTheKnownCases`) y
-contra la cifra de arriba: en 40 partidos de referencia ve 0,301 inversiones por jugador y segundo, **46,5 % deshechas**
+contra la cifra de arriba: en 40 partidos de referencia ve 0,301 inversiones por jugador y segundo, **46,5 % deshechas** (sonda sin limpiar; limpia: 0,164/s y 42,4 %)
 (arriba, otro partido: 0,33/s y 52 %).
 
 | | Hipótesis | Etiqueta | Medida (40 partidos, semillas 1-40) |
@@ -284,7 +284,18 @@ contra la cifra de arriba: en 40 partidos de referencia ve 0,301 inversiones por
 | H8f | Destinos que cambian con el balón en vuelo | **Sin aislar** | 34 % de las inversiones con el balón en vuelo, repartidas entre H8a-c; bajan con ellas (3.317 → ~200 deshechas) |
 | H8g | Empate entre ids de paridad distinta (decisión en ticks alternos) | **Sin evidencia** | No hizo falta: H8a-c explican el 88 % de la bajada |
 
-**Arreglo:** `ai.context.positioningHoldBonus` = 40 (0 = motor de antes, comprobado bit a bit con las huellas de
-`MobNarrowingTests`). Sonda: deshechas **46,5 % → 13,7 %**, inversiones **0,301 → 0,164 por jugador y segundo**,
-*paso-0-paso* 612 → 478 por partido (lo que queda es H4, [ADR 0185](../decisiones/0185-arranque-y-frenada.md)).
-Lote, puertas y efecto en el juego: en la ADR 0184.
+**Arreglo:** `ai.context.positioningHoldBonus` = 50, sólo entre colocaciones y en el paso posterior al bucle de
+`Utility.Choose`, roto por cualquier cambio de posesión (0 = motor de antes, bit a bit, fijado por
+`MobNarrowingTests.WithTheHoldOffEveryTraceIsTheOneBeforeAdr0184`). **Sonda limpia** (sin porteros, cortes de
+reanudación ni inversiones legítimas por cambio de balón; validada contra el volcado RT-098 en una traza real):
+deshechas **42,4 % → 14,6 %**, inversiones **0,164 → 0,095 por jugador y segundo**, *paso-0-paso* 591 → 486 por partido
+(lo que queda es H4, [ADR 0185](../decisiones/0185-arranque-y-frenada.md)). La primera versión (commit `fbe7918`, 40)
+tenía dos fugas que la revisión independiente encontró; corregidas, y medido que no explicaban los goles.
+
+**Hermano encontrado midiendo (CONFIRMED):** un dueño del balón podía quedar en `Positioning` (sin pases ni regate),
+elegir perseguir su propio balón y quedarse en `Chasing` con un rival encima (414 ticks, semilla 70, lo cazó
+`StalledDuelTests` con la sostenida a 50). Con ella a 0, cero fotogramas así en 100 partidos: mecanismo latente, sin
+activación antes. Guarda en `MatchEngine.UpdatePlayer`: el dueño del balón decide como portador. **Sin aislar**: por
+qué camino llega el dueño a `Positioning` (no es el fin del derribo: probado y descartado).
+
+Lote, muertes, puertas y efecto en el juego: en la ADR 0184.

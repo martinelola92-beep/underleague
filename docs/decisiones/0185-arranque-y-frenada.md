@@ -8,14 +8,14 @@ Requisitos: RT-020, RT-023, RT-089, RF-050 · Ficha: [BV-A](../pendientes/BV-A.m
 BV-A H4 (CONFIRMED en `/Sim`): `MatchEngine.Move` da a cada jugador el paso **constante** de `SpeedPerTick` desde el
 primer tick (0,131-0,159 casillas/tick con los atributos de referencia) y lo corta en seco al llegar. La velocidad por
 tick de la traza es bimodal: 3.480 ticks a 0 y 5.350 a 2,0-2,5 c/s, casi nada en medio. Además, la sonda de la ADR 0184
-cuenta ~478 *paso-0-paso* por partido (carrera, un tick quieto, carrera) con la sostenida puesta, 612 sin ella: un
+cuenta ~486 *paso-0-paso* por partido (carrera, un tick quieto, carrera) con la sostenida puesta, 591 sin ella: un
 destino que avanza menos que un paso por decisión, alcanzado en un tick y esperado el siguiente.
 
 ## Por qué no entra en la build del 4 oct (`game-design-review`, pregunta 9 y 10)
 
 - **Cambia quién llega antes.** Con arranque, todo el que sale de parado pierde terreno, y con penalización de giro
   el que presiona (que gira mucho) pierde más que el que corre recto. Eso mueve intercepciones, persecuciones,
-  entradas y lesiones, que la ADR 0184 ya mueve esta misma noche (entradas +8-10 %, y dos puertas abiertas). Medir las dos a la vez no
+  entradas y lesiones, que la ADR 0184 ya mueve esta misma noche (entradas +18-22 %, y dos puertas abiertas). Medir las dos a la vez no
   permitiría atribuir nada (`balance-measure`: una hipótesis por tanda).
 - **La parte visible ya la cubre la presentación.** `/Game` (BV-A, «Implementación») dibuja la velocidad promediada
   ±2 ticks con un filtro de 0,12 s: el muñeco ya arranca y frena en pantalla aunque la traza no lo haga. Lo que falta
