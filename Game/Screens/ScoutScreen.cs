@@ -71,6 +71,20 @@ public partial class ScoutScreen : Control
             state = EnsureTestRivalry(state, node);
         }
 
+        if (Tour.Cap)
+        {
+            // Solo captura (ADR 0187): un titular de campo con tres prótesis, en la copia local del estado.
+            var prostheses = run.Systems!.Prostheses;
+            var capped = state.Roster.First(p => p.Position != Sim.Model.Position.Goalkeeper && p.IsAvailable
+                && state.Lineup.Slots.Any(slot => slot.PlayerId == p.Id));
+            foreach (string id in new[] { "peg_leg", "iron_arm", "glass_eye" })
+            {
+                capped = Sim.Run.Systems.Medical.MedicalSystem.Install(capped, prostheses.Find(id)!);
+            }
+
+            state = state.WithPlayer(capped);
+        }
+
         var (setup, _, _) = RunEngine.BuildMatch(state, _nodeId, catalog, run.Engine);
 
         Layout.CenterLegacy(this);
@@ -87,7 +101,11 @@ public partial class ScoutScreen : Control
 
         Widgets.InputHelp(this, UiText.Get("ui.input.mouseOnly"), UiText.Get("ui.input.padPending"));
 
-        if (Tour.Rivalry)
+        if (Tour.Cap)
+        {
+            Tour.Step(this, "ojeo-tope", null);
+        }
+        else if (Tour.Rivalry)
         {
             // Captura y sale sin seguir a Equipo: --tour-rivalry existe solo para esta una captura, y
             // continuar reescribiría equipo-run.png con la misma copia local ya usada más arriba (BE-B: no
@@ -393,6 +411,7 @@ public partial class ScoutScreen : Control
                     effective.Lineup.Slots.Count.ToString(CultureInfo.InvariantCulture)),
                 LineupWarningKind.FilledFromBench => UiText.Get("ui.scout.warnFilled", player?.Name ?? "?"),
                 LineupWarningKind.SevereInjuryDeathRisk => UiText.Get("ui.scout.warnSevere", player?.Name ?? "?"),
+                LineupWarningKind.ProsthesisCapRisk => UiText.Get("ui.scout.warnCap", player?.Name ?? "?"),
                 _ => UiText.Get("ui.scout.warnLethal", player?.Name ?? "?", Percent(warning.Risk)),
             });
         }

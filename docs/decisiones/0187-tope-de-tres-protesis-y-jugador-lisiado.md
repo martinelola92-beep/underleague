@@ -49,6 +49,22 @@ venta de un grave ya vale un cuarto (RF-114f, `PlayerSaleStatePercent`). El tech
 10. **Cómo se demuestra.** `CrippledTests` (valor conocido, control, guardado anterior), captura de la clínica y la
     ficha, y `--full-runs` contra `main` (sección siguiente).
 
+## Enmienda tras la revisión independiente (3 oct 2026)
+
+1. **El aviso va donde se decide.** `RunEngine.LineupWarnings` gana `ProsthesisCapRisk` (un titular 3/3: «lleva 3/3 prótesis:
+   una lesión grave lo deja lisiado», en el bloque «Antes de confirmar» del ojeo) y deja de avisar de «muerte» por un lisiado
+   (no puede estar en el once). El botón del matasanos sobre un **leve** 3/3 dice «empeore a grave y lo deje lisiado». La carta
+   de evento con una lesión grave añade a la fila de cada objetivo 3/3 «la lesión grave lo dejaría lisiado, sin cura»
+   (`EventView`, plantilla `targetCrippled` es/en).
+2. **Guardado anterior con 3+ prótesis y una grave: no se avisa una sola vez; se documenta.** Queda lisiado al cargar, y desde
+   entonces lo dicen la clínica (lista permanente de lisiados en rojo cada vez que se abre) y la ficha («Lisiado»). No hay
+   estado de «ya avisado» que guardar, que es lo que se evitó al derivarlo. Alcance: sólo un guardado de la versión 9 o
+   anterior con un jugador de tres o más prótesis **y** lesión grave sin tratar; la política automática nunca llega a 3 (lote
+   de abajo) y la regla es del 3 oct, así que es un caso de cola del desarrollo, no de jugadores. Coste aceptado: ese jugador
+   pierde la cura sin un aviso propio al cargar.
+3. Capturas por xvfb de la clínica (lisiado, aviso 3/3 y matasanos), la ficha (la lista de prótesis se parte en dos líneas con
+   tres) y el ojeo (`--tour-cap`).
+
 ## Medición (3 oct 2026)
 
 `/Balance --full-runs 300` en las semillas 1 y 1001 (900 runs por celda con las tres doctrinas; resumen de la principal),

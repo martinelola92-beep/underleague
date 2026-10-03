@@ -33,13 +33,15 @@ public static class Tour
 
     private const string ClinicFlag = "--tour-clinic";
 
+    private const string CapFlag = "--tour-cap";
+
     private static readonly HashSet<string> Captured = new();
 
     /// <summary>Directorio de capturas, el mismo que documenta <c>docs/ui-equipo.md</c>.</summary>
     public const string Directory = "res://screenshots";
 
     /// <summary>True si el juego se ha arrancado para hacer alguno de los recorridos de capturas.</summary>
-    public static bool Active => HasArgument(Flag) || Maps || Rivalry || Event || Training || Clinic;
+    public static bool Active => HasArgument(Flag) || Maps || Rivalry || Event || Training || Clinic || Cap;
 
     /// <summary>
     /// True con <c>--map-tour</c>: el recorrido corto que solo enseña el <b>mapa de los tres actos</b> y
@@ -75,6 +77,12 @@ public static class Tour
     /// graves y oro, abre la mesa del herrero como lo haría el jugador y captura "clinica-herrero.png".
     /// </summary>
     public static bool Clinic => HasArgument(ClinicFlag);
+
+    /// <summary>
+    /// True con <c>--tour-cap</c> (ADR 0187): el recorrido llega al ojeo con un titular al tope de prótesis (3/3) y
+    /// captura "ojeo-tope.png", para ver el aviso de la alineación donde se decide.
+    /// </summary>
+    public static bool Cap => HasArgument(CapFlag);
 
     /// <summary>True si se ha arrancado con <c>--screenshots</c> (el recorrido de la pantalla de Equipo).</summary>
     public static bool Screenshots => HasArgument("--screenshots");

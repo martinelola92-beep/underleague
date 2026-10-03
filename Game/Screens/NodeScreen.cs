@@ -98,7 +98,10 @@ public partial class NodeScreen : Control
                 var keeper = medical(medical(medical(seeded.Roster[0], prostheses.Find("peg_leg")!), prostheses.Find("iron_arm")!), prostheses.Find("glass_eye")!);
                 var crippled = medical(medical(medical(seeded.Roster[3], prostheses.Find("peg_leg")!), prostheses.Find("iron_arm")!), prostheses.Find("glass_eye")!)
                     with { PhysicalState = PhysicalState.SevereInjury };
-                return seeded.WithPlayer(first2).WithPlayer(second).WithPlayer(keeper).WithPlayer(crippled).WithGold(40);
+                // Y un quinto con el tope y una lesión leve: su matasanos dice que puede dejarlo lisiado.
+                var minorCap = medical(medical(medical(seeded.Roster[4], prostheses.Find("peg_leg")!), prostheses.Find("iron_arm")!), prostheses.Find("glass_eye")!)
+                    with { PhysicalState = PhysicalState.MinorInjury, MinorInjuries = 1 };
+                return seeded.WithPlayer(first2).WithPlayer(second).WithPlayer(keeper).WithPlayer(crippled).WithPlayer(minorCap).WithGold(40);
             });
             _forgePlayer = _run.State!.Roster[1].Id;
             _forgeExtra = 2;
@@ -238,14 +241,16 @@ public partial class NodeScreen : Control
                 state.Gold >= full);
             button.Pressed += () => Decide(new TreatPlayer(id), UiText.Get("ui.node.treated", name));
 
+            // ADR 0187: el matasanos puede empeorar un leve a grave; con el tope de prótesis eso es quedar lisiado.
+            bool capRisk = patient.PhysicalState == PhysicalState.MinorInjury && patient.Prostheses.Count >= RunRules.MaxProstheses;
             var quack = Widgets.Button(
                 this,
                 UiText.Get(
-                    "ui.node.treatRisky",
+                    capRisk ? "ui.node.treatRiskyCap" : "ui.node.treatRisky",
                     risky,
                     economy.ClinicRiskyFailPercent + economy.ClinicRiskyWorsePercent,
                     economy.ClinicRiskyWorsePercent),
-                new Rect2(396f, y, 420f, 28f),
+                new Rect2(396f, y, capRisk ? 516f : 420f, 28f),
                 state.Gold >= risky);
             quack.Pressed += () => Decide(new TreatPlayer(id, Risky: true), UiText.Get("ui.node.treatedRisky", name));
 

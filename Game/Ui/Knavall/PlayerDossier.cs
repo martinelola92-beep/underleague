@@ -372,11 +372,6 @@ public partial class PlayerDossier : InkCanvas
 
         // ADR 0187 (RF-012d): el tope se ve antes de llegar a él y después de pasarse.
         var (count, crippled) = _state.ProsthesisCapOf(player.Id);
-        if (count >= RunRules.MaxProstheses)
-        {
-            string cap = UiText.Get(crippled ? "ui.kn.crippled" : "ui.kn.prosthesisCap", count, RunRules.MaxProstheses);
-            Ink.Text(this, Ink.Heavy, new Vector2(Margin + 118f, top + 28f), cap, 13, crippled ? Ink.Red : Ink.Muted);
-        }
 
         var parts = new List<string>();
         foreach (var prosthesis in installed)
@@ -390,9 +385,32 @@ public partial class PlayerDossier : InkCanvas
 
         Label(UiText.Get("ui.kn.prostheses"), new Vector2(Margin + 2f, top + 7f));
         float left = Margin + 116f;
-        string line = string.Join(", ", parts);
-        int size = Ink.FitSize(Ink.Heavy, line, 15, Size.X - Margin - 8f - left, 11);
-        Ink.Text(this, Ink.Heavy, new Vector2(left, top + 10f), line, size, Ink.Muted);
+
+        // Con tres prótesis la lista no cabe en una línea sin encoger la letra hasta no leerse: se parte en dos.
+        var lines = new List<string>();
+        if (parts.Count >= 3)
+        {
+            int firstLine = (parts.Count + 1) / 2;
+            lines.Add(string.Join(", ", parts.GetRange(0, firstLine)) + ",");
+            lines.Add(string.Join(", ", parts.GetRange(firstLine, parts.Count - firstLine)));
+        }
+        else
+        {
+            lines.Add(string.Join(", ", parts));
+        }
+
+        for (int i = 0; i < lines.Count; i++)
+        {
+            int size = Ink.FitSize(Ink.Heavy, lines[i], 15, Size.X - Margin - 8f - left, 11);
+            Ink.Text(this, Ink.Heavy, new Vector2(left, top + 10f + (18f * i)), lines[i], size, Ink.Muted);
+        }
+
+        float capTop = top + 10f + (18f * lines.Count);
+        if (count >= RunRules.MaxProstheses)
+        {
+            string cap = UiText.Get(crippled ? "ui.kn.crippled" : "ui.kn.prosthesisCap", count, RunRules.MaxProstheses);
+            Ink.Text(this, Ink.Heavy, new Vector2(left, capTop), cap, 13, crippled ? Ink.Red : Ink.Muted);
+        }
     }
 
     /// <summary>
