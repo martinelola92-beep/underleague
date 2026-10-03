@@ -133,7 +133,16 @@ public sealed class PenaltyAreaSymmetryTests
     /// </summary>
     private static List<int> CollectPenaltyFoulRows()
     {
+        // ADR 0185: la mitad de los partidos con la alineación REFLEJADA (fila r -> 6 - r). Este test afirma que la
+        // GEOMETRÍA del área es simétrica (ADR 0121), pero jugaba siempre la misma pareja de plantillas, y una plantilla
+        // no es simétrica: qué jugador ocupa cada lado sesga dónde se pitan las faltas. Medido con 4.500 partidos
+        // (PenaltyRowsMirrorTests): faltas pitadas por fila [534, 934, 1479, 1963, 3444, 2894, 2196] tal cual y
+        // [2152, 2853, 3451, 2139, 1560, 875, 495] reflejada, con y sin el arranque de la ADR 0185: la asimetría SIGUE
+        // a la plantilla, así que no es un signo del motor. Con el arranque (accelTicks 3), las filas 1/5 de penalti
+        // pasaron a 53/180 con la alineación tal cual. Reflejar la mitad quita el sesgo de plantilla y conserva lo que
+        // el test discrimina: la banda vieja del área es asimétrica en las dos mitades.
         var setup = TestMatches.Reference(Catalog, BaseSeed);
+        var mirrored = setup with { Home = Mirror(setup.Home), Away = Mirror(setup.Away) };
         var config = SimConfig.Default with { CollectLog = false, Trace = true };
 
         var perMatch = new List<int>[Matches];
@@ -141,7 +150,7 @@ public sealed class PenaltyAreaSymmetryTests
         {
             ulong matchSeed = RngStreams.MatchSeed(BaseSeed, i);
             // Catálogo por hilo (ThreadCatalogs): las condiciones de perk compiladas no son reentrantes.
-            var result = Simulator.Run(setup, matchSeed, ThreadCatalogs.Current, config);
+            var result = Simulator.Run(i % 2 == 0 ? setup : mirrored, matchSeed, ThreadCatalogs.Current, config);
             perMatch[i] = ExtractPenaltyFoulRows(result);
         });
 
@@ -155,6 +164,12 @@ public sealed class PenaltyAreaSymmetryTests
 
         return rows;
     }
+
+    private static TeamSetup Mirror(TeamSetup team) =>
+        team with
+        {
+            Lineup = new Lineup(team.Lineup.Slots.Select(s => s with { HomeCell = new Cell(s.HomeCell.Column, Pitch.Rows - 1 - s.HomeCell.Row) }).ToList()),
+        };
 
     private static List<int> ExtractPenaltyFoulRows(MatchResult result)
     {
