@@ -113,7 +113,7 @@
     "grudgeBonus": 240,
 
     "coverSpacingCells": 0.8,
-    "positioningHoldBonus": 40,
+    "positioningHoldBonus": 50,
     "pressCarrierBonus": 60,
     "pressDistancePenaltyPerCell": 60,
     "pressGoalkeeperExitBonus": 200,

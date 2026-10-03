@@ -488,16 +488,21 @@ internal static class Utility
                 previousDiscarded = eval.Discarded;
             }
 
-            if (rejected)
-            {
-                continue;
-            }
-
-            if (action == holding)
+            // BV-A H8 (ADR 0184): la colocación en curso se guarda como candidata a sostenerse aunque el límite
+            // exterior la descarte al llegar al borde (y sólo por eso): ese descarte existe para no EMPEZAR a ir
+            // a un sitio al que no se llega, y aplicado al que ya cubre en el borde lo mandaba a casa para
+            // volver en cuanto se alejaba 0,25 casillas. Como candidata sólo puede ganar en el paso de después
+            // del bucle, frente a otra colocación: contra perseguir, entrar o pasar sigue descartada.
+            if (action == holding && !eval.Discarded)
             {
                 holdFound = true;
                 holdScore = score;
                 holdEval = eval;
+            }
+
+            if (rejected)
+            {
+                continue;
             }
 
             if (!found || score > bestScore)
@@ -521,12 +526,14 @@ internal static class Utility
         }
 
         // BV-A H8 (ADR 0184): UNA COLOCACIÓN SE SOSTIENE. Si gana otra acción de colocación por menos de
-        // positioningHoldBonus puntos, el jugador sigue con la que ya ejecutaba. Sólo entre colocaciones: si
+        // positioningHoldBonus puntos, el jugador sigue con la que ya ejecutaba, mientras la posesión no haya
+        // cambiado desde que la eligió (al recuperar o perder el balón se decide desde cero). Sólo entre colocaciones: si
         // gana perseguir, entrar, presionar o un pase, gana igual que antes, y por eso este paso va DESPUÉS
         // del bucle y no sumando un bono dentro (un bono dentro haría perder también a esas acciones).
         int hold = ctx.Weights.Context.PositioningHoldBonus;
         if (hold > 0 && found && holdFound && best != holding
             && p.State == PlayerState.Positioning
+            && p.ChoseWithBall == (ctx.HoldingTeam == p.Team)
             && YieldsToLooseBall(best) && YieldsToLooseBall(holding)
             && holdScore + hold >= bestScore)
         {
@@ -553,6 +560,7 @@ internal static class Utility
         }
 
         p.CurrentAction = best;
+        p.ChoseWithBall = ctx.HoldingTeam == p.Team;
         p.TargetPoint = ctx.Band.Clamp(bestTarget);
         p.PassReceiver = bestReceiver;
         p.TackleTarget = bestTackleTarget;
@@ -1109,15 +1117,8 @@ internal static class Utility
             eval.Context -= OutsidePenalty(ctx, p, eval.OutsideCentiCells);
         }
 
-        // BV-A H8 (ADR 0184): una colocación que ya se ejecuta no se descarta por haber llegado al borde. El
-        // descarte por el límite exterior existe para no EMPEZAR a ir hacia un sitio al que no se llega; pero
-        // el que ya cubre en el borde de su zona está haciendo exactamente lo que puede, y descartarlo al
-        // llegar lo mandaba a casa para volver en cuanto se alejaba 0,25 casillas (medido: un ciclo
-        // CoverSpace -> Retreat -> CoverSpace de 4 ticks).
-        bool sustained = ctx.Weights.Context.PositioningHoldBonus > 0
-            && action == p.CurrentAction && p.State == PlayerState.Positioning && YieldsToLooseBall(action);
         bool beyondOuterLimit = p.OuterZone.DistanceOutside(raw, p.EffectiveHome, direction) > 0f;
-        if (!eval.IgnoreOuterLimit && !sustained && beyondOuterLimit
+        if (!eval.IgnoreOuterLimit && beyondOuterLimit
             && Vec2.Distance(clamped, p.Position) < OuterLimitMinAdvance)
         {
             eval.OutsideOuterLimit = true;
@@ -1476,21 +1477,6 @@ internal static class Utility
         int bestScore = 0;
         Vec2 bestPoint = p.Position;
 
-        // BV-A H8 (ADR 0184): EL HUECO ELEGIDO SE SOSTIENE. Los dieciséis candidatos se miden desde la posición
-        // de este tick, así que el hueco de la decisión anterior no está entre ellos y basta un empate para
-        // que gane el del lado contrario (medido: el 42 % de las inversiones deshechas que quedaban eran un
-        // FindSpace que cambiaba de hueco). El que ya buscaba hueco lo vuelve a puntuar con las mismas reglas
-        // y con positioningHoldBonus de ventaja: sólo lo deja si otro es claramente mejor. Va primero, así
-        // que a igualdad también se queda.
-        int hold = context.PositioningHoldBonus;
-        if (hold > 0 && p.CurrentAction == PlayerAction.FindSpace && p.State == PlayerState.Positioning)
-        {
-            Vec2 held = FindSpaceCandidate(ctx, p, p.TargetPoint, direction, marginedLine);
-            bestScore = FindSpaceScore(ctx, p, held, direction, carrier, intentTarget, intentRadiusCenti) + hold;
-            bestPoint = held;
-            found = true;
-        }
-
         for (int d = 0; d < SpaceDirections.Length; d++)
         {
             for (int s = 0; s < SpaceDistances.Length; s++)
@@ -1503,6 +1489,24 @@ internal static class Utility
                     bestScore = score;
                     bestPoint = candidate;
                 }
+            }
+        }
+
+        // BV-A H8 (ADR 0184): EL HUECO ELEGIDO SE SOSTIENE. Los dieciséis candidatos se miden desde la posición
+        // de este tick, así que el hueco de la decisión anterior no está entre ellos y basta un empate para
+        // que gane el del lado contrario. El que ya buscaba hueco lo vuelve a puntuar con las mismas reglas y
+        // sólo lo cambia si el mejor de los nuevos le gana por más de positioningHoldBonus. La sostenida SÓLO
+        // elige el sitio: lo que FindSpace vale frente a las demás acciones sigue siendo el mejor hueco
+        // disponible (bestScore), igual que sin sostenida, así que no compite distinto contra perseguir o
+        // bloquear ni se suma a la sostenida entre colocaciones de Choose.
+        int hold = context.PositioningHoldBonus;
+        if (hold > 0 && found && p.CurrentAction == PlayerAction.FindSpace && p.State == PlayerState.Positioning
+            && p.ChoseWithBall == (ctx.HoldingTeam == p.Team))
+        {
+            Vec2 held = FindSpaceCandidate(ctx, p, p.TargetPoint, direction, marginedLine);
+            if (FindSpaceScore(ctx, p, held, direction, carrier, intentTarget, intentRadiusCenti) + hold >= bestScore)
+            {
+                bestPoint = held;
             }
         }
 

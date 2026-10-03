@@ -24,12 +24,17 @@ public sealed class MobNarrowingTests
     // el árbol de la ADR 0167, y renovadas al rebasar sobre main (que movió el reglamentario por otras ADR); el test de abajo
     // exige además que el reglamentario coincida con el de la turba a 0/0, que es la prueba de que esta ADR no lo toca:
     // el conjunto de los partidos que no llegan a la turba, y el de TODOS los partidos.
-    // Renovadas el 3 oct 2026 por la ADR 0184 (positioningHoldBonus 0 -> 40: cambian las trayectorias de todos los
+    // Renovadas el 3 oct 2026 por la ADR 0184 (positioningHoldBonus 0 -> 50: cambian las trayectorias de todos los
     // partidos). Antes de renovarlas se comprobó que con el dato a 0 los tres valores viejos (1085505645508475356, 44,
     // 9633395058359667205) seguían saliendo: la sostenida apagada es el motor de antes, bit a bit.
-    private const ulong RegulationOnlyBefore = 11080906411296668719UL;
-    private const int RegulationOnlyMatches = 43;
-    private const ulong EveryMatchBefore = 646147432754916318UL;
+    private const ulong RegulationOnlyBefore = 12801312321570104342UL;
+    private const int RegulationOnlyMatches = 46;
+    private const ulong EveryMatchBefore = 6110102956897498372UL;
+
+    // Las mismas tres huellas antes de la ADR 0184; con positioningHoldBonus = 0 tienen que seguir saliendo.
+    private const ulong RegulationOnlyBeforeAdr0184 = 1085505645508475356UL;
+    private const int RegulationOnlyMatchesBeforeAdr0184 = 44;
+    private const ulong EveryMatchBeforeAdr0184 = 9633395058359667205UL;
 
     private const float Eps = 0.001f;
 
@@ -137,6 +142,37 @@ public sealed class MobNarrowingTests
         }
 
         Assert.Equal(untouched, hash);
+    }
+
+    /// <summary>
+    /// ADR 0184: con <c>positioningHoldBonus</c> = 0 el motor es el de antes de la sostenida, bit a bit. Las tres
+    /// huellas de antes de la ADR 0184 tienen que seguir saliendo con el dato a 0 (el reglamentario, su número de
+    /// partidos y todos los partidos con la turba a 0/0).
+    /// </summary>
+    [Fact]
+    public void WithTheHoldOffEveryTraceIsTheOneBeforeAdr0184()
+    {
+        var current = OscillationProbeTests.WithHold(Current, 0);
+        var noMob = OscillationProbeTests.WithHold(NoMobChanges, 0);
+
+        ulong regulation = FnvOffset;
+        int played = 0;
+        ulong every = FnvOffset;
+        for (ulong seed = 1; seed <= 60; seed++)
+        {
+            var result = Play(current, seed);
+            if (!result.Report.WentToGoldenGoal)
+            {
+                regulation = (regulation ^ Fingerprint(result)) * FnvPrime;
+                played++;
+            }
+
+            every = (every ^ Fingerprint(Play(noMob, seed))) * FnvPrime;
+        }
+
+        Assert.Equal(RegulationOnlyBeforeAdr0184, regulation);
+        Assert.Equal(RegulationOnlyMatchesBeforeAdr0184, played);
+        Assert.Equal(EveryMatchBeforeAdr0184, every);
     }
 
     [Fact]

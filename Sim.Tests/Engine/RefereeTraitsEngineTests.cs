@@ -105,7 +105,7 @@ public sealed class RefereeTraitsEngineTests
     /// (<c>MatchEngine.ResolveFoul</c>: <c>SendOff</c> por segunda amarilla se llama en el mismo tramo que
     /// registra la amarilla), una roja por doble amarilla y no una directa.
     /// </summary>
-    private static IEnumerable<(int Actor, int PriorYellows)> RedsWithPriorYellowCount(IReadOnlyList<MatchEvent> events)
+    internal static IEnumerable<(int Actor, int PriorYellows)> RedsWithPriorYellowCount(IReadOnlyList<MatchEvent> events)
     {
         var yellowsByActor = new Dictionary<int, int>();
         foreach (var e in events)
@@ -152,7 +152,10 @@ public sealed class RefereeTraitsEngineTests
     /// NEUTRO produce esa roja de verdad -si nunca ocurriera, "el cobarde nunca la saca" no demostraría
     /// nada del rasgo-. La doble amarilla es un suceso raro incluso en el emparejamiento brutal (medido:
     /// las primeras apariciones caen hacia la semilla 90-200, no en las 1-30 que usaba la versión anterior
-    /// de este test -el hueco de instrumento que señaló la revisión-).
+    /// de este test -el hueco de instrumento que señaló la revisión-). ADR 0184: 250 -> 500 semillas. Medido en
+    /// 500 (<c>OscillationProbeTests.SecondYellowRedsWithAndWithoutTheHold</c>): 6 partidos con la sostenida a 0,
+    /// 8 con 40 y 3 con 50 (primera en la semilla 311): ruido de Poisson de ~1 caso por cada 100 semillas, con el
+    /// que una ventana de 250 falla por mala suerte. No cambia lo que se afirma, sólo la muestra.
     /// </summary>
     [Fact]
     public void ANeutralRefereeDoesSendOffOnASecondYellow_Precondition()
@@ -161,13 +164,13 @@ public sealed class RefereeTraitsEngineTests
         var neutral = brutal with { Referee = brutal.Referee with { Trait = RefereeTrait.Neutral } };
 
         bool found = false;
-        for (ulong seed = 1; seed <= 250 && !found; seed++)
+        for (ulong seed = 1; seed <= 500 && !found; seed++)
         {
             var result = Simulator.Run(neutral, seed, Catalog, new SimConfig(CollectLog: false));
             found = RedsWithPriorYellowCount(result.Events).Any(r => r.PriorYellows >= 2);
         }
 
-        Assert.True(found, "ninguna de las primeras 250 semillas del emparejamiento brutal con árbitro neutro produjo una roja por doble amarilla: el escenario no sirve para medir el rasgo cobarde (Regla J)");
+        Assert.True(found, "ninguna de las primeras 500 semillas del emparejamiento brutal con árbitro neutro produjo una roja por doble amarilla: el escenario no sirve para medir el rasgo cobarde (Regla J)");
     }
 
     /// <summary>

@@ -469,6 +469,12 @@ internal sealed class MatchPlayer
     /// <summary>Última acción elegida por la utilidad (§3.5).</summary>
     public PlayerAction CurrentAction { get; set; } = PlayerAction.Retreat;
 
+    /// <summary>
+    /// Si su equipo tenía el balón cuando eligió <see cref="CurrentAction"/> (BV-A H8, ADR 0184): una colocación
+    /// sólo se sostiene mientras la posesión no ha cambiado.
+    /// </summary>
+    public bool ChoseWithBall { get; set; }
+
     /// <summary>Punto objetivo de movimiento, ya acotado a la correa (§3.3).</summary>
     public Vec2 TargetPoint { get; set; }
 

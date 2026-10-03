@@ -21,6 +21,38 @@ public sealed class OscillationProbeTests
     internal const float RunStepCells = 0.09f;
     internal const float MinStepCells = 0.02f;
     internal const int UndoTicks = 4;
+
+    /// <summary>
+    /// Tope de un paso que se considera movimiento: la carrera más rápida (0,159 casillas/tick con velocidad 99, +15 %
+    /// en la turba) más el empuje máximo de separación (0,06) cabe con holgura; por encima es un corte.
+    /// </summary>
+    internal const float MaxStepCells = 0.3f;
+
+    private static bool TouchesRestart(MatchTrace trace, int from, int to)
+    {
+        for (int g = from; g <= to; g++)
+        {
+            if (trace.RestartAt(g) != RestartKind.None)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool BallChanged(MatchTrace trace, int from, int to)
+    {
+        for (int g = from + 1; g <= to; g++)
+        {
+            if (trace.BallOwnerAt(g) != trace.BallOwnerAt(g - 1) || trace.BallInFlightAt(g) != trace.BallInFlightAt(g - 1))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
     private const float CosReverse = -0.70711f;
 
     private static readonly Catalog Catalog = TestData.LoadCatalog();
@@ -66,6 +98,11 @@ public sealed class OscillationProbeTests
         public int BallInFlight;
         public int UndoneBallInFlight;
         public int StopGo;
+        public int Cuts;
+
+        /// <summary>Si no es null, se apuntan aquí todas las inversiones contadas (jugador, fotograma, causa).</summary>
+        public List<(int Player, int Frame, Cause Cause)>? Samples;
+        public int Legit;
         public long RunningSteps;
 
         public double UndonePercent => Reversals == 0 ? 0 : 100.0 * Undone / Reversals;
@@ -91,6 +128,12 @@ public sealed class OscillationProbeTests
         int n = trace.FrameCount;
         for (int player = 0; player < trace.Players.Count; player++)
         {
+            // Los porteros no cuentan: su colocación es un punto sobre la línea de gol y no es lo que el revisor ve oscilar.
+            if (trace.Players[player].Role == Position.Goalkeeper)
+            {
+                continue;
+            }
+
             for (int f = 2; f < n; f++)
             {
                 if (!trace.OnPitchAt(f, player) || !trace.OnPitchAt(f - 1, player) || !trace.OnPitchAt(f - 2, player))
@@ -126,6 +169,22 @@ public sealed class OscillationProbeTests
                     continue;
                 }
 
+                // Saltos de reanudación o de recolocación: un paso más largo que cualquier carrera (con la turba y
+                // el empuje de separación) no es movimiento, es un corte. Y nada que toque una reanudación.
+                if (la > MaxStepCells || lb > MaxStepCells || TouchesRestart(trace, f - 2, Math.Min(n - 1, f + UndoTicks)))
+                {
+                    census.Cuts++;
+                    continue;
+                }
+
+                // Inversiones legítimas: cambió el dueño del balón o su vuelo (posesión, pase, despeje, desvío) en
+                // los tres fotogramas del giro. Darse la vuelta porque el balón cambió de sitio es fútbol.
+                if (BallChanged(trace, f - 2, f))
+                {
+                    census.Legit++;
+                    continue;
+                }
+
                 census.Reversals++;
                 bool undone = false;
                 for (int k = 1; k <= UndoTicks && f + k < n; k++)
@@ -136,7 +195,7 @@ public sealed class OscillationProbeTests
                     }
 
                     var s = trace.PositionAt(f + k, player) - trace.PositionAt(f + k - 1, player);
-                    if (Undoes(s, b))
+                    if (s.Length <= MaxStepCells && Undoes(s, b))
                     {
                         undone = true;
                         break;
@@ -147,6 +206,7 @@ public sealed class OscillationProbeTests
                 var action = trace.ActionAt(f, player);
                 string key = $"{trace.StateAt(f, player)}/{(action is null ? "-" : action.ToString())}";
                 census.ByCause[(int)cause]++;
+                census.Samples?.Add((player, f, cause));
                 Bump(census.ByAction, key);
                 string pair = $"{trace.ActionAt(f - 1, player)}->{action}";
                 bool flight = trace.BallInFlightAt(f);
@@ -240,7 +300,7 @@ public sealed class OscillationProbeTests
         output.WriteLine(
             $"{label}: partidos {c.Matches} · inversiones {c.Reversals} ({c.PerPlayerSecond:F3}/s por jugador) · " +
             $"deshechas ≤{UndoTicks} {c.Undone} ({c.UndonePercent:F1} %) · balón en vuelo {c.BallInFlight} (deshechas {c.UndoneBallInFlight}) · " +
-            $"paso-0-paso {c.StopGo} · pasos de carrera {c.RunningSteps}");
+            $"paso-0-paso {c.StopGo} · pasos de carrera {c.RunningSteps} · excluidas: cortes {c.Cuts}, legítimas {c.Legit}");
         foreach (Cause cause in Enum.GetValues<Cause>())
         {
             output.WriteLine($"  causa {cause}: {c.ByCause[(int)cause]} (deshechas {c.UndoneByCause[(int)cause]})");
@@ -319,7 +379,7 @@ public sealed class OscillationProbeTests
     [Trait("Category", "Diagnostic")]
     public void BrutalMatchBiasWithAndWithoutTheHold()
     {
-        foreach (int hold in new[] { 0, 40 })
+        foreach (int hold in new[] { 0, 50 })
         {
             var catalog = WithHold(Catalog, hold);
             var setup = TestMatches.Brutal(catalog);
@@ -339,11 +399,36 @@ public sealed class OscillationProbeTests
         }
     }
 
+    /// <summary>ADR 0184: rojas por doble amarilla en el emparejamiento brutal con árbitro neutro, con y sin sostenida.</summary>
+    [Fact]
+    [Trait("Category", "Diagnostic")]
+    public void SecondYellowRedsWithAndWithoutTheHold()
+    {
+        foreach (int hold in new[] { 0, 40, 50 })
+        {
+            var catalog = WithHold(Catalog, hold);
+            var brutal = TestMatches.Brutal(catalog);
+            var neutral = brutal with { Referee = brutal.Referee with { Trait = RefereeTrait.Neutral } };
+            int matches = 0, first = 0;
+            for (ulong seed = 1; seed <= 500; seed++)
+            {
+                var result = Simulator.Run(neutral, seed, catalog, new SimConfig(CollectLog: false));
+                if (RefereeTraitsEngineTests.RedsWithPriorYellowCount(result.Events).Any(r => r.PriorYellows >= 2))
+                {
+                    matches++;
+                    first = first == 0 ? (int)seed : first;
+                }
+            }
+
+            _output.WriteLine($"hold {hold}: partidos con roja por doble amarilla en 500 semillas: {matches} (primera en la semilla {first})");
+        }
+    }
+
     [Fact]
     [Trait("Category", "Diagnostic")]
     public void SweepOfTheHold()
     {
-        foreach (int hold in new[] { 0, 30, 40, 50, 60, 100 })
+        foreach (int hold in new[] { 0, 40, 50, 60, 80, 100 })
         {
             Report(_output, $"hold {hold}", Measure(WithHold(Catalog, hold), 1, 40));
         }
