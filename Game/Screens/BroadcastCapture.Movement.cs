@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Godot;
@@ -55,7 +56,9 @@ public partial class BroadcastCapture
 
     private bool _movementImages = true;
 
-    private async Task CaptureMovement(RunController run, string directory, ulong seed, bool images)
+    private async Task CaptureMovement(
+        RunController run, string directory, ulong seed, bool images,
+        IReadOnlyList<(string Label, int StartTick, int EndTick, string Focus)>? custom = null)
     {
         _movementImages = images;
         _movementDirectory = directory;
@@ -92,7 +95,7 @@ public partial class BroadcastCapture
             Path.Combine(directory, "pies.csv"),
             "clip,t,lx,ly,lz,rx,ry,rz\n" + Ui.PlayerModel.DebugFootProfile(this, "kick") + Ui.PlayerModel.DebugFootProfile(this, "receive"));
 
-        var windows = PlanMovementWindows(screen, trace, hasModel);
+        var windows = custom is { Count: > 0 } ? CustomWindows(trace, hasModel, custom) : PlanMovementWindows(screen, trace, hasModel);
         var plan = new StringBuilder("label,start,end,focus,images\n");
         foreach (var w in windows)
         {
@@ -121,6 +124,59 @@ public partial class BroadcastCapture
         File.WriteAllText(Path.Combine(directory, "fotogramas.csv"), _movementLog.ToString());
         GD.Print($"movimiento: registro escrito en {directory}");
         Drop(instance);
+    }
+
+    /// <summary>
+    /// Tramos pedidos por la línea de órdenes (ticks de la traza, no fotogramas): la batería de detectores de
+    /// síntomas da semilla y tick de sus peores casos, y aquí se convierten en tramos con imágenes. Foco: los
+    /// ids de jugador pedidos que tengan modelo, o, si no hay, los tres con modelo más cercanos al balón.
+    /// </summary>
+    private static List<MovementWindow> CustomWindows(
+        MatchTrace trace, bool[] hasModel, IReadOnlyList<(string Label, int StartTick, int EndTick, string Focus)> custom)
+    {
+        var windows = new List<MovementWindow>();
+        foreach (var (label, t0, t1, focusArg) in custom)
+        {
+            int start = trace.FrameOfTick(t0);
+            int end = Math.Max(start + 1, trace.FrameOfTick(t1));
+            var focus = new List<int>();
+            foreach (string token in focusArg.Split(',', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (int.TryParse(token, NumberStyles.Integer, CultureInfo.InvariantCulture, out int id))
+                {
+                    for (int i = 0; i < trace.Players.Count; i++)
+                    {
+                        if (trace.Players[i].Id == id && hasModel[i] && !focus.Contains(i))
+                        {
+                            focus.Add(i);
+                        }
+                    }
+                }
+            }
+
+            if (focus.Count == 0)
+            {
+                var ball = trace.BallAt(start);
+                var order = new List<(float D, int I)>();
+                for (int i = 0; i < trace.Players.Count; i++)
+                {
+                    if (hasModel[i] && trace.OnPitchAt(start, i))
+                    {
+                        order.Add((Vec2.Distance(ball, trace.PositionAt(start, i)), i));
+                    }
+                }
+
+                order.Sort((a, b) => a.D != b.D ? a.D.CompareTo(b.D) : a.I.CompareTo(b.I));
+                focus.AddRange(order.Take(3).Select(o => o.I));
+            }
+
+            windows.Add(new MovementWindow
+            {
+                Label = label, Start = start, End = end, Focus = focus.ToArray(), Images = true, MaxEngineFrames = ((end - start) * 3) + 60,
+            });
+        }
+
+        return windows;
     }
 
     private void OnMovementPostDraw()

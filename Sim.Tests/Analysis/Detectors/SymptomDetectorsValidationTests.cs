@@ -243,9 +243,9 @@ public sealed class SymptomDetectorsValidationTests
             jump.SetPos(f, 3, jump.X[jump.Slot(f, 3)] + (f * 0.15f), 5f); // andar normal: 0,15/tick
         }
 
-        Assert.Single(SymptomDetectors.Teleports(jump, out int e1, out _));
+        Assert.Single(SymptomDetectors.Teleports(jump, out int e1, out _, out _));
         Assert.Equal(0, e1);
-        Assert.Empty(SymptomDetectors.Teleports(reset, out int e2, out _));
+        Assert.Empty(SymptomDetectors.Teleports(reset, out int e2, out _, out _));
         Assert.Equal(1, e2);
     }
 
@@ -259,8 +259,23 @@ public sealed class SymptomDetectorsValidationTests
         }
 
         t.SetPos(9, 4, t.X[t.Slot(8, 4)] + 1.5f, 2f); // el último tick dentro: se desliza 1,5 «hacia» la salida
-        SymptomDetectors.Teleports(t, out _, out int leaving);
+        SymptomDetectors.Teleports(t, out _, out int leaving, out _);
         Assert.Equal(1, leaving);
+    }
+
+    [Fact]
+    public void TeleportDuringARestartIsCountedApartAndNotAsUnexplained()
+    {
+        var t = DetectorTrace.Synthetic(30);
+        for (int f = 10; f < 30; f++)
+        {
+            t.Restart[f] = RestartKind.FreeKick;
+            t.Taker[f] = 3;
+            t.SetPos(f, 9, t.X[t.Slot(f, 9)] + 1.5f, 2f); // un rival apartado de la falta
+        }
+
+        Assert.Empty(SymptomDetectors.Teleports(t, out _, out _, out int restart));
+        Assert.Equal(1, restart);
     }
 
     // ---- BB-B ----
@@ -389,7 +404,7 @@ public sealed class SymptomDetectorsValidationTests
 
         // Un partido de verdad repone los equipos al menos una vez (saque inicial o tras gol): el instrumento
         // tiene que verlo como salto EXPLICADO, no ignorarlo. Si diera 0 estaría ciego.
-        SymptomDetectors.Teleports(t, out int explained, out _);
+        SymptomDetectors.Teleports(t, out int explained, out _, out _);
         Assert.True(explained > 0, "el detector no ve ni una reposición de equipos en un partido real");
 
         // El detector de reanudaciones tiene ventanas que mirar.

@@ -158,7 +158,19 @@ public partial class BroadcastCapture : Control
                 ? parsedSeed
                 : Seeds[0];
             bool movementImages = System.Array.IndexOf(movementArgs, "sinimagenes") < 0;
-            await CaptureMovement(run, movementDir, movementSeed, movementImages);
+            // `ventana <etiqueta> <tickIni> <tickFin> <idJugador,idJugador|->` (repetible): graba SOLO esos tramos de la
+            // traza, para fotografiar los peores casos de la batería de detectores (tools/barrido-detectores.sh).
+            var custom = new List<(string Label, int StartTick, int EndTick, string Focus)>();
+            for (int a = 0; a + 4 < movementArgs.Length; a++)
+            {
+                if (movementArgs[a] == "ventana" && int.TryParse(movementArgs[a + 2], out int t0) && int.TryParse(movementArgs[a + 3], out int t1))
+                {
+                    custom.Add((movementArgs[a + 1], t0, t1, movementArgs[a + 4]));
+                    a += 4;
+                }
+            }
+
+            await CaptureMovement(run, movementDir, movementSeed, movementImages, custom);
             GetTree().Quit();
             return;
         }

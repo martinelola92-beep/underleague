@@ -394,11 +394,13 @@ internal static class SymptomDetectors
     /// BB-A / BB-L: saltos de más de 0,6 casillas de un jugador en el campo entre dos ticks, separando los que
     /// el motor hace a propósito (reposición en un <c>TeamsReset</c>, el sacador que se coloca sobre el balón)
     /// de los que nadie explica. Devuelve sólo los inexplicados; <paramref name="explained"/> cuenta los otros
-    /// (es el control positivo: una traza real DEBE tener algunos).
+    /// (es el control positivo: una traza real DEBE tener algunos) y <paramref name="restartJumps"/> los que ocurren
+    /// con una reanudación en marcha (el motor aparta o coloca gente a propósito).
     /// </summary>
-    public static IReadOnlyList<Hit> Teleports(DetectorTrace t, out int explained, out int leavingJumps)
+    public static IReadOnlyList<Hit> Teleports(DetectorTrace t, out int explained, out int leavingJumps, out int restartJumps)
     {
         explained = 0;
+        restartJumps = 0;
         leavingJumps = 0;
         var hits = new List<Hit>();
         var resetTicks = new HashSet<int>();
@@ -438,6 +440,14 @@ internal static class SymptomDetectors
                 if (reset || taker)
                 {
                     explained++;
+                    continue;
+                }
+
+                // Durante una reanudación el motor aparta a los jugadores del balón (barrera, ADR 0090/0115) y
+                // pone al sacador sobre él: movimiento a propósito, aunque de más de 0,6 casillas en un tick.
+                if (t.Restart[f] != RestartKind.None || t.Restart[f - 1] != RestartKind.None)
+                {
+                    restartJumps++;
                     continue;
                 }
 
