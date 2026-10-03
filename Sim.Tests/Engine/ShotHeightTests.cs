@@ -16,11 +16,106 @@ namespace Underleague.Sim.Tests.Engine;
 /// así que ningún desenlace se mueve todavía. La altura empieza a decidir en el paso 3. Aquí se comprueba
 /// que existe, que es coherente y que no rompe nada.</para>
 /// </summary>
-public sealed class ShotHeightTests
+public sealed class ShotHeightTests : IClassFixture<ShotHeightTests.Observations>
 {
     private static readonly Catalog Catalog = TestData.LoadCatalog();
 
     private const int Matches = 300;
+
+    private readonly Observations _seen;
+
+    public ShotHeightTests(Observations seen) => _seen = seen;
+
+    /// <summary>Lo que dos pruebas leen de cada partido de referencia con traza.</summary>
+    public sealed record Seen(IReadOnlyList<float> GoalRows, int Shots, int Frames, IReadOnlyList<string> BadDetails, IReadOnlyList<string> Problems);
+
+    /// <summary>
+    /// Observaciones por semilla de los partidos de referencia con traza (técnica «compartir lo que se repite»):
+    /// <c>ShotsOnTargetSpreadAcrossTheGoalInsteadOfAllHittingTheCentre</c> (semillas 1..300) y
+    /// <c>ShotsCanHitTheWoodworkAndDoNotCountAsGoals</c> (1..400) juegan los mismos partidos. Se guarda lo que cada
+    /// prueba extrae de la traza y no la traza (pesa ~2 MB por partido). Es función pura de la semilla.
+    /// </summary>
+    public sealed class Observations
+    {
+        private readonly Dictionary<ulong, Seen> _bySeed = new();
+
+        public Seen Get(ulong seed)
+        {
+            lock (_bySeed)
+            {
+                if (!_bySeed.TryGetValue(seed, out var seen))
+                {
+                    seen = Observe(seed);
+                    _bySeed[seed] = seen;
+                }
+
+                return seen;
+            }
+        }
+
+        private static Seen Observe(ulong seed)
+        {
+            var result = Simulator.Run(TestMatches.Reference(Catalog, seed), seed, Catalog, SimConfig.Default with { Trace = true });
+            var trace = result.Trace!;
+            var events = result.Events;
+            var goalRows = new List<float>();
+            var badDetails = new List<string>();
+            var problems = new List<string>();
+            int shots = 0, frames = 0;
+
+            for (int i = 0; i < events.Count; i++)
+            {
+                if (events[i].Type == EventType.Goal)
+                {
+                    int goalFrame = trace.FrameOfTick(events[i].Tick);
+                    if (goalFrame > 0 && goalFrame < trace.FrameCount)
+                    {
+                        goalRows.Add(trace.BallAt(goalFrame - 1).Y);
+                    }
+                }
+
+                if (events[i].Type == EventType.Shot && events[i].Detail != "attempted")
+                {
+                    shots++;
+                    continue;
+                }
+
+                if (events[i].Type != EventType.ShotPost)
+                {
+                    continue;
+                }
+
+                frames++;
+                if (events[i].Detail is not ("post" or "crossbar"))
+                {
+                    badDetails.Add($"detalle inesperado en el tiro al marco: '{events[i].Detail}'");
+                }
+
+                // Un tiro al marco NO es gol: no puede haber un Goal en el mismo tick.
+                for (int j = i + 1; j < events.Count && events[j].Tick == events[i].Tick; j++)
+                {
+                    if (events[j].Type == EventType.Goal)
+                    {
+                        problems.Add($"semilla {seed}: gol en el mismo tick que un tiro al marco (tick {events[i].Tick})");
+                    }
+                }
+
+                // Y el balón queda VIVO, que es lo que distingue un rechace de un balón muerto: sale del
+                // marco con velocidad. Que alguien lo recoja al tick siguiente NO es un fallo -un rechace
+                // que cae a los pies de un delantero es exactamente lo que se buscaba-, así que lo que se
+                // comprueba es que sale con velocidad, no que nadie lo coja.
+                int f = trace.FrameOfTick(events[i].Tick);
+                if (f + 1 < trace.FrameCount
+                    && trace.BallOwnerAt(f + 1) < 0
+                    && Vec2.Distance(trace.BallAt(f), trace.BallAt(f + 1)) < 0.01f)
+                {
+                    problems.Add($"semilla {seed}: el balón se quedó muerto en el marco en vez de rechazar");
+                }
+            }
+
+            return new Seen(goalRows, shots, frames, badDetails, problems);
+        }
+    }
 
     /// <summary>El balón se despega del suelo en algún momento: antes era imposible por construcción.</summary>
     [Fact]
@@ -105,22 +200,7 @@ public sealed class ShotHeightTests
 
         for (ulong seed = 1; seed <= Matches; seed++)
         {
-            var result = Simulator.Run(TestMatches.Reference(Catalog, seed), seed, Catalog, SimConfig.Default with { Trace = true });
-            var trace = result.Trace!;
-
-            foreach (var e in result.Events)
-            {
-                if (e.Type != EventType.Goal)
-                {
-                    continue;
-                }
-
-                int frame = trace.FrameOfTick(e.Tick);
-                if (frame > 0 && frame < trace.FrameCount)
-                {
-                    rows.Add(trace.BallAt(frame - 1).Y);
-                }
-            }
+            rows.AddRange(_seen.Get(seed).GoalRows);
         }
 
         Assert.True(rows.Count > 50, $"muestra corta: sólo {rows.Count} goles");
@@ -155,49 +235,11 @@ public sealed class ShotHeightTests
 
         for (ulong seed = 1; seed <= 400; seed++)
         {
-            var result = Simulator.Run(TestMatches.Reference(Catalog, seed), seed, Catalog, SimConfig.Default with { Trace = true });
-            var trace = result.Trace!;
-            var events = result.Events;
-
-            for (int i = 0; i < events.Count; i++)
-            {
-                if (events[i].Type == EventType.Shot && events[i].Detail != "attempted")
-                {
-                    shots++;
-                    continue;
-                }
-
-                if (events[i].Type != EventType.ShotPost)
-                {
-                    continue;
-                }
-
-                frames++;
-                Assert.True(
-                    events[i].Detail is "post" or "crossbar",
-                    $"detalle inesperado en el tiro al marco: '{events[i].Detail}'");
-
-                // Un tiro al marco NO es gol: no puede haber un Goal en el mismo tick.
-                for (int j = i + 1; j < events.Count && events[j].Tick == events[i].Tick; j++)
-                {
-                    if (events[j].Type == EventType.Goal)
-                    {
-                        afterFrame.Add($"semilla {seed}: gol en el mismo tick que un tiro al marco (tick {events[i].Tick})");
-                    }
-                }
-
-                // Y el balón queda VIVO, que es lo que distingue un rechace de un balón muerto: sale del
-                // marco con velocidad. Que alguien lo recoja al tick siguiente NO es un fallo -un rechace
-                // que cae a los pies de un delantero es exactamente lo que se buscaba-, así que lo que se
-                // comprueba es que sale con velocidad, no que nadie lo coja.
-                int f = trace.FrameOfTick(events[i].Tick);
-                if (f + 1 < trace.FrameCount
-                    && trace.BallOwnerAt(f + 1) < 0
-                    && Vec2.Distance(trace.BallAt(f), trace.BallAt(f + 1)) < 0.01f)
-                {
-                    afterFrame.Add($"semilla {seed}: el balón se quedó muerto en el marco en vez de rechazar");
-                }
-            }
+            var seen = _seen.Get(seed);
+            shots += seen.Shots;
+            frames += seen.Frames;
+            Assert.True(seen.BadDetails.Count == 0, seen.BadDetails.FirstOrDefault());
+            afterFrame.AddRange(seen.Problems);
         }
 
         Assert.True(frames > 0, $"ningún tiro dio en el marco en 400 partidos ({shots} tiros)");
