@@ -84,6 +84,13 @@ Un consumible manual es una entrada del usuario en mitad de un partido determini
 
 Esta decisión mantiene RT-013 (una sola entrada pura) sin excepciones. Coste: recalcular desde el inicio, que con partidos de 60-90 s a 15 ticks/s es despreciable (RT-051).
 
+**Enmienda (ADR 0191, BX-19):** «despreciable» no lo era en `/Game`. Cada decisión simulaba el partido dos veces
+(reproducción con traza y `EnterMatch`), más una por punto de sustitución, con el `/Sim` del `Debug` de Godot sin
+optimizar: 0,5-3,9 s de congelación medidos. Ahora `MatchPlaybacks.PlayAndEnter` simula una vez cuando la
+reproducción no deja ningún punto del jugador pendiente, `Sim.csproj` compila optimizado siempre, y `RunController`
+simula la decisión en un `Task` con un **catálogo propio** (`/Sim` no es reentrante) mientras la retransmisión
+sostiene el fotograma de la decisión; el resultado se aplica en el hilo principal. El partido es el mismo byte a byte.
+
 ## Sustitución forzada durante el partido (AZ-F, ADR 0094)
 
 Mismo mecanismo que el consumible manual: `TeamSetup.Substitutions` (`Substitution(Tick, OutPlayerId, InPlayerId)`)

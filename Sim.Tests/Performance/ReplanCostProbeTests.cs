@@ -63,6 +63,7 @@ public sealed class ReplanCostProbeTests
             long tResolve = Min(() => SubstitutionPoints.ResolveAutomatically(built.Setup, built.Seed, catalog, cfg with { Trace = true }, static t => t == 1, decisions.Declines));
             long tResolveAll = Min(() => SubstitutionPoints.ResolveAutomatically(built.Setup, built.Seed, catalog, cfg, null, decisions.Declines));
             long tPlay = Min(() => MatchPlaybacks.OfResolvingBlockedPoints(state, node.Id, catalog, bossSystems, true, decisions, 0, out _));
+            long tPlayAndEnter = Min(() => MatchPlaybacks.PlayAndEnter(state, node.Id, catalog, bossSystems, decisions, 0, out _));
             long tEnter = Min(() => RunEngine.EnterMatch(state, node.Id, catalog, bossSystems, decisions));
             long tSave = Min(() => RunSave.Save(state, new PendingMatch(node.Id, decisions, 1000)));
             var playback = MatchPlaybacks.Of(state, node.Id, catalog, bossSystems, trace: true, decisions);
@@ -72,7 +73,7 @@ public sealed class ReplanCostProbeTests
 
             _output.WriteLine(
                 $"semilla {seed}: frames {playback.Result.Trace!.FrameCount} subs {subs} | BuildMatch {tBuild} · MatchConfig {tCfg} · Run {tRun} · Run+traza {tRunTrace} · " +
-                $"Resolve(rival,traza) {tResolve} · Resolve(ambos) {tResolveAll} · Playback {tPlay} · EnterMatch {tEnter} · RunSave {tSave} · Momentos {tMoments} · Log {tLog} (ms, mínimo de 5)");
+                $"Resolve(rival,traza) {tResolve} · Resolve(ambos) {tResolveAll} · Playback {tPlay} · EnterMatch {tEnter} · PlayAndEnter (ADR 0191) {tPlayAndEnter} · RunSave {tSave} · Momentos {tMoments} · Log {tLog} (ms, mínimo de 5)");
         }
     }
 }

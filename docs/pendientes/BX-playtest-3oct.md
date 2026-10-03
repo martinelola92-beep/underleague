@@ -32,6 +32,13 @@ Capturas: `capturas/playtest-3oct-saque-portero.png` (saque de puerta al centro,
 
 ## Paquete 4 — Rendimiento de las decisiones
 - **BX-19** Al cambiar la táctica (defensa, neutro, ataque) hay un parón, porque se vuelve a simular. Hay que solucionarlo.
+  **Cerrada por la [ADR 0191](../decisiones/0191-la-decision-en-vivo-se-simula-en-segundo-plano.md).** Medido con
+  `-- paron` (arnés de la retransmisión) y `ReplanCostProbeTests`: cada decisión en vivo simulaba el partido **dos veces**
+  (reproducción + `EnterMatch`, más una por punto de sustitución) con el `/Sim` del `Debug` sin optimizar, 0,5-3,9 s de
+  bloqueo — H1/H2 (re-simulación duplicada) y H5 (`Debug` ×5-10) **CONFIRMED**; guardado y pantalla **REJECTED** como
+  causa (≤ 3 %). Ahora una simulación, `/Sim` optimizado y en segundo plano con catálogo propio: ≤ 3 ms en el clic y
+  6-15 ms al aplicar en el hilo principal; partido igual byte a byte. Queda (LIKELY imperceptible, sin medir a 60 Hz):
+  1-3 fotogramas con el reloj sostenido mientras se simula.
 
 ## Paquete 5 — Muertes
 - **BX-20** Contra unos orcos pegones, en un partido mataron a 2 jugadores y lesionaron gravemente a otros 2; en la run murieron 5. «Sed de médula igual es demasiado.» Esto va contra la condición «la muerte es rara» de la ADR 0048. **Ficha: [BX-20](BX-20.md). Cerrada por la [ADR 0190](../decisiones/0190-un-carnicero-se-cobra-una-vida-por-partido.md)**: el mismo portador letal mataba en serie (1,75 por partido el de Partecráneos); ahora una vida por portador y partido, y `marrow_thirst` 900 → 1800 para no salir de banda.
