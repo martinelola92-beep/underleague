@@ -120,3 +120,37 @@ que no sea del partido (`Nav.Go`) y cuando entra o decide algo ajeno al partido 
 - Guardar el partido a mitad de **jugada** o la posición del campo: se reproduce desde el tick 0 (RT-051:
   60-90 s a 15 ticks/s, coste despreciable). No se guarda un punto de reanudación en el motor.
 - El resultado de un partido sin ver (autosimulado por `/Balance` o por políticas): no pasa por aquí.
+
+## Enmienda del 3 oct 2026: «Continuar» no borra el guardado
+
+**Decisión del revisor.** Lo habitual en un roguelite: el guardado no se borra al cargar; se sobrescribe en
+cada punto de control con escritura atómica, y el anti-recarga lo garantiza el determinismo más el suelo
+pesimista de esta ADR. Hasta hoy `RunController.Continue()` borraba el slot nada más cargar (RT-061 antiguo:
+«se borra al cargarse») y un cierre forzado justo después perdía la run entera. Cambia el texto de RT-061.
+
+**Qué se hizo** (`/Game`, `RunController`): `Continue` ya no borra; `WriteSave` escribe en `run.json.tmp` (mismo
+directorio) y lo renombra sobre `run.json` (`DirAccess.RenameAbsolute`), así que un cierre a mitad de escritura
+deja el guardado anterior intacto; el slot se sigue borrando sólo al terminar la run (`Save` con la run acabada
+y `Abandon`).
+
+**Caminos de recarga que se abren con el guardado conservado** (comprobados leyendo `RunController`,
+`AfterTransition` y `PlayMatch`; LIKELY por lectura, no por reproducción en proceso):
+
+1. *Partido a medias* (cargar, ver, matar): **cerrado ya**. El guardado conserva `pendingMatch` y su
+   `WatchedTick`; `PlayMatch` lo reescribe con el suelo pesimista antes de enseñar nada, y el suelo nunca baja
+   por una reanudación. Matar tras cargar deja el mismo guardado de antes, no uno peor.
+2. *Nodo no-partido abierto* (mercado, clínica, entrenamiento, evento): **abierto, y existía ya** para todo
+   nodo salvo el primero tras cargar (el slot que había en disco era el del mapa anterior). `AfterTransition`
+   sólo guardaba con la run en el mapa; lo decidido dentro de un nodo (compra, tratamiento, opción de evento)
+   no estaba en disco hasta cerrar el nodo. Con el slot conservado, el jugador podía ver la consecuencia de una
+   opción, matar el proceso y volver a elegir. **Cerrado:** `AfterTransition` guarda en **cada** transición,
+   también con el nodo abierto (la fase `NodeOpen` ya se carga: es la de «recompensa pendiente» tras una victoria
+   y `Nav.For` la enruta). Cada `Apply` queda en disco antes de que la pantalla muestre su efecto.
+3. *Elegir nodo en el mapa y matar antes de que se guarde*: no hay información que ganar. Elegir un nodo no
+   resuelve nada, y su contenido y su resultado dependen de `(semilla de la run, id del nodo)` (W-5, W-12), no
+   del camino. Un nodo de partido pasa por `PlayMatch` (camino 1). **Sin camino de recarga.**
+
+**No queda abierto:** matar durante la propia escritura (cubierto por el temporal + rename). **Límite
+declarado:** `RenameAbsolute` es atómico en Linux; en Windows Godot borra el destino antes de mover, así que
+hay una ventana mínima entre ambos pasos donde sólo existe el temporal. No se ha tratado (el guardado anterior
+sigue siendo `run.json.tmp` aún no promovido); si importa, se recupera el temporal al arrancar.

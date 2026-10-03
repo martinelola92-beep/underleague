@@ -168,8 +168,9 @@ public partial class RunController : Node
     }
 
     /// <summary>
-    /// Retoma el guardado ironman y lo <b>borra</b> del disco (RT-061: un único slot, que se borra al
-    /// cargarse). La run se sigue jugando con la instantánea de <c>/data</c> que congeló al empezar, no
+    /// Retoma el guardado ironman <b>sin borrarlo</b> (RT-061, ADR 0183 enmienda del 3 oct): el slot se
+    /// sobrescribe en cada punto de control y sólo se borra al terminar la run. La run se sigue jugando con la instantánea de <c>/data</c> que congeló al
+    /// empezar, no
     /// con la del disco (RT-061b). Devuelve false si no había guardado o si no se pudo leer.
     /// </summary>
     public bool Continue()
@@ -217,7 +218,6 @@ public partial class RunController : Node
             return false;
         }
 
-        DeleteSave();
         Changed();
         return true;
     }
@@ -333,16 +333,29 @@ public partial class RunController : Node
         WriteSave(RunSave.Save(State));
     }
 
+    /// <summary>
+    /// Escritura atómica (ADR 0183, enmienda del 3 oct): el JSON entero va a un temporal del mismo directorio
+    /// y sólo cuando está cerrado se renombra sobre el guardado. Un cierre forzado a mitad de escritura deja
+    /// el guardado anterior intacto, nunca uno truncado.
+    /// </summary>
     private static void WriteSave(string json)
     {
-        using var file = FileAccess.Open(SavePath, FileAccess.ModeFlags.Write);
-        if (file is null)
+        string temporary = SavePath + ".tmp";
+        using (var file = FileAccess.Open(temporary, FileAccess.ModeFlags.Write))
         {
-            GD.PushError($"no se pudo escribir el guardado en {SavePath}");
-            return;
+            if (file is null)
+            {
+                GD.PushError($"no se pudo escribir el guardado temporal {temporary}");
+                return;
+            }
+
+            file.StoreString(json);
         }
 
-        file.StoreString(json);
+        if (DirAccess.RenameAbsolute(temporary, SavePath) != Error.Ok)
+        {
+            GD.PushError($"no se pudo renombrar {temporary} a {SavePath}");
+        }
     }
 
     /// <summary>Borra el guardado ironman.</summary>
@@ -368,7 +381,7 @@ public partial class RunController : Node
     /// <summary>
     /// Sale al menú principal <b>sin</b> perder la run: la guarda como al cerrar la ventana y la descarga
     /// de memoria, así que en el inicio aparece «Continuar la run guardada» y retomarla pasa por
-    /// <see cref="Continue"/>, que vuelve a borrar el slot (RT-061). Distinto de <see cref="Abandon"/>,
+    /// <see cref="Continue"/>, que deja el slot donde está (RT-061). Distinto de <see cref="Abandon"/>,
     /// que sí la pierde (RF-007).
     /// </summary>
     public void LeaveToMenu()
@@ -396,9 +409,11 @@ public partial class RunController : Node
             : (State, Catalog);
 
     /// <summary>
-    /// Cierre común de toda transición: guardar al completar un nodo (RT-061) y avisar a las pantallas.
-    /// Se guarda cuando la run vuelve al mapa, que es exactamente "nodo completado"; con un nodo abierto
-    /// no se guarda, porque las decisiones de dentro todavía no han terminado.
+    /// Cierre común de toda transición: guardar (RT-061) y avisar a las pantallas. Se guarda en <b>cada</b>
+    /// transición, también con un nodo abierto (ADR 0183, enmienda del 3 oct): el guardado ya no se borra al
+    /// cargar, así que lo decidido dentro de un nodo (compra, tratamiento, opción de un evento) debe estar en
+    /// disco antes de que el jugador vea su consecuencia; si no, cerrar a la fuerza y volver permitiría
+    /// deshacerlo. Un nodo abierto es un estado que el guardado ya sabe cargar (recompensa pendiente).
     /// </summary>
     private void AfterTransition()
     {
@@ -412,7 +427,7 @@ public partial class RunController : Node
             return;
         }
 
-        if (State is not null && (State.Phase == RunPhase.OnMap || Outcome().IsOver))
+        if (State is not null)
         {
             Save();
         }

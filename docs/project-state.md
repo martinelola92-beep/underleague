@@ -49,8 +49,8 @@ independiente, rebase y merge a `main`, push):
    Ver `docs/pendientes/BV-A.md`.
 
 **DECISIONES DEL REVISOR (3 oct, madrugada):**
-1. F3 (vista 2D) pasa a ser opcional en el menú de ajustes.
-2. `Continue()` hace lo habitual: no borra el guardado; escritura atómica y anti-recarga por suelo/semilla.
+1. F3 (vista 2D) pasa a ser opcional en el menú de ajustes. **HECHO (3 oct):** `GameSettings.Match2DKey`, apagada por defecto, casilla en Ajustes; con ella apagada F3 no hace nada en la retransmisión.
+2. `Continue()` hace lo habitual: no borra el guardado; escritura atómica y anti-recarga por suelo/semilla. **HECHO (3 oct, enmienda de la ADR 0183):** `Continue` no borra, `WriteSave` es temporal + rename, y se guarda en cada transición también con el nodo abierto (cierra el camino de recarga de la compra/evento). RT-061 reescrito.
 3. Herrero: tope de 3 prótesis; a partir de ahí, el jugador queda lisiado.
 4. Sumideros: se balanceará el coste al final; por ahora vale.
 5. Bulwark: a criterio.
@@ -58,8 +58,6 @@ independiente, rebase y merge a `main`, push):
 Prioridad absoluta: IA y animaciones 3D para la build de la mañana del 3 oct (dos pistas: /Game presentación y /Sim oscilación/aceleración).
 
 **SIGUIENTE (3 oct):** la cola de la noche está vacía. Decisiones abiertas del revisor (antes de responderlas):
-- F3 (vista 2D) en el juego normal o sólo en desarrollo (BR-A);
-- `Continue()` borra el guardado (anti-recarga, BR-A);
 - tope de seguridad del herrero sobre un titular (ADR 0164);
 - «nunca todos los sumideros» por acto (ADR 0182);
 - tercer perk de Bulwark desbloqueado (BB-U);

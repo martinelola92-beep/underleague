@@ -50,3 +50,7 @@ que el borrado impide (matar el proceso tras una mala decisión de un nodo abier
 anterior), así que es una decisión del revisor, no un arreglo mecánico. Con partido a medias el riesgo es
 mínimo: `PlayMatch` reescribe el guardado antes de enseñar nada. La vista 2D (F3) ya registra lo que enseña
 (`MatchScreen` llama a `NoteWatched`); si F3 debe existir sólo en desarrollo es decisión del revisor, no se ha cambiado.
+
+**Actualización (3 oct 2026):** las dos decisiones pendientes de esta ficha están tomadas. F3 es una opción de
+Ajustes apagada por defecto, y `Continue()` ya no borra el guardado (escritura atómica, guardado en cada
+transición); ver la enmienda de la [ADR 0183](../decisiones/0183-salir-a-mitad-de-partido-reproduce-el-partido.md).

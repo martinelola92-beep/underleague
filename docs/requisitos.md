@@ -532,7 +532,7 @@ Run
 ### 4.8 Persistencia
 
 - **RT-060** Guardado en JSON local, con número de versión de esquema.
-- **RT-061** **Guardado ironman**: un único slot por run. Se guarda automáticamente al completar cada nodo, se borra al cargarse, y no puede copiarse ni restaurarse desde el juego. Salir a mitad de partido reproduce el partido desde la semilla al volver. Sin trampas por recarga y sin runs perdidas por cerrar el juego.
+- **RT-061** **Guardado ironman**: un único slot por run. Se guarda automáticamente en cada punto de control (cada transición, con escritura atómica) y se borra sólo al terminar la run (victoria, derrota o abandono) — enmendado el 3 oct 2026, ADR 0183 —, y no puede copiarse ni restaurarse desde el juego. Salir a mitad de partido reproduce el partido desde la semilla al volver. Sin trampas por recarga y sin runs perdidas por cerrar el juego.
 - **RT-061b** Cada run **congela una instantánea de `/data`** al empezar y la guarda consigo. Una actualización del juego nunca altera una run en curso ni invalida sus repeticiones.
 - **RT-062** Debe existir un modo de depuración que cargue un estado predefinido (por ejemplo, acto 2 con una plantilla concreta) sin jugar los nodos previos.
 - **RT-063** Sincronización con Steam Cloud.
