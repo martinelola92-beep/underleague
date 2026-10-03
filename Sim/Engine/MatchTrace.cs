@@ -469,6 +469,31 @@ internal sealed class MatchTraceRecorder
         var numbers = new int[players.Length];
         for (int team = 0; team < 2; team++)
         {
+            // BX-4: si todo el equipo trae dorsal fijo de la run (distintos y positivos), es ese; si no (rivales
+            // generados, equipos de prueba), se reparte como siempre. Se decide por equipo entero para no mezclar
+            // dorsales fijos con repartidos y acabar con dos jugadores con el mismo número.
+            var roster = (team == 0 ? setup.Home : setup.Away).Players;
+            if (HasFixedShirtNumbers(roster))
+            {
+                for (int i = 0; i < players.Length; i++)
+                {
+                    if (players[i].Team != team)
+                    {
+                        continue;
+                    }
+
+                    for (int s = 0; s < roster.Count; s++)
+                    {
+                        if (roster[s].Id == players[i].Id)
+                        {
+                            numbers[i] = roster[s].ShirtNumber;
+                        }
+                    }
+                }
+
+                continue;
+            }
+
             int next = 1;
             for (int role = 0; role <= (int)Position.Forward; role++)
             {
@@ -531,6 +556,27 @@ internal sealed class MatchTraceRecorder
         }
 
         return described;
+    }
+
+    private static bool HasFixedShirtNumbers(IReadOnlyList<PlayerDefinition> roster)
+    {
+        for (int i = 0; i < roster.Count; i++)
+        {
+            if (roster[i].ShirtNumber <= 0)
+            {
+                return false;
+            }
+
+            for (int j = 0; j < i; j++)
+            {
+                if (roster[j].ShirtNumber == roster[i].ShirtNumber)
+                {
+                    return false;
+                }
+            }
+        }
+
+        return roster.Count > 0;
     }
 
     /// <summary>Iniciales del nombre, hasta dos letras y en mayúsculas; vacío si el nombre lo está.</summary>

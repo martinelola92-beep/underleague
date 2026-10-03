@@ -36,6 +36,13 @@ public sealed record PlayerDefinition(
     public StyleTag StyleTag { get; init; } = StyleTag.Neutral;
 
     /// <summary>
+    /// Dorsal fijo del jugador en la run (BX-4, <c>RunPlayer.ShirtNumber</c>), o 0 si no tiene: rivales generados, equipos
+    /// de prueba. La traza del partido (<c>MatchTrace</c>) lo respeta cuando todo el equipo lo trae y reparte el suyo
+    /// cuando no, así que el 0 es «sin dorsal» y nunca un dorsal.
+    /// </summary>
+    public int ShirtNumber { get; init; }
+
+    /// <summary>
     /// Perks asignados al jugador (RF-071), por id de <c>data/perks/</c>. Se declara como propiedad
     /// <c>init</c> y no como parámetro posicional para que las construcciones existentes sigan valiendo
     /// y para poder escribir <c>definition with { Perks = ["bloodlust"] }</c>.

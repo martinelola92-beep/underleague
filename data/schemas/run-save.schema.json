@@ -345,6 +345,11 @@
           "type": "integer",
           "minimum": 0
         },
+        "shirtNumber": {
+          "description": "Dorsal fijo del jugador toda la run (BX-4, versión 10). Un guardado de la 8 o la 9 no lo trae y se numera por id al cargar.",
+          "type": "integer",
+          "minimum": 1
+        },
         "prostheses": {
           "type": "array",
           "items": {
@@ -405,7 +410,7 @@
       "required": [
         "id", "name", "race", "position", "rarity", "level", "experience", "attributes", "traits",
         "tags", "speciesTag", "styleTag", "perks", "item", "physicalState", "minorInjuries",
-        "prostheses", "wage", "isMercenary", "isYouth", "matchesBenched", "bonds", "mourning",
+        "shirtNumber", "prostheses", "wage", "isMercenary", "isYouth", "matchesBenched", "bonds", "mourning",
         "counters", "bondProgress", "career"
       ],
       "additionalProperties": false

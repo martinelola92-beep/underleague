@@ -38,6 +38,7 @@ Run
       item              id de objeto o null  (RF-076: un único objeto)
       physicalState     healthy | minorInjury | severeInjury | dead  (RF-090)
       minorInjuries     int (acumulables, RF-091)
+      shirtNumber       int >= 1, dorsal fijo toda la run (BX-4, esquema 10); el primero libre al entrar
       prostheses[]      (slot, effect)  (RF-095)
       wage              int, 0 salvo mercenarios  (RF-111)
       isMercenary       bool

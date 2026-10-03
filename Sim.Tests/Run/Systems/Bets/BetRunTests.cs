@@ -255,16 +255,15 @@ public sealed class BetRunTests
     // ---------------------------------------------------------------- guardado v7
 
     [Fact]
-    public void SaveVersionIsNineAndATakenBetSurvivesTheRoundTrip()
+    public void SaveVersionIsTheCurrentOneAndATakenBetSurvivesTheRoundTrip()
     {
-        Assert.Equal(9, RunState.CurrentSchemaVersion);
         var (state, node, _) = Offered();
         var taken = RunEngine.Apply(state, new TakeBet(node.Id), Catalog, Systems)
             .WithBet(new AcceptedBet("hunt_the_star", node.Id, 4, 973, 104, "Grok \"Comecráneos\""));
 
         var loaded = RunSave.Load(RunSave.Save(taken));
 
-        Assert.Equal(9, loaded.SchemaVersion);
+        Assert.Equal(RunState.CurrentSchemaVersion, loaded.SchemaVersion);
         Assert.Equal(taken.Bet, loaded.Bet);
         Assert.Equal(taken.Gold, loaded.Gold);
         Assert.Equal(RunSave.Save(taken), RunSave.Save(loaded));

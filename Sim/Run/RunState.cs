@@ -194,6 +194,14 @@ public sealed record RunPlayer(
     internal static readonly IReadOnlyDictionary<string, int> NoCounters =
         new SortedDictionary<string, int>(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Dorsal del jugador, <b>fijo toda la run</b> (BX-4): lo recibe al entrar en la plantilla
+    /// (<see cref="RunState.WithNewPlayer"/>, <see cref="RunState.WithRoster"/>) y no cambia por puesto, por
+    /// partido ni porque entre o salga alguien. Es el primero libre ≥ 1 de la plantilla (los muertos siguen en ella,
+    /// así que su número no se reasigna). 0 = sin asignar todavía, un estado transitorio que ningún embudo deja salir.
+    /// </summary>
+    public int ShirtNumber { get; init; }
+
     /// <summary>Etiqueta de especie, fija por raza (ADR 0024).</summary>
     public string SpeciesTag { get; init; } = string.Empty;
 
@@ -342,6 +350,7 @@ public sealed record RunPlayer(
             StyleTag = StyleTag,
             Perks = Perks,
             Counters = Counters,
+            ShirtNumber = ShirtNumber,
         };
 
         if (!applyMinorInjuryPenalty
@@ -388,6 +397,7 @@ public sealed record RunPlayer(
             StyleTag = definition.StyleTag,
             Perks = definition.Perks,
             Counters = definition.Counters,
+            ShirtNumber = definition.ShirtNumber,
         };
     }
 }
@@ -483,7 +493,9 @@ public sealed record RunState
     // carrera de cada jugador gana "revenges".
     // 9 (ADR 0183): el guardado puede llevar un "pendingMatch" (partido a medias y sus decisiones) junto al estado
     // de antes de ese partido. Sólo añade un campo opcional: la 8 sigue leyéndose (RunSave.MinimumReadableVersion).
-    public const int CurrentSchemaVersion = 9;
+    // 10 (BX-4): cada jugador gana "shirtNumber", su dorsal fijo de la run. Los guardados de la 8 y la 9 no lo traen y
+    // se numeran al cargar por id ascendente (RunState.WithRoster): migración explícita, sin pérdida.
+    public const int CurrentSchemaVersion = 10;
 
     /// <summary>Versión de esquema con la que se creó este estado.</summary>
     public int SchemaVersion { get; init; } = CurrentSchemaVersion;
@@ -1072,6 +1084,7 @@ public sealed record RunState
         ArgumentNullException.ThrowIfNull(roster);
         var players = new List<RunPlayer>(roster);
         players.Sort(static (a, b) => a.Id.CompareTo(b.Id));
+        AssignShirtNumbers(players);
 
         int next = NextPlayerId;
         for (int i = 0; i < players.Count; i++)
@@ -1137,9 +1150,70 @@ public sealed record RunState
             throw new ArgumentException($"ya hay un jugador con el id {added.Id} en la plantilla", nameof(player));
         }
 
+        // BX-4: el dorsal se fija aquí, al entrar. Si el que trae está ocupado (o no trae), el primero libre.
+        if (added.ShirtNumber <= 0 || IsShirtNumberTaken(Roster, added.ShirtNumber))
+        {
+            added = added with { ShirtNumber = FirstFreeShirtNumber(Roster) };
+        }
+
         var players = new List<RunPlayer>(Roster) { added };
         players.Sort(static (a, b) => a.Id.CompareTo(b.Id));
         return this with { Roster = players, NextPlayerId = Math.Max(NextPlayerId, added.Id + 1) };
+    }
+
+    /// <summary>
+    /// Da dorsal a quien no lo tiene o lo tiene repetido, en orden de id (BX-4): conserva el de cada jugador si es
+    /// válido y único y reparte el primero libre al resto. Es la migración de un guardado anterior y el arranque de la run.
+    /// </summary>
+    private static void AssignShirtNumbers(List<RunPlayer> players)
+    {
+        var taken = new HashSet<int>();
+        var pending = new List<int>();
+        for (int i = 0; i < players.Count; i++)
+        {
+            if (players[i].ShirtNumber > 0 && taken.Add(players[i].ShirtNumber))
+            {
+                continue;
+            }
+
+            pending.Add(i);
+        }
+
+        foreach (int index in pending)
+        {
+            int number = 1;
+            while (taken.Contains(number))
+            {
+                number++;
+            }
+
+            taken.Add(number);
+            players[index] = players[index] with { ShirtNumber = number };
+        }
+    }
+
+    private static bool IsShirtNumberTaken(IReadOnlyList<RunPlayer> roster, int number)
+    {
+        for (int i = 0; i < roster.Count; i++)
+        {
+            if (roster[i].ShirtNumber == number)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static int FirstFreeShirtNumber(IReadOnlyList<RunPlayer> roster)
+    {
+        int number = 1;
+        while (IsShirtNumberTaken(roster, number))
+        {
+            number++;
+        }
+
+        return number;
     }
 
     /// <summary>Copia sin el jugador indicado (venta, RF-114f). No reutiliza su id.</summary>

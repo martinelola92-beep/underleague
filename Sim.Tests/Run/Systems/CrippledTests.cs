@@ -115,7 +115,7 @@ public sealed class CrippledTests
     public void AnOldSaveWithAThreeProsthesisSevereInjuryLoadsAndIsCrippled()
     {
         var (state, patient) = Clinic(3, PhysicalState.SevereInjury);
-        string json = RunSave.Save(state).Replace("\"schemaVersion\":9", "\"schemaVersion\":8", StringComparison.Ordinal);
+        string json = RunSave.Save(state).Replace($"\"schemaVersion\":{RunSave.SchemaVersion}", "\"schemaVersion\":8", StringComparison.Ordinal);
         Assert.Contains("\"schemaVersion\":8", json, StringComparison.Ordinal);
         var loaded = RunSave.Load(json);
         Assert.True(loaded.GetPlayer(patient.Id).IsCrippled);

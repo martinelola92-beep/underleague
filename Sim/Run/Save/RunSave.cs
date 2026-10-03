@@ -544,6 +544,7 @@ public static class RunSave
 
         w.WriteString("physicalState", Camel(player.PhysicalState.ToString()));
         w.WriteNumber("minorInjuries", player.MinorInjuries);
+        w.WriteNumber("shirtNumber", player.ShirtNumber);
 
         w.WriteStartArray("prostheses");
         for (int i = 0; i < player.Prostheses.Count; i++)
@@ -894,6 +895,9 @@ public static class RunSave
                 Perks = perks,
                 Item = itemElement.ValueKind == JsonValueKind.Null ? null : itemElement.GetString(),
                 MinorInjuries = Int(element, "minorInjuries", path),
+
+                // BX-4: la 8 y la 9 no lo traen; 0 y WithRoster los numera por id al cargar (migración explícita).
+                ShirtNumber = element.TryGetProperty("shirtNumber", out _) ? Int(element, "shirtNumber", path) : 0,
                 Prostheses = prostheses,
                 Wage = Int(element, "wage", path),
                 IsMercenary = Bool(element, "isMercenary", path),

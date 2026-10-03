@@ -37,7 +37,7 @@ public sealed class RunSaveRefereeTests
 
         var loaded = RunSave.Load(RunSave.Save(state));
 
-        Assert.Equal(9, loaded.SchemaVersion);
+        Assert.Equal(RunState.CurrentSchemaVersion, loaded.SchemaVersion);
         Assert.Equal(state.Referees.Count, loaded.Referees.Count);
         for (int i = 0; i < state.Referees.Count; i++)
         {

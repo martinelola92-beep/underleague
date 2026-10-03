@@ -141,7 +141,7 @@ public class PendingMatchTests
 
         // Revisión: la migración sube la versión al cargar, y al reescribirlo sale una 9 completa (con su
         // pendingMatch nulo), idéntica a la que se habría escrito de haber empezado la run con este código.
-        Assert.Equal(9, loaded.SchemaVersion);
+        Assert.Equal(RunState.CurrentSchemaVersion, loaded.SchemaVersion);
         Assert.Equal(v9, RunSave.Save(loaded));
     }
 

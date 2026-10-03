@@ -23,6 +23,7 @@ internal static class TestRuns
         Assert.Equal(expected.Rarity, actual.Rarity);
         Assert.Equal(expected.Level, actual.Level);
         Assert.Equal(expected.Experience, actual.Experience);
+        Assert.Equal(expected.ShirtNumber, actual.ShirtNumber);
         Assert.Equal(expected.Attributes, actual.Attributes);
         Assert.Equal(expected.Traits, actual.Traits);
         Assert.Equal(expected.Tags, actual.Tags);
