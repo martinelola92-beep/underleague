@@ -733,6 +733,8 @@ internal sealed class MatchEngine : IPerkWorld
         // UpdateBall/CheckOutOfBounds (revisión independiente, fase 0, ya resuelta antes de este cambio).
         bool wasRestarting = _restartTicksLeft > 0;
         _closedArea = ClosedKeeperArea();
+        _context.ClosedArea = _closedArea;
+        _context.Ramped = _tuning.Movement.AccelTicks > 0;
 
         // ADR 0151: durante la celebración de un gol nadie camina —ni el sacador ni el equipo—; el reinicio
         // los coloca a todos de golpe cuando termina.
@@ -6138,7 +6140,7 @@ internal sealed class MatchEngine : IPerkWorld
     }
 
     /// <summary>Saca un punto del área que defiende <paramref name="team"/> por su borde más cercano.</summary>
-    private static Vec2 PushOutOfArea(Vec2 point, int team)
+    internal static Vec2 PushOutOfArea(Vec2 point, int team)
     {
         const float Margin = 0.1f;
         float frontier = team == 0 ? Pitch.AreaColumns + Margin : Pitch.Columns - Pitch.AreaColumns - Margin;
@@ -6233,7 +6235,25 @@ internal sealed class MatchEngine : IPerkWorld
             // que nadie pueda entrar ni cargar durante la reanudación, así que un hueco de 4 centésimas es
             // el hueco entero. Se desliza POR la línea hasta cumplir la distancia en vez de conformarse.
             player.Position = SlideAlongPitchToClear(center, corrected, clearance);
-            player.Velocity = default;
+
+            // ADR 0185: con el arranque, la velocidad es de dónde parte el paso siguiente. Ponerla a cero aquí, cada tick
+            // de la cuenta atrás, dejaba al que la barrera aparta arrancando siempre desde parado: medido, un delantero
+            // dentro del área de un saque de puerta avanzaba 0,04 casillas por tick hacia la salida y la barrera se lo
+            // comía, y seguía dentro al sacar (KeeperAreaTests). El empujón no es su carrera: se le deja la que llevaba.
+            // Lo que se pierde es la parte que iba hacia el balón (la que la barrera le ha quitado); la de lado se conserva.
+            if (_tuning.Movement.AccelTicks == 0)
+            {
+                player.Velocity = default;
+            }
+            else
+            {
+                var v = player.Velocity;
+                float inward = -((v.X * direction.X) + (v.Y * direction.Y));
+                if (inward > 0f)
+                {
+                    player.Velocity = v + (direction * inward);
+                }
+            }
         }
     }
 

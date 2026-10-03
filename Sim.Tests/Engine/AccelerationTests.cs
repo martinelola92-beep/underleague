@@ -85,6 +85,76 @@ public sealed class AccelerationTests
         Assert.InRange(side, (ceiling / 2) + accel - 3, Math.Min(ceiling, (ceiling / 2) + accel + 3));
     }
 
+    /// <summary>ADR 0185 (gameplay-debug): quién sigue dentro del área al sacar de puerta, y qué estaba haciendo.</summary>
+    [Fact]
+    [Trait("Category", "Diagnostic")]
+    public void WhoIsStillInTheAreaAtTheGoalKick()
+    {
+        for (ulong seed = 1; seed <= 60; seed++)
+        {
+            var result = Simulator.Run(TestMatches.Reference(Catalog, seed), seed, Catalog, SimConfig.Default with { Trace = true });
+            var trace = result.Trace!;
+            foreach (var e in result.Events.Where(e => e.Type == Underleague.Sim.Events.EventType.Recovery && e.Detail == "goalKick"))
+            {
+                int f = trace.FrameOfTick(e.Tick);
+                int keeper = trace.BallOwnerAt(f);
+                if (keeper < 0 || trace.Players[keeper].Role != Position.Goalkeeper)
+                {
+                    continue;
+                }
+
+                int team = trace.Players[keeper].Team;
+                for (int i = 0; i < trace.Players.Count; i++)
+                {
+                    if (i == keeper || !trace.OnPitchAt(f, i) || trace.Players[i].Role == Position.Goalkeeper || !Pitch.IsInArea(trace.PositionAt(f, i), team))
+                    {
+                        continue;
+                    }
+
+                    var path = string.Join(" ", Enumerable.Range(Math.Max(0, f - 4), 5).Select(g => $"({trace.PositionAt(g, i).X:F2},{trace.PositionAt(g, i).Y:F2})->({trace.TargetAt(g, i).X:F2},{trace.TargetAt(g, i).Y:F2}) {trace.ActionAt(g, i)} balón ({trace.BallAt(g).X:F1},{trace.BallAt(g).Y:F1})"));
+                    _output.WriteLine($"semilla {seed} tick {e.Tick} jugador {trace.Players[i].Id} (equipo {trace.Players[i].Team}, portero del {team}): {path}");
+                }
+            }
+        }
+    }
+
+    /// <summary>ADR 0185 (gameplay-debug): la racha de baile de cobertura más larga con el arranque, y qué la produce.</summary>
+    [Fact]
+    [Trait("Category", "Diagnostic")]
+    public void LongestCoverDance()
+    {
+        int best = 0;
+        string where = "";
+        for (ulong seed = 1; seed <= 60; seed++)
+        {
+            var trace = Simulator.Run(TestMatches.Reference(Catalog, seed), seed, Catalog, SimConfig.Default with { Trace = true }).Trace!;
+            for (int p = 0; p < trace.Players.Count; p++)
+            {
+                int run = 0;
+                for (int f = 2; f < trace.FrameCount; f++)
+                {
+                    var a = trace.PositionAt(f - 1, p) - trace.PositionAt(f - 2, p);
+                    var b = trace.PositionAt(f, p) - trace.PositionAt(f - 1, p);
+                    bool rev = trace.OnPitchAt(f, p) && a.Length > 0.02f && b.Length > 0.02f && ((a.X * b.X) + (a.Y * b.Y)) < 0f;
+                    run = rev ? run + 1 : 0;
+                    if (rev && run > best && trace.ActionAt(f, p) == PlayerAction.CoverSpace)
+                    {
+                        best = run;
+                        var steps = string.Join(" ", Enumerable.Range(f - 5, 6).Select(g =>
+                        {
+                            var s = trace.PositionAt(g, p) - trace.PositionAt(g - 1, p);
+                            int near = Enumerable.Range(0, trace.Players.Count).Where(q => q != p && trace.OnPitchAt(g, q)).OrderBy(q => Vec2.Distance(trace.PositionAt(g, q), trace.PositionAt(g, p))).First();
+                            return $"({s.X:F3},{s.Y:F3}) {trace.StateAt(g, p)}/{trace.ActionAt(g, p)} obj ({trace.TargetAt(g, p).X:F2},{trace.TargetAt(g, p).Y:F2}) pos ({trace.PositionAt(g, p).X:F2},{trace.PositionAt(g, p).Y:F2}) R{trace.RestartAt(g)} cerca {trace.Players[near].Id} a {Vec2.Distance(trace.PositionAt(g, near), trace.PositionAt(g, p)):F2} {trace.ActionAt(g, near)}";
+                        }));
+                        where = $"semilla {seed} jugador {trace.Players[p].Id} fotograma {f} racha {run}: {steps}";
+                    }
+                }
+            }
+        }
+
+        _output.WriteLine(where);
+    }
+
     private static List<int> Steps(Catalog catalog, Vec2 start, Vec2 target, int ticks, out int ceiling, int preRunTicks = 0)
     {
         var engine = Engine(catalog, out int index, out ceiling);
