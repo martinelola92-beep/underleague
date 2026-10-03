@@ -4,38 +4,38 @@ Tres trazas: `ref` = `TestMatches.Reference` (semilla = emparejamiento); `run` =
 
 | Detector | ref casos/partido ± e.t. | ref % partidos | run casos/partido ± e.t. | run % partidos | Peores (traza:semilla@tick, magnitud) |
 |---|---|---|---|---|---|
-| BA-E gol sin ángulo | 0.234 ± 0.015 | 21.0 % (210/1000) | 0.178 ± 0.013 | 16.9 % (169/1000) | ref:32@165 (1); ref:35@126 (1); ref:39@130 (1) |
-| BA-J sin repliegue tras parada | 1.691 ± 0.040 | 83.6 % (836/1000) | 1.733 ± 0.040 | 85.2 % (852/1000) | ref:22@769 (5); ref:77@1555 (5); ref:84@1670 (5) |
-| BB-A/L salto inexplicado | 0.003 ± 0.002 | 0.3 % (3/1000) | 0.002 ± 0.001 | 0.2 % (2/1000) | run:57@1377 (1.11); ref:74@955 (0.93); ref:343@394 (0.92) |
+| BA-E gol sin ángulo | 0.176 ± 0.013 | 16.3 % (163/1000) | 0.143 ± 0.012 | 13.3 % (133/1000) | ref:241@631 (1); ref:410@574 (1); ref:500@783 (1) |
+| BA-J sin repliegue tras parada | 1.839 ± 0.040 | 85.5 % (855/1000) | 1.681 ± 0.038 | 83.5 % (835/1000) | ref:14@517 (5); ref:17@109 (5); ref:21@127 (5) |
+| BB-A/L salto inexplicado | 0.002 ± 0.001 | 0.2 % (2/1000) | 0.003 ± 0.002 | 0.3 % (3/1000) | run:340@869 (2.49); run:168@1345 (0.78); run:820@325 (0.69) |
 | BB-B robo antes de cualquier saque | 0.000 ± 0.000 | 0.0 % (0/1000) | 0.000 ± 0.000 | 0.0 % (0/1000) | — |
 | BB-B robo antes del saque de centro | 0.000 ± 0.000 | 0.0 % (0/1000) | 0.000 ± 0.000 | 0.0 % (0/1000) | — |
 | BB-C celebración (salto o en su campo) | 0.000 ± 0.000 | 0.0 % (0/1000) | 0.000 ± 0.000 | 0.0 % (0/1000) | — |
 | BB-G2 portero perseguidor (abrazo mortal) | 0.000 ± 0.000 | 0.0 % (0/1000) | 0.000 ± 0.000 | 0.0 % (0/1000) | — |
 | BB-I perk sin tiro [armado] | 0.000 ± 0.000 | 0.0 % (0/1000) | — | — | — |
-| BB-K baile | 0.938 ± 0.045 | 46.2 % (462/1000) | 0.789 ± 0.043 | 40.4 % (404/1000) | run:775@1821 (54); run:775@1822 (53); ref:487@1181 (52) |
-| BC-G balón suelto quieto >=15 ticks | 0.093 ± 0.010 | 8.6 % (86/1000) | 0.130 ± 0.012 | 11.4 % (114/1000) | ref:232@875 (26); ref:335@1375 (25); run:640@1177 (25) |
+| BB-K baile | 0.864 ± 0.034 | 52.9 % (529/1000) | 0.815 ± 0.035 | 49.4 % (494/1000) | run:827@1934 (21); ref:343@2035 (18); run:379@869 (15) |
+| BC-G balón suelto quieto >=15 ticks | 0.043 ± 0.007 | 3.9 % (39/1000) | 0.059 ± 0.008 | 5.5 % (55/1000) | ref:482@1195 (23); run:166@625 (23); run:282@314 (23) |
 | BC-G balón suelto quieto >=60 ticks | 0.000 ± 0.000 | 0.0 % (0/1000) | 0.000 ± 0.000 | 0.0 % (0/1000) | — |
-| BF-C delantero elige pegar sin portador a su alcance | 1.921 ± 0.061 | 74.4 % (744/1000) | 1.588 ± 0.056 | 69.6 % (696/1000) | run:794@405 (31); run:283@406 (25); ref:8@100 (22) |
-| BF-C delantero pega sin balón | 0.000 ± 0.000 | 0.0 % (0/1000) | 0.000 ± 0.000 | 0.0 % (0/1000) | — |
-| BH-A congelación | 0.000 ± 0.000 | 0.0 % (0/1000) | 0.000 ± 0.000 | 0.0 % (0/1000) | — |
-| BN-A amontonamiento sobre el portero | 0.596 ± 0.024 | 46.0 % (460/1000) | 0.517 ± 0.022 | 41.9 % (419/1000) | ref:205@1669 (5); ref:411@405 (5); ref:466@1163 (5) |
-| BO-A portador y rival atascados >3 s | 0.024 ± 0.005 | 2.4 % (24/1000) | 0.036 ± 0.006 | 3.4 % (34/1000) | run:743@1127 (173); ref:59@252 (53); ref:97@368 (53) |
+| BF-C delantero elige pegar sin portador a su alcance | 2.339 ± 0.072 | 79.6 % (796/1000) | 1.950 ± 0.057 | 78.6 % (786/1000) | run:386@60 (31); ref:77@846 (22); ref:91@128 (22) |
+| BF-C delantero pega sin balón | 0.000 ± 0.000 | 0.0 % (0/1000) | 0.001 ± 0.001 | 0.1 % (1/1000) | run:447@107 (1) |
+| BH-A congelación | 0.000 ± 0.000 | 0.0 % (0/1000) | 0.001 ± 0.001 | 0.1 % (1/1000) | run:130@1025 (280) |
+| BN-A amontonamiento sobre el portero | 0.765 ± 0.028 | 53.2 % (532/1000) | 0.645 ± 0.025 | 48.5 % (485/1000) | ref:44@140 (5); ref:58@180 (5); ref:117@669 (5) |
+| BO-A portador y rival atascados >3 s | 0.047 ± 0.007 | 4.6 % (46/1000) | 0.048 ± 0.007 | 4.7 % (47/1000) | run:810@1175 (62); ref:29@1081 (60); run:162@89 (56) |
 
 ## Métricas auxiliares (media por partido ± e.t.)
 
 | Métrica | ref | run | armado |
 |---|---|---|---|
-| BA-E goles | 1.989 ± 0.036 | 2.001 ± 0.034 | — |
-| BA-E tiros | 8.148 ± 0.111 | 8.585 ± 0.110 | — |
-| BA-E tiros sin ángulo (apertura<0,5) | 0.764 ± 0.027 | 0.618 ± 0.025 | — |
-| BA-J paradas retenidas | 2.299 ± 0.050 | 2.425 ± 0.052 | — |
-| BA-J rezagados medios por parada retenida | 2.166 ± 0.038 | 2.101 ± 0.037 | — |
-| BB-A salto de >0,6 en reanudación (apartar/colocar, diseño) | 6.478 ± 0.140 | 4.496 ± 0.119 | — |
-| BB-A salto explicado (reposición, control) | 19.981 ± 0.413 | 20.228 ± 0.397 | — |
-| BB-G2 ticks del portero eligiendo ChaseBall fuera del área | 2.324 ± 0.180 | 1.708 ± 0.143 | — |
+| BA-E goles | 1.920 ± 0.034 | 1.844 ± 0.033 | — |
+| BA-E tiros | 8.082 ± 0.104 | 7.844 ± 0.102 | — |
+| BA-E tiros sin ángulo (apertura<0,5) | 0.643 ± 0.026 | 0.475 ± 0.023 | — |
+| BA-J paradas retenidas | 2.355 ± 0.049 | 2.223 ± 0.048 | — |
+| BA-J rezagados medios por parada retenida | 2.225 ± 0.036 | 2.127 ± 0.036 | — |
+| BB-A salto de >0,6 en reanudación (apartar/colocar, diseño) | 7.343 ± 0.158 | 5.168 ± 0.136 | — |
+| BB-A salto explicado (reposición, control) | 19.204 ± 0.390 | 18.660 ± 0.390 | — |
+| BB-G2 ticks del portero eligiendo ChaseBall fuera del área | 1.981 ± 0.158 | 1.370 ± 0.125 | — |
 | BB-I con tiro bloqueado al instante | — | — | 0.000 ± 0.000 |
-| BB-I disparos del perk | — | — | 2.648 ± 0.050 |
+| BB-I disparos del perk | — | — | 2.806 ± 0.051 |
 | BB-L salida del campo tras salto | 0.000 ± 0.000 | 0.000 ± 0.000 | — |
-| BF-C placajes sin balón (todos los puestos) | 2.423 ± 0.063 | 2.218 ± 0.068 | — |
-| BF-C ticks de delantero eligiendo Tackle/Block sin portador | 11.864 ± 0.381 | 10.543 ± 0.361 | — |
+| BF-C placajes sin balón (todos los puestos) | 2.807 ± 0.067 | 2.387 ± 0.070 | — |
+| BF-C ticks de delantero eligiendo Tackle/Block sin portador | 14.839 ± 0.444 | 13.848 ± 0.398 | — |
 | BH-A ticks con el dueño fuera del campo | 0.000 ± 0.000 | 0.000 ± 0.000 | — |
