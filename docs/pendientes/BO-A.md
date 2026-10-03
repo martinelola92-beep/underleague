@@ -64,3 +64,33 @@ tick 614, 632 ticks** (y semilla 92 tick 284, 217). Build actual: 0,024 tramos >
 `run`), frente al 9 % de antes. El peor: **run semilla 743, tick 1127, 173 ticks (11,5 s)**, portador 6 contra el rival 2000003; la
 hoja (`hojas/hoja-BO-A.png`, MP4 `BO-A.mp4`) muestra un grupo de rojos alrededor del portador azul con el balón a los pies, no
 un duelo de dos. Los demás `ref` son 53 ticks (justo sobre el umbral de 45). Informe: [barrido-detectores-2026-10-03](../analisis/barrido-detectores-2026-10-03.md).
+
+## Sube tras la ADR 0184 y se arregla el tope (3 oct 2026, tarde)
+
+Barrido de la tarde: **0,024 → 0,047 ± 0,007** tramos de más de 3 s por partido (`ref`), 0,036 → 0,048 (`run`).
+
+- **Instrumento validado (Regla J)**: la sonda por variante (`WorstCaseProbeTests.StuckAndCrowdByVariant`, 1.000 partidos
+  por traza) reproduce el barrido al milésimo con el `main` actual (0,047 / 0,048) y el de la mañana con la sostenida a 0
+  y BV-B apagada (0,023 / 0,038).
+- **De dónde viene la subida — LIKELY la sostenida (ADR 0184)**: sólo sostenida 0,035 / 0,066; sólo BV-B 0,030 / 0,036;
+  ninguna 0,023 / 0,038 (±0,006). Las dos suben algo en `ref`; en `run`, la sostenida.
+- **Por qué pasa de 3 s — CONFIRMED**: **todos** los tramos tenían entre 40 y 49 ticks de protección (el resto, unos
+  pocos de conducción con el rival encima), con `shieldMaxTicks` = 36. El tope se miraba al **elegir** proteger, y el
+  compromiso de 12 que empezaba con 35 gastados se cumplía entero (hasta 48). La sostenida no cambia eso: hace que más
+  posesiones lleguen al tope.
+- **Arreglo** (código, `MatchEngine.ShieldCommitTicks`): el último compromiso es lo que queda del tope; sin tope (0), el de
+  siempre. Hace verdad lo que la ADR 0153 escribió («tres compromisos de 12»); no es una regla nueva. Margen que queda: la
+  cadencia de decisión (`decisionIntervalTicks` = 2), porque al acabar un compromiso el portador sigue en `Shielding`
+  hasta su turno.
+- **Medido** (1.000 partidos por traza): **0,047 → 0,005** (`ref`), **0,048 → 0,002** (`run`), por debajo de la mañana.
+  Los tres peores del barrido no cambian (`run:810@1175` 62, `ref:29@1081` 60, `run:162@89` 56): son el residuo de
+  diseño, 36-39 ticks de protección más conducción con el defensa encima (`ref:29`: `CoverSpace` 693 contra `Tackle`
+  549, el defensa cuyo punto de cobertura cae sobre el portador, la variante que ya estaba CONFIRMED arriba).
+- **Tests** (`ShieldCapTests`): valor conocido del compromiso (12 / 6 / 1 con 0 / 30 / 35 gastados; control sin tope, 12)
+  y el caso real `ref:100@1270` (48 ticks protegiendo sin el arreglo; ahora ≤ 38 y ningún tramo de más de 3 s en esa
+  semilla). Comprobado que los dos fallan sin el arreglo.
+- Partido de referencia sin cambio medible (10.000 × 2): s1 goles 2,480, entradas 9,27, lesiones 0,744; s2 2,090, 11,20,
+  0,415 (ADR 0188: 2,479 / 9,29 / 0,742 y 2,088 / 11,24 / 0,412).
+
+Queda abierta la causa de fondo de siempre (por qué se vuelve a elegir proteger con la misma presión, BI-D/BJ-A) y el
+defensa cuyo punto de cobertura cae encima del portador.

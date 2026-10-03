@@ -55,3 +55,12 @@ y deja el peor tramo en 53 igual; las dos reglas juntas dan la salida que pidió
 - **La causa de fondo sigue abierta** (BI-D, BJ-A): por qué la utilidad vuelve a elegir proteger con la
   misma presión. El tope trata el síntoma. Y es el segundo arreglo puntual del patrón «dos jugadores que
   repiten su mejor opción sin progreso» (el primero, ADR 0117, con un peso): sin regla común todavía.
+
+## Enmienda (3 oct 2026): el tope es exacto (BO-A)
+
+El tope se miraba al **elegir** proteger y el compromiso (`ShieldingTicks` 12) se cumplía entero: un compromiso que
+empezaba con 35 ticks gastados llegaba a 47-48. Tras la ADR 0184 más posesiones llegan al tope y los tramos de más de 3 s
+se doblaron (0,024 → 0,047 por partido); **todos** tenían 40-49 ticks de protección. Ahora el último compromiso es lo que
+queda del tope (`MatchEngine.ShieldCommitTicks`), que es lo que esta ADR escribió: «tres compromisos de 12». Margen
+restante: la cadencia de decisión (2 ticks). Medido, 1.000 partidos por traza: **0,047 → 0,005** (`ref`), 0,048 → 0,002
+(`run`); partido de referencia sin cambio medible (10.000 × 2). Tests: `ShieldCapTests`. Ficha: [BO-A](../pendientes/BO-A.md).

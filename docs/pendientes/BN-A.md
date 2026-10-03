@@ -101,3 +101,32 @@ sintéticos. Build actual: **0,60 ± 0,02 por partido** (`ref`, 46 %) y 0,52 (`r
 pero no lo cerró. **Ninguno es un saque de puerta**: los 1.113 episodios ocurren en juego abierto, con el portero reteniendo 20
 ticks y 5 compañeros a menos de 2 casillas. Peores: `ref` semillas 205 (tick 1669), 411 (tick 405), 466 (tick 1163) y
 `run` semilla 61 tick 1509. Posible conexión con la pausa del portero de la ADR 0178 (BA-J): LIKELY, sin aislar. Informe: [barrido-detectores-2026-10-03](../analisis/barrido-detectores-2026-10-03.md).
+
+## Sube tras la ADR 0184: es el grupo del instante de la parada, no un amontonamiento (3 oct 2026, tarde)
+
+Barrido de la tarde: **0,596 → 0,765 ± 0,028** por partido (`ref`), 0,517 → 0,645 (`run`). **No se arregla en `/Sim`**;
+queda como decisión del revisor.
+
+- **CONFIRMED, la sostenida (ADR 0184)** — sonda por variante, 1.000 partidos por traza (`WorstCaseProbeTests.StuckAndCrowdByVariant`),
+  que reproduce el barrido al milésimo: `main` 0,765 / 0,645; sostenida a 0 0,571 / 0,478; sólo BV-B apagada 0,699 /
+  0,571; las dos apagadas 0,603 / 0,511 (la mañana: 0,596 / 0,517). La ADR 0188 no pesa (la variante «ninguna» la lleva).
+- **Qué cuenta el detector — CONFIRMED con la misma sonda**: en el **95 %** de los casos (745 de 780) el grupo ya está en el
+  fotograma en que el portero coge el balón, casi siempre tras una parada retenida (`SAVE held`, 556), y son defensas y
+  medios que estaban **cubriendo dentro de su área** (`CoverSpace` el tick anterior: 893 + 275 dentro del área, 715 fuera).
+  Se disuelve andando (RF-053): con ≥ 2 a menos de 2 casillas quedan 573 a los 3 ticks, 220 a los 6, 84 a los 10 y 18 a los
+  15. Sin sostenida el perfil de disolución es el mismo (10 ticks: 11 % frente a 9 %); lo que cambia es **cuántas paradas
+  pillan defensas cubriendo dentro** (745 frente a 532): la línea que la ADR 0184 sostiene.
+- **REJECTED como arreglo, medido**: que el hueco de `FindSpace` respete el área cerrada (llevar la candidata al borde,
+  como hace el movimiento). Quita los huecos dentro del área (206 → 0) pero el borde queda junto al portero y la
+  persistencia sube (a los 10 ticks 84 → 103, a los 15 18 → 37); el total no se mueve (0,780 → 0,757 ± 0,027). Revertido.
+- **Instrumento nuevo** (`SymptomDetectors.GoalkeeperCrowdPersisting`, fila propia en el barrido, validado en sintético):
+  el grupo que **sigue** a los 10 ticks (umbral provisional: el tiempo en que se ha disuelto el 85-90 % de los grupos).
+  `main` 0,084 / 0,068, la mañana (variante «ninguna») 0,042 / 0,035: también se dobla, por la misma razón (más paradas
+  con defensas dentro), y a los 10 ticks los que quedan siguen saliendo (destino «fuera» 109 de 167; 47 con el hueco
+  dentro del área).
+
+**Decisión que queda para el revisor** (cambia una regla, no se hace sin él): lo que se mide no es que los compañeros
+vayan hacia el portero, sino que estaban allí defendiendo y salen andando. Volver a 0,60 pide (a) que la línea no
+sostenga la cobertura dentro de su propia área —tocar la ADR 0184—, (b) salir del área cerrada más deprisa que andando
+—tocar RF-053 en la ADR 0152—, o (c) aceptar que el detector de base cuenta defensa legítima y vigilar la fila
+persistente.

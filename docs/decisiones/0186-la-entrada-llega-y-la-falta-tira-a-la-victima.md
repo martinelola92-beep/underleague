@@ -163,3 +163,12 @@ entrada dura cae el infractor en las 274; en las mismas plantillas sin esos rasg
 alcance, en ninguna de 61; la víctima que llevaba el balón lo suelta en las 99; ningún sacador de falta en el suelo en
 6.520 fotogramas de saque). El test del jefe del acto 3 ya no depende de una semilla: recorre 40 fijas hasta el primer
 partido ganado.
+
+## Enmienda (3 oct 2026, tarde): la repetición de entrada usa el mismo alcance (BH-A)
+
+`escapeBeyondDecisionReach` quitó el margen de 0,3 a la **resolución** pero no a la **elección de blanco** de la entrada
+que repite `extraAction` (`RepeatTackle`, `NearestReachableRival`). Un rival entre 1,0 y 1,3 era blanco y «escapado» a
+la vez, y la rama del escapado dejaba a quien acababa de ganar el balón con Arrollador en `Positioning` con él en los pies:
+280 ticks congelado en `run:130@1025` (barrido de detectores, [BH-A](../pendientes/BH-A.md), CONFIRMED). Ahora las tres
+leen `MatchEngine.TackleResolveReach`. No es regla nueva: es la de esta enmienda aplicada donde faltaba. Con el dato
+apagado sigue siendo 1,3 en las tres. Tests: `RepeatTackleReachTests` (valor conocido con control y el caso real).

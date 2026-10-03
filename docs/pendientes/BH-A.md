@@ -69,3 +69,26 @@ rachas cortas de silencio, y el test no puede confundirlas con un congelamiento.
 **REJECTED en la build actual** (0/2.000 partidos con ≥ 150 ticks sin evento ni balón en movimiento, ni con el dueño del balón
 fuera del campo). El detector sí lo ve en las builds viejas (semillas 40@618 con 628 ticks, 224@623, 389@882). La primitiva
 sigue sin existir (el motor no tiene temporizador de inactividad); esto sólo dice que hoy no se dispara. Informe: [barrido-detectores-2026-10-03](../analisis/barrido-detectores-2026-10-03.md).
+
+## Reaparece tras la ADR 0186 y se arregla en su causa (3 oct 2026, tarde)
+
+El barrido de la tarde, sobre `main` con las ADR 0184/0186/0188, dio **1 de 1.000**: `run:130@1025`, 280 ticks sin evento.
+
+- **CONFIRMED** (traza y volcado RT-098, `WorstCaseProbeTests.DumpWorstCase`): en el tick 1001 el centrocampista 4 gana
+  una entrada, `SetOwner` lo pasa a `Dribbling` y Arrollador (`steamroller`, `extraAction` sobre `RECOVERY tackle`)
+  repite la entrada contra 2000003, que está a 1,19 casillas. `NearestReachableRival` elegía con el alcance viejo
+  (decisión + 0,3 = 1,3) y `ResolveTackle`, con `escapeBeyondDecisionReach` (enmienda de la ADR 0186), resuelve con 1,0:
+  el rival era blanco y «escapado» a la vez, y esa rama devuelve a quien entra a `Positioning`, **con el balón**. Un
+  dueño que no decide como portador elige colocarse sobre su propia casilla (`CoverSpace`); los rivales, a 2,2 casillas
+  y fuera de su zona, puntúan quedarse (`CoverSpace` 477 contra `ChaseBall` 273). 304 fotogramas así hasta el final.
+- **Censo de la clase** (`OwnerOutOfCarrierStateCensus`, dueño del balón en `Positioning`/`Chasing`/`Tackling`/`Blocking`
+  en juego abierto, 500 `ref` + 500 `run`): **1 episodio, el de la semilla 130**; con `escapeBeyondDecisionReach` apagado,
+  0. La referencia no lleva perks, así que no puede verlo.
+- **Arreglo** (código, `MatchEngine.TackleResolveReach`): un solo alcance para resolver la entrada y para que la
+  repetición elija blanco. Con la regla apagada sigue siendo 1,3 en las dos (bit a bit lo de antes).
+- **Tests** (`RepeatTackleReachTests`): valor conocido (rival a 1,15: con la regla no hay blanco y quien entra sigue de
+  portador; control con la regla apagada: la repetición se tira) y el caso real por semilla (falla sin el arreglo:
+  304 fotogramas; con él, 0 y ningún caso del detector).
+- Barrido de 1.000 con el código final: **0/1.000** en las dos trazas.
+
+La primitiva sigue sin existir (no hay temporizador de inactividad en el motor); el detector del barrido es la opción 1.

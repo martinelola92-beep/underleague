@@ -95,3 +95,31 @@ en gol), `BB-AL` (57, 1360-1395: el salto del portero), `BC-G` (640, 1160-1205),
 - Los detectores de BB-A/BB-L y BB-C miran la **traza de `/Sim`**, no el render: el deslizamiento dibujado de BA-K sólo
   se vería con el registro por fotograma de `-- movimiento` (no se barrió).
 - La máquina estaba compartida: los barridos se lanzaron con 1 hilo y los Godot por `tools/pesado.sh`.
+
+## Tarde: tras las ADR 0184/0186/0188 y los arreglos de BH-A y BO-A
+
+Barrido de 1.000 partidos por traza (`tools/barrido-detectores.sh 1000`), casos por partido `ref` / `run`:
+
+| Síntoma | Mañana (antes de 0184/0186) | `main` con 0184/0186/0188 | Con los arreglos | Estado |
+|---|---|---|---|---|
+| BH-A congelación | 0 / 0 | 0 / 0,001 (`run:130@1025`, 280 ticks) | **0 / 0** | arreglado en la causa ([BH-A](../pendientes/BH-A.md), enmienda de la ADR 0186) |
+| BO-A atascados > 3 s | 0,024 / 0,036 | 0,047 / 0,048 | **0,005 / 0,002** | arreglado: tope de protección exacto ([BO-A](../pendientes/BO-A.md), enmienda de la ADR 0153) |
+| BN-A amontonamiento | 0,596 / 0,517 | 0,765 / 0,645 | 0,780 / 0,646 | **sin arreglar**: CONFIRMED de la ADR 0184; es el grupo que defendía en el área en la parada ([BN-A](../pendientes/BN-A.md)) |
+| BN-A que sigue a los 10 ticks (fila nueva) | 0,042 / 0,035 (sonda, sostenida 0 y BV-B apagada) | sin medir | 0,084 / 0,068 | idem |
+
+Los demás detectores, sin cambio distinguible del ruido frente a `main` (BB-K 0,838 / 0,803, BC-G ≥ 15 ticks 0,044 /
+0,057, BA-J 1,84 / 1,69, BF-C 2,33 / 1,96, BA-E 0,178 / 0,141; BB-A 2 / 3 casos en 1.000). Salida en el temporal del
+agente (no se tocó `Game/screenshots/detectores/`, que sigue siendo el barrido de `main`).
+
+**Partido de referencia** (`/Balance`, 10.000 × 2, media ± e.t.): s1 goles 2,480 ± 0,013, entradas 9,27, lesiones 0,744 ±
+0,009; s2 2,090 ± 0,013, 11,20, 0,415 ± 0,007. ADR 0188 (`main`): 2,479 / 9,29 / 0,742 y 2,088 / 11,24 / 0,412. Fuera de
+banda sólo `betterTeamWinRate` 60-40, la conocida.
+
+**`Category=Gate` una vez (48 tests, 12 m 12 s): 9 rojas.** Las 7 de `main` (ADR 0188): BossGate curva, BuildGate ×3
+(`orc_violence` 53,62; `elf_brawler` 45,52), `elf_none` 39,62, `StatisticalTests` ×2 (90,96, igual que `main`). Además:
+- `EveryCatalogPerkIsAssignedInSomeBuild` (`immovable` sin build): comprueba **sólo datos** (`/data/builds`), no juega
+  partidos; `immovable` entró en `610c567`, después de la pasada de puertas de la ADR 0188. Roja también en `main`.
+- `TheThreeDoctrinesBuyDifferently` (ahorradora 15,20 frente a contextual 15,67): la puerta de una semilla que ya saltó
+  con las ADR 0184/0186 y volvió a verde con la 0188; el signo cambia por semilla (ver ADR 0184, «Puertas»). Sin medir
+  aparte con más semillas.
+- Dentro de `BadBuildsLoseToTheirBaseline`, ya roja, aparece `elf_out_of_zone` 45,18 (techo 45; `main` < 45).
