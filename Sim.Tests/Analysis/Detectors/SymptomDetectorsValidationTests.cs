@@ -326,6 +326,24 @@ public sealed class SymptomDetectorsValidationTests
             clean.Owner[f] = 3;
         }
 
+        // La entrada que PITA la falta (mismo tick en que se abre la ventana) no es un robo; la que llega después, sí.
+        var foulEvents = new[]
+        {
+            Ev(EventType.Tackle, 5, 8, opponent: 3, detail: "foul"),   // el origen de la falta, tick 5 = primer tick de la ventana
+            Ev(EventType.Tackle, 9, 9, opponent: 3, detail: "missed"), // contra el sacador con la ventana ya abierta
+        };
+        var fk = DetectorTrace.Synthetic(30, foulEvents);
+        for (int f = 5; f < 20; f++)
+        {
+            fk.Restart[f] = RestartKind.FreeKick;
+            fk.Taker[f] = 3;
+            fk.Owner[f] = 3;
+        }
+
+        var fkHits = SymptomDetectors.StealBeforeRestart(fk, kickoffOnly: false);
+        Assert.Single(fkHits);
+        Assert.Equal(9, fkHits[0].Tick);
+
         Assert.Single(SymptomDetectors.StealBeforeRestart(steal, kickoffOnly: true));
         Assert.Empty(SymptomDetectors.StealBeforeRestart(clean, kickoffOnly: true));
         Assert.Single(SymptomDetectors.StealBeforeRestart(steal, kickoffOnly: false));
@@ -422,6 +440,37 @@ public sealed class SymptomDetectorsValidationTests
         Assert.Empty(SymptomDetectors.PerkWithoutShot(good, "box_predator", out int tg, out int blocked));
         Assert.Equal(2, tg);
         Assert.Equal(1, blocked);
+    }
+
+    // ---- Control cruzado con el contador del propio motor ----
+
+    /// <summary>
+    /// BA-E: el detector de tiros sin ángulo se contrasta con <c>MatchReport.LowApertureShots</c>, que el motor
+    /// cuenta en <c>LaunchShot</c> con la apertura REAL del tirador. Si la posición de la traza en el tick del
+    /// evento <c>Shot</c> no es la del lanzamiento, el detector estaría midiendo otra cosa (Regla J).
+    /// </summary>
+    [Fact]
+    public void LowApertureShotCountMatchesTheEnginesOwnCounter()
+    {
+        var catalog = TestData.LoadCatalog();
+        long engine = 0;
+        long detector = 0;
+        long shotsEngine = 0;
+        long shotsDetector = 0;
+        for (ulong seed = 1; seed <= 150; seed++)
+        {
+            var result = Simulator.Run(TestMatches.Reference(catalog, seed), seed, catalog, SimConfig.Default with { Trace = true });
+            SymptomDetectors.GoalsWithoutAngle(DetectorTrace.From(result), out int shots, out int low, out _);
+            engine += result.Report.LowApertureShots;
+            shotsEngine += result.Report.Shots[0] + result.Report.Shots[1];
+            detector += low;
+            shotsDetector += shots;
+        }
+
+        Assert.True(engine > 50, $"muestra demasiado pequeña: {engine}");
+        // ±10 %: la traza graba la posición al FINAL del tick y el motor la mide al lanzar.
+        Assert.InRange(detector, (long)(engine * 0.9) - 2, (long)(engine * 1.1) + 2);
+        Assert.InRange(shotsDetector, (long)(shotsEngine * 0.9) - 2, (long)(shotsEngine * 1.1) + 2);
     }
 
     // ---- Control sobre una traza real ----

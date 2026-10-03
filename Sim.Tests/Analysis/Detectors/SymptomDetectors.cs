@@ -402,7 +402,8 @@ internal static class SymptomDetectors
 
             if (maxMates >= GoalkeeperCrowdMates)
             {
-                hits.Add(new Hit(start, t.Tick[start], f - start, maxMates, $"portero {t.Id[gk]}, {maxMates} compañeros a <2"));
+                string context = t.Restart[start] != RestartKind.None ? t.Restart[start].ToString() : "juego abierto";
+                hits.Add(new Hit(start, t.Tick[start], f - start, maxMates, $"portero {t.Id[gk]}, {maxMates} compañeros a <2 ({context})"));
             }
         }
 
@@ -575,6 +576,13 @@ internal static class SymptomDetectors
             int taker = t.Taker[f];
             if (t.Restart[f] == RestartKind.None || taker < 0 || t.Restart[f] == RestartKind.Penalty
                 || (kickoffOnly && t.Restart[f] != RestartKind.Kickoff) || e.Opponent != t.Id[taker])
+            {
+                continue;
+            }
+
+            // La entrada que PITA la falta abre la ventana de reanudación en su mismo tick: es la causa del saque,
+            // no un robo del saque. Sólo cuenta una entrada con la ventana ya abierta en el tick anterior.
+            if (f == 0 || t.Restart[f - 1] != t.Restart[f] || t.Taker[f - 1] != taker)
             {
                 continue;
             }
