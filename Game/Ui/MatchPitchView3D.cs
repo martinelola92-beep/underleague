@@ -702,6 +702,10 @@ public partial class MatchPitchView3D : SubViewportContainer
                 model = PlayerModel.TryCreate(height, IsKeeper(setup, player));
                 if (model is not null)
                 {
+                    model.Variant = _models.Count;
+                }
+                if (model is not null)
+                {
                     // La cápsula se queda sin malla y pasa a ser solo el hueso que transforma al modelo:
                     // posición, altura y postura las sigue mandando ApplyTrace, sin enterarse de nada.
                     body.Mesh = null;
@@ -2315,6 +2319,10 @@ public partial class MatchPitchView3D : SubViewportContainer
             model.Pose(
                 SmoothedVelocity(trace, frame, i), FacingOf(trace, frame, i), LookAtBall(trace, frame, i, at, lookBall),
                 i == receiver, trace.StateAt(frame, i), CueFor(trace, frame, i), KickFor(trace, frame, i), FallFor(trace, frame, i), _playbackRate, delta);
+
+            // B2: la cabeza sigue al balón dibujado; menos quien lo lleva (lo mira a sus pies, que ya mira) y nada en el suelo.
+            float look = Style.IsDown(trace.StateAt(frame, i)) ? 0f : trace.BallOwnerAt(frame) == i ? 0.3f : 1f;
+            model.LookAt(new Vector3(lookBall.X, BallRadius, lookBall.Y), look, delta);
         }
 
         var ball = InterpolateBall(trace, frame);

@@ -285,6 +285,31 @@ public sealed partial class PlayerModel : Node3D
     private const float HitTurnSeconds = 0.15f;
 
     /// <summary>
+    /// Inclinación del cuerpo por la aceleración de su trayectoria DIBUJADA (BV-A, B1): hacia delante al arrancar, atrás al
+    /// frenar, hacia dentro en las curvas, en grados por casilla/s². <b>Provisional, sin medir</b>: con la carrera medida
+    /// (2,19 c/s) y el giro máximo (720°/s) la aceleración lateral ronda 6-7 c/s², que da ~12°, el tope.
+    /// </summary>
+    private const float LeanDegreesPerAccel = 1.8f;
+    private const float LeanMaxDegrees = 12f;
+
+    /// <summary>Filtro de la aceleración que inclina, en segundos de partido: sin él cada frontera de tick sacudiría el torso. Provisional.</summary>
+    private const float LeanSmoothingSeconds = 0.15f;
+
+    /// <summary>
+    /// Peso con que la cabeza (y un poco el torso) siguen al balón, y su tope de giro (BV-A, B2). <b>Provisionales</b>: un
+    /// futbolista sigue el balón con la cabeza mucho más que con el cuerpo; 70° es lo que gira un cuello sin girar hombros.
+    /// </summary>
+    private const float HeadLookInfluence = 0.8f;
+    private const float TorsoLookInfluence = 0.25f;
+    private const float HeadLookLimitDegrees = 70f;
+
+    /// <summary>
+    /// Variación del ritmo de la espera entre jugadores (BV-A, B4): ±10 % alrededor del clip, y un desfase distinto por
+    /// jugador, para que los catorce no respiren a la vez. <b>Provisional, sin medir</b>.
+    /// </summary>
+    private const float IdleRateSpread = 0.1f;
+
+    /// <summary>
     /// Remate del golpeo que se deja ver tras el contacto antes de poder soltarlo. <b>Medido</b> (BV-A, segunda pasada):
     /// el pasador está QUIETO durante <c>Passing</c> y <c>/Sim</c> lo echa a correr en el mismo tick en que sale el balón,
     /// así que el patinaje del golpeo no estaba en la carrerilla sino en el remate (0,20-0,30 s del clip, cuerpo a 2,2 c/s).
@@ -336,6 +361,18 @@ public sealed partial class PlayerModel : Node3D
     private bool _faceBall;
     private float _gestureFade = BlendSeconds;
     private float _gestureSpeed = 1f;
+    private Vector2 _drawnVelocity;
+    private Vector2 _drawnAccel;
+    private float _leanPitch;
+    private float _leanRoll;
+    private Node3D? _lookTarget;
+    private LookAtModifier3D? _headLook;
+    private LookAtModifier3D? _torsoLook;
+    private float _lookWeight;
+    private bool _idleSeeded;
+
+    /// <summary>Número del jugador (su índice en la traza): sólo para desfasar su espera de la de los demás. Determinista.</summary>
+    public int Variant { get; set; }
     private float _baseY;
     private Vector2 _lurchDir;
     private float _lurchTime = -1f;
@@ -533,7 +570,19 @@ public sealed partial class PlayerModel : Node3D
         _tree.Set("parameters/jr/blend_amount", jogToRun);
         _tree.Set("parameters/jog_seek/seek_request", ClipTimeAtPhase("jog", _jogOffset));
         _tree.Set("parameters/run_seek/seek_request", ClipTimeAtPhase("run", _runOffset));
-        _tree.Set("parameters/idle_scale/scale", rate);
+        _rate = rate;
+        if (!_idleSeeded && _library is not null)
+        {
+            // B4: cada uno empieza su espera en un punto distinto del clip (proporción áurea por número: reparto uniforme
+            // y determinista, sin RNG en la vista).
+            _idleSeeded = true;
+            float idleLength = ClipLength(_keeper ? "gk_idle" : "idle");
+            _tree.Set("parameters/idle_seek/seek_request", Mathf.PosMod(Variant * 0.618034f, 1f) * idleLength);
+        }
+
+        float idleRate = 1f + (IdleRateSpread * ((Mathf.PosMod(Variant * 0.381966f, 1f) * 2f) - 1f));
+        _tree.Set("parameters/idle_scale/scale", rate * idleRate);
+        Lean(down, simDelta);
         _tree.Set("parameters/gesture_scale/scale", rate * _gestureSpeed);
 
         float weightTarget = _gesture.Length > 0 ? 1f : 0f;
@@ -595,6 +644,7 @@ public sealed partial class PlayerModel : Node3D
         var step = new Vector2(here.X - _lastGlobal.X, here.Z - _lastGlobal.Z);
         _lastGlobal = here;
         float distance = step.Length();
+        TrackAcceleration(step, delta);
         float cycle = CycleCells(jogToRun);
         if (distance > 0.6f || cycle <= 0.001f)
         {
@@ -612,6 +662,93 @@ public sealed partial class PlayerModel : Node3D
         float length = Mathf.Lerp(ClipLength("jog"), ClipLength("run"), jogToRun);
         _debugFeetScale = signed / cycle * length / delta;
         _debugFeetNatural = cycle / Mathf.Max(0.001f, length);
+    }
+
+    /// <summary>
+    /// Velocidad y aceleración de la trayectoria dibujada, en segundos de PARTIDO (a x4 la aceleración por fotograma real
+    /// es otra), filtradas: de ahí sale la inclinación (B1).
+    /// </summary>
+    private void TrackAcceleration(Vector2 step, float realDelta)
+    {
+        float simDelta = realDelta * _rate;
+        if (simDelta <= 0.0001f || step.Length() > 0.6f)
+        {
+            return;
+        }
+
+        var velocity = step / simDelta;
+        var accel = (velocity - _drawnVelocity) / simDelta;
+        _drawnVelocity = velocity;
+        float k = 1f - Mathf.Exp(-simDelta / LeanSmoothingSeconds);
+        _drawnAccel = _drawnAccel.Lerp(accel, k);
+    }
+
+    private float _rate = 1f;
+
+    /// <summary>Inclina el muñeco sobre sus pies (el origen del modelo está en los pies) según la aceleración filtrada.</summary>
+    private void Lean(bool down, float simDelta)
+    {
+        var forward = new Vector2(Mathf.Sin(_yaw), Mathf.Cos(_yaw));
+        var right = new Vector2(-Mathf.Cos(_yaw), Mathf.Sin(_yaw));
+        float free = down ? 0f : 1f - _gestureWeight;
+        float pitch = Mathf.Clamp(_drawnAccel.Dot(forward) * LeanDegreesPerAccel, -LeanMaxDegrees, LeanMaxDegrees) * free;
+        float roll = Mathf.Clamp(_drawnAccel.Dot(right) * LeanDegreesPerAccel, -LeanMaxDegrees, LeanMaxDegrees) * free;
+        float k = simDelta <= 0f ? 1f : 1f - Mathf.Exp(-simDelta / LeanSmoothingSeconds);
+        _leanPitch = Mathf.Lerp(_leanPitch, pitch, k);
+        _leanRoll = Mathf.Lerp(_leanRoll, roll, k);
+        Rotation = new Vector3(Mathf.DegToRad(_leanPitch), _yaw, Mathf.DegToRad(_leanRoll));
+    }
+
+    /// <summary>
+    /// Dónde está el balón y cuánto debe mirarlo (B2): la cabeza y algo el torso lo siguen con un
+    /// <see cref="LookAtModifier3D"/> de Godot sobre el esqueleto animado, con tope de giro. Peso 0 = mira al frente.
+    /// </summary>
+    public void LookAt(Vector3 world, float weight, float delta)
+    {
+        EnsureLook();
+        if (_lookTarget is null || _headLook is null || _torsoLook is null)
+        {
+            return;
+        }
+
+        _lookTarget.GlobalPosition = world;
+        float k = delta <= 0f ? 1f : 1f - Mathf.Exp(-delta * _rate / 0.2f);
+        _lookWeight = Mathf.Lerp(_lookWeight, weight * (1f - _gestureWeight), k);
+        _headLook.Influence = HeadLookInfluence * _lookWeight;
+        _torsoLook.Influence = TorsoLookInfluence * _lookWeight;
+    }
+
+    private void EnsureLook()
+    {
+        if (_headLook is not null || _skeleton is null || !_skeleton.IsInsideTree())
+        {
+            return;
+        }
+
+        _lookTarget = new Node3D { Name = "LookTarget", TopLevel = true };
+        AddChild(_lookTarget);
+        _torsoLook = NewLook("mixamorig_Spine2", HeadLookLimitDegrees * 0.5f);
+        _headLook = NewLook("mixamorig_Head", HeadLookLimitDegrees);
+    }
+
+    private LookAtModifier3D NewLook(string bone, float limitDegrees)
+    {
+        var look = new LookAtModifier3D
+        {
+            BoneName = bone,
+            ForwardAxis = SkeletonModifier3D.BoneAxis.PlusZ,
+            PrimaryRotationAxis = Vector3.Axis.Y,
+            UseSecondaryRotation = true,
+            UseAngleLimitation = true,
+            SymmetryLimitation = true,
+            PrimaryLimitAngle = Mathf.DegToRad(limitDegrees),
+            SecondaryLimitAngle = Mathf.DegToRad(limitDegrees * 0.5f),
+            Duration = 0.15f,
+            Influence = 0f,
+        };
+        _skeleton!.AddChild(look);
+        look.TargetNode = look.GetPathTo(_lookTarget);
+        return look;
     }
 
     /// <summary>Zancada de un ciclo completo (dos pasos), en casillas, a esta mezcla trote→carrera: desplazamiento horneado del clip por su duración.</summary>
@@ -1057,8 +1194,10 @@ public sealed partial class PlayerModel : Node3D
         // La espera va con su reloj (al ritmo de la reproducción); trote y carrera se COLOCAN cada fotograma en la
         // misma fase (BV-A, punto 2): mezclar dos zancadas desfasadas daba piernas a medio camino de dos pasos.
         root.AddNode("idle", Clip(_keeper ? "gk_idle" : "idle"));
+        root.AddNode("idle_seek", new AnimationNodeTimeSeek());
+        root.ConnectNode("idle_seek", 0, "idle");
         root.AddNode("idle_scale", new AnimationNodeTimeScale());
-        root.ConnectNode("idle_scale", 0, "idle");
+        root.ConnectNode("idle_scale", 0, "idle_seek");
         foreach (var key in new[] { "jog", "run" })
         {
             root.AddNode(key, Clip(key));
