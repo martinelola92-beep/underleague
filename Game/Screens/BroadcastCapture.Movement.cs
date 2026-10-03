@@ -65,6 +65,7 @@ public partial class BroadcastCapture
 
         // BV-A, B3: `sinik` mide el antes del IK del pie con el mismo binario.
         Ui.PlayerModel.DebugFootLockOff = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "sinik") >= 0;
+        Ui.PlayerModel.DebugCaptureFinalPose = true;
         _movementDirectory = directory;
         Directory.CreateDirectory(directory);
 

@@ -798,6 +798,7 @@ public sealed partial class PlayerModel : Node3D
     private void UpdateFootLock(bool down, float move, float jogToRun, float delta)
     {
         EnsureFootLock();
+        HookFinalPose();
         if (_skeleton is null || _feet[0].Ik is null)
         {
             return;
@@ -904,17 +905,9 @@ public sealed partial class PlayerModel : Node3D
         var forward = new Vector3(Mathf.Sin(_yaw), 0f, Mathf.Cos(_yaw));
         (float, float) Knee(string s)
         {
-            int hb = _skeleton.FindBone($"mixamorig_{s}UpLeg");
-            int kb = _skeleton.FindBone($"mixamorig_{s}Leg");
-            int ab = _skeleton.FindBone($"mixamorig_{s}Foot");
-            if (hb < 0 || kb < 0 || ab < 0)
-            {
-                return (0f, 0f);
-            }
-
-            var h = toWorld * _skeleton.GetBoneGlobalPose(hb).Origin;
-            var k = toWorld * _skeleton.GetBoneGlobalPose(kb).Origin;
-            var a = toWorld * _skeleton.GetBoneGlobalPose(ab).Origin;
+            var h = DebugBone($"mixamorig_{s}UpLeg");
+            var k = DebugBone($"mixamorig_{s}Leg");
+            var a = DebugBone($"mixamorig_{s}Foot");
             float angle = Mathf.RadToDeg((h - k).AngleTo(a - k));
             var mid = (h + a) * 0.5f;
             return (angle, (k - mid).Dot(forward));
@@ -1535,6 +1528,55 @@ public sealed partial class PlayerModel : Node3D
         return perSecond * _skeleton.GlobalTransform.Basis.Scale.X;
     }
 
+    /// <summary>
+    /// El instrumento lee la pose FINAL, con los modificadores (IK del pie, mirada) aplicados. Medido (Regla J): desde Godot
+    /// 4.3 el esqueleto aplica los modificadores, pinta, y DEVUELVE la pose a la de la animación, así que
+    /// <c>GetBoneGlobalPose</c> leído después no ve el IK —el primer «después» del IK salió idéntico byte a byte al «antes»—.
+    /// La única forma de verla es la señal <c>skeleton_updated</c>, que llega con la pose ya modificada.
+    /// </summary>
+    public static bool DebugCaptureFinalPose { get; set; }
+
+    private readonly System.Collections.Generic.Dictionary<string, Vector3> _finalPose = new();
+    private bool _finalHooked;
+
+    private void HookFinalPose()
+    {
+        if (_finalHooked || _skeleton is null || !DebugCaptureFinalPose)
+        {
+            return;
+        }
+
+        _finalHooked = true;
+        _skeleton.SkeletonUpdated += () =>
+        {
+            var toWorld = _skeleton.GlobalTransform;
+            foreach (var bone in new[]
+            {
+                "mixamorig_Hips", "mixamorig_LeftToeBase", "mixamorig_RightToeBase", "mixamorig_LeftUpLeg", "mixamorig_LeftLeg",
+                "mixamorig_LeftFoot", "mixamorig_RightUpLeg", "mixamorig_RightLeg", "mixamorig_RightFoot",
+            })
+            {
+                int index = _skeleton.FindBone(bone);
+                if (index >= 0)
+                {
+                    _finalPose[bone] = toWorld * _skeleton.GetBoneGlobalPose(index).Origin;
+                }
+            }
+        };
+    }
+
+    /// <summary>Posición final (con modificadores) de un hueso si el instrumento la está capturando; si no, la de la animación.</summary>
+    private Vector3 DebugBone(string bone)
+    {
+        if (_finalPose.TryGetValue(bone, out var at))
+        {
+            return at;
+        }
+
+        int index = _skeleton!.FindBone(bone);
+        return index < 0 ? Vector3.Zero : _skeleton.GlobalTransform * _skeleton.GetBoneGlobalPose(index).Origin;
+    }
+
     /// <summary>Altura de la cadera en el mundo, en casillas: de pie ~0,5, en el suelo ~0,1. Dice si una caída SE VE. Solo BV-A.</summary>
     public float DebugHipsY()
     {
@@ -1543,8 +1585,7 @@ public sealed partial class PlayerModel : Node3D
             return 0f;
         }
 
-        int hips = _skeleton.FindBone("mixamorig_Hips");
-        return hips < 0 ? 0f : (_skeleton.GlobalTransform * _skeleton.GetBoneGlobalPose(hips).Origin).Y;
+        return DebugBone("mixamorig_Hips").Y;
     }
 
     /// <summary>Las dos punteras en coordenadas del mundo, ya animadas; ceros si el modelo no tiene esqueleto. Solo BV-A.</summary>
@@ -1556,9 +1597,8 @@ public sealed partial class PlayerModel : Node3D
             return;
         }
 
-        var toWorld = _skeleton.GlobalTransform;
-        left = toWorld * _skeleton.GetBoneGlobalPose(bones.Left).Origin;
-        right = toWorld * _skeleton.GetBoneGlobalPose(bones.Right).Origin;
+        left = DebugBone("mixamorig_LeftToeBase");
+        right = DebugBone("mixamorig_RightToeBase");
     }
 
     /// <summary>Una línea CSV por clip montado: clave, duración en segundos, bucle y desplazamiento horneado por segundo (unidades de esqueleto). BV-A.</summary>
