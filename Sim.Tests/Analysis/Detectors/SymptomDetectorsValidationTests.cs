@@ -139,6 +139,37 @@ public sealed class SymptomDetectorsValidationTests
         Assert.Equal(2, all);
     }
 
+    [Fact]
+    public void ForwardTackleChoicePositiveWithNoRivalCarrierAndNegativeAgainstTheCarrier()
+    {
+        var t = DetectorTrace.Synthetic(50);
+        for (int f = 5; f < 15; f++)
+        {
+            t.Action[t.Slot(f, 5)] = (int)PlayerAction.Tackle;     // balón suelto: «pega» al aire / a su marca
+        }
+
+        for (int f = 20; f < 30; f++)
+        {
+            t.Action[t.Slot(f, 6)] = (int)PlayerAction.Tackle;     // un rival lleva el balón: entrada normal
+            t.Owner[f] = 10;
+        }
+
+        for (int f = 30; f < 40; f++)
+        {
+            t.Action[t.Slot(f, 3)] = (int)PlayerAction.Tackle;     // un centrocampista: no es el síntoma
+        }
+
+        for (int f = 40; f < 45; f++)
+        {
+            t.Action[t.Slot(f, 5)] = (int)PlayerAction.Block;      // Block siempre es a quien no lleva el balón
+            t.Owner[f] = 10;
+        }
+
+        var hits = SymptomDetectors.ForwardTackleChoice(t, out int frames);
+        Assert.Equal(2, hits.Count);
+        Assert.Equal(15, frames);
+    }
+
     // ---- BB-G2 ----
 
     private static DetectorTrace LooseBallWithKeeperNearest(bool teammateChases)

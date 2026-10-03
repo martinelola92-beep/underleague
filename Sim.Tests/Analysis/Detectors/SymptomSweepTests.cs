@@ -146,6 +146,8 @@ public sealed class SymptomSweepTests
         m["BA-J paradas retenidas"] = stragglers.Count;
         hits["BF-C delantero pega sin balón"] = SymptomDetectors.ForwardOffBallHit(t, out int allOff);
         m["BF-C placajes sin balón (todos los puestos)"] = allOff;
+        hits["BF-C delantero elige pegar sin portador a su alcance"] = SymptomDetectors.ForwardTackleChoice(t, out int fwdFrames);
+        m["BF-C ticks de delantero eligiendo Tackle/Block sin portador"] = fwdFrames;
         hits["BB-G2 portero perseguidor (abrazo mortal)"] = SymptomDetectors.GoalkeeperChaser(t, out int chase);
         m["BB-G2 ticks del portero eligiendo ChaseBall fuera del área"] = chase;
         hits["BN-A amontonamiento sobre el portero"] = SymptomDetectors.GoalkeeperCrowd(t);

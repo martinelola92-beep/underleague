@@ -68,6 +68,12 @@ internal static class SymptomDetectors
     /// <summary>BA-J: compañeros de campo no delanteros aún en campo contrario al soltar el portero. Provisional, sin medir.</summary>
     public const int RetreatMaxStragglers = 1;
 
+    /// <summary>
+    /// BF-C: alcance de una entrada. Medido en <c>RestartClearanceTests</c> (BB-B): «max(tackleDistanceMaxCells,
+    /// blockReachMaxCells) + margen = 1,3 casillas».
+    /// </summary>
+    public const float TackleReach = 1.3f;
+
     /// <summary>BB-C: la celebración debe darse en campo contrario o a la altura del tiro; provisional, sin medir.</summary>
     public const int CelebrationProbeTicks = 10;
 
@@ -104,7 +110,7 @@ internal static class SymptomDetectors
 
                 if (run >= DanceMinReversals && NearestMate(t, runStart, p) < DanceMateRadius)
                 {
-                    hits.Add(new Hit(runStart, t.Tick[runStart], run, run, $"jugador {t.Id[p]}"));
+                    hits.Add(new Hit(runStart, t.Tick[runStart], run, run, $"jugador {t.Id[p]}, acción {ActionName(t, runStart, p)}"));
                 }
 
                 run = 0;
@@ -220,6 +226,65 @@ internal static class SymptomDetectors
             if (p >= 0 && t.Role[p] == Position.Forward)
             {
                 hits.Add(new Hit(t.FrameOfTick(e.Tick), e.Tick, 1, 1, $"delantero {e.Actor} sobre {e.Opponent} ({e.Detail})"));
+            }
+        }
+
+        return hits;
+    }
+
+    /// <summary>
+    /// BF-C, la forma que se ve en la decisión: un delantero elige <c>Block</c>, o <c>Tackle</c> sin que ningún
+    /// rival lleve el balón: «pega» a quien no lleva el balón.
+    /// Un episodio es una racha de ticks consecutivos. Existe porque el placaje sin balón del delantero está
+    /// cerrado a propósito (ADR 0133) y los eventos <c>offBall*</c> dan 0 siempre: el síntoma vive en la elección.
+    /// </summary>
+    public static IReadOnlyList<Hit> ForwardTackleChoice(DetectorTrace t, out int forwardChoiceFrames)
+    {
+        forwardChoiceFrames = 0;
+        var hits = new List<Hit>();
+        for (int p = 0; p < t.Players; p++)
+        {
+            if (t.Role[p] != Position.Forward)
+            {
+                continue;
+            }
+
+            int run = 0;
+            int start = 0;
+            for (int f = 0; f <= t.Frames; f++)
+            {
+                bool choice = false;
+                if (f < t.Frames && t.On(f, p) && t.Phase[f] == MatchPhase.OpenPlay)
+                {
+                    int action = t.Action[t.Slot(f, p)];
+                    if (action == (int)PlayerAction.Tackle || action == (int)PlayerAction.Block)
+                    {
+                        // «Pega sin balón»: Block (derribar a quien no lleva el balón) o Tackle sin que un
+                        // rival lleve el balón (lo tiene un compañero, o está suelto): no hay portador al que entrar.
+                        int owner = t.Owner[f];
+                        bool rivalCarrier = owner >= 0 && t.Team[owner] != t.Team[p];
+                        choice = action == (int)PlayerAction.Block || !rivalCarrier;
+                    }
+                }
+
+                if (choice)
+                {
+                    forwardChoiceFrames++;
+                    if (run == 0)
+                    {
+                        start = f;
+                    }
+
+                    run++;
+                    continue;
+                }
+
+                if (run > 0)
+                {
+                    hits.Add(new Hit(start, t.Tick[start], run, run, $"delantero {t.Id[p]} elige pegar sin portador a su alcance"));
+                }
+
+                run = 0;
             }
         }
 
@@ -698,6 +763,9 @@ internal static class SymptomDetectors
     }
 
     // ----------------------------------------------------------------------------------------------------
+
+    private static string ActionName(DetectorTrace t, int frame, int p)
+        => t.Action[t.Slot(frame, p)] is var a and >= 0 ? ((PlayerAction)a).ToString() : "?";
 
     private static float NearestMate(DetectorTrace t, int frame, int p)
     {
