@@ -61,3 +61,28 @@ Discrimina un experimento barato: `onTackleBase` a 0 con la suma de la falta con
 ## Mediciones
 
 (se rellenan abajo)
+Lote de referencia (`--runs 10000 --teams data/balance/reference.json`, media ± e.t. por partido; `base` = HEAD, que
+reproduce las cifras de la ADR 0186: 0,789 / 0,464):
+
+| brazo | s1 lesiones | s2 lesiones | s1 entradas | s2 entradas | s1 goles | s2 goles |
+|---|---|---|---|---|---|---|
+| base (140 / 60) | 0,789 ± 0,009 | 0,464 ± 0,007 | 9,27 | 11,22 | 2,474 | 2,087 |
+| E1: limpio 0, falta 200 (la falta igual) | 0,659 ± 0,008 | 0,334 ± 0,006 | 9,32 | 11,25 | 2,490 | 2,098 |
+| E2: 0 / 60 (base común a 0) | 0,573 ± 0,008 | 0,277 ± 0,005 | 9,37 | 11,28 | 2,508 | 2,109 |
+| 55 / 145 | 0,707 ± 0,009 | 0,375 ± 0,006 | 9,30 | 11,25 | 2,485 | 2,093 |
+| objetivo (antes de la 0184) | 0,692 | 0,395 | | | | |
+
+**H1 CONFIRMED** (E1 aislado, sólo cambia la base del contacto limpio): el contacto limpio solo puede quitar −0,130
+lesiones por partido en las dos semillas, más de lo que hace falta (−0,097 / −0,069). **H2 innecesaria.** Las entradas
+no bajan en ningún brazo (suben unas centésimas: menos lesionados, más jugadores en el campo).
+
+Runs completas (`--full-runs 240`, semillas 1-3, contextual, 720 runs; `base` reproduce la ADR 0186):
+
+| brazo | lesiones propias / run | graves / run | muertes / partido | `runWinRate` |
+|---|---|---|---|---|
+| base | 4,04 ± 0,15 | 2,02 | 0,155 ± 0,007 | 15,3 (12,9 / 16,7 / 16,2) |
+| 55 / 145 | 3,12 ± 0,12 | 1,52 | 0,153 ± 0,007 | 16,0 (14,6 / 19,2 / 14,2) |
+| objetivo (antes de la 0184) | 3,70 ± 0,14 | | 0,152 ± 0,008 | 16,8 |
+
+**Las dos cifras objetivo no las devuelve el mismo valor** (CONFIRMED con los dos lotes): la run responde al contacto
+limpio con más fuerza que el partido de referencia (con 55 la referencia queda en +2 % / −5 % y la run en −16 %).

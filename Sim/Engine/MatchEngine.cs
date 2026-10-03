@@ -5119,18 +5119,13 @@ internal sealed class MatchEngine : IPerkWorld
         throw new ArgumentOutOfRangeException(nameof(offset));
     }
 
-    private void ResolveInjury(MatchPlayer tackler, MatchPlayer victim, bool isFoul)
+    /// <summary>
+    /// La cuota de lesión de un contacto, en base 10.000, antes de tirarla (ADR 0041, 0043, 0050, 0188). La falta
+    /// —señalada o no— y el efecto <c>injure</c> de un perk (<see cref="ProvokeInjury"/>) suman <c>onFoulBase</c>; el
+    /// contacto limpio sólo <c>onTackleBase</c>. Pura: no consume dados.
+    /// </summary>
+    private int InjuryChance(MatchPlayer tackler, MatchPlayer victim, bool isFoul)
     {
-        // BR-B: la muerte es terminal. Un perk letal publica la entrada/el bloqueo ANTES de resolverlo
-        // (EffectEngine) y puede matar ya al objetivo; la disputa sigue su curso, pero contra un muerto no
-        // hay nada más que lesionar: sin esta guarda salía un INJURY en el mismo tick que el DEATH y la
-        // plantilla lo dejaba "vivo y lesionado" (semilla 7, run 0, partido 15). Va antes de cualquier
-        // tirada, así que no consume dados que un jugador vivo consumiría.
-        if (victim.Dead)
-        {
-            return;
-        }
-
         // ADR 0041: la fuerza del que entra contra la resistencia del que la recibe, sin ninguna
         // constante de por medio. Un nivel 8 que entra a otro nivel 8 lesiona aproximadamente lo mismo
         // que un nivel 1 contra otro nivel 1; lo que mueve el riesgo es la diferencia entre los dos.
@@ -5151,7 +5146,27 @@ internal sealed class MatchEngine : IPerkWorld
         // cambia nada (SimConfig.InjuryScalePercent).
         chance = Math.Clamp(chance, 0, 5000) * _config.InjuryScalePercent / 100;
 
-        int injuryChance = Math.Clamp(chance, 0, 5000);
+        return Math.Clamp(chance, 0, 5000);
+    }
+
+    /// <summary>ADR 0188: la cuota de lesión de un contacto entre dos jugadores del partido, sin tirarla.</summary>
+    internal int InjuryChanceForTest(int tacklerIndex, int victimIndex, bool isFoul) =>
+        InjuryChance(_players[tacklerIndex], _players[victimIndex], isFoul);
+
+    private void ResolveInjury(MatchPlayer tackler, MatchPlayer victim, bool isFoul)
+    {
+        // BR-B: la muerte es terminal. Un perk letal publica la entrada/el bloqueo ANTES de resolverlo
+        // (EffectEngine) y puede matar ya al objetivo; la disputa sigue su curso, pero contra un muerto no
+        // hay nada más que lesionar: sin esta guarda salía un INJURY en el mismo tick que el DEATH y la
+        // plantilla lo dejaba "vivo y lesionado" (semilla 7, run 0, partido 15). Va antes de cualquier
+        // tirada, así que no consume dados que un jugador vivo consumiría.
+        if (victim.Dead)
+        {
+            return;
+        }
+
+        var injury = _tuning.Injury;
+        int injuryChance = InjuryChance(tackler, victim, isFoul);
         bool lethalStake = IsLethalStake(victim);
         if (!_rng.Chance(injuryChance))
         {
