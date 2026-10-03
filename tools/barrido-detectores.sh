@@ -7,6 +7,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 export UL_DET_MATCHES="${1:-100}"
 export UL_DET_SEED0="${2:-1}"
+export UL_DET_OUT="${UL_DET_OUT:-$PWD/Game/screenshots/detectores}"
 if pgrep -f "project Balance|testhost|godot" >/dev/null; then
   echo "hay un proceso pesado en marcha (Balance/testhost/godot); espera a que acabe" >&2
   exit 2

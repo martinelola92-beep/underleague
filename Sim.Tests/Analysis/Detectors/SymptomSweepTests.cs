@@ -18,8 +18,8 @@ namespace Underleague.Sim.Tests.Analysis.Detectors;
 ///
 /// <para><b>Comando único</b>: <c>tools/barrido-detectores.sh [partidos]</c>. Variables: <c>UL_DET_MATCHES</c>
 /// (100 por defecto; el mínimo del encargo), <c>UL_DET_SEED0</c> (1), <c>UL_DET_THREADS</c> (2: la máquina es
-/// de 4 núcleos y comparte), <c>UL_DET_OUT</c> (carpeta de salida, por defecto
-/// <c>Game/screenshots/detectores/</c>).</para>
+/// de 4 núcleos y comparte), <c>UL_DET_OUT</c> (carpeta de salida; por defecto el temporal del sistema,
+/// y <c>tools/barrido-detectores.sh</c> la pone en <c>Game/screenshots/detectores/</c>).</para>
 ///
 /// <para>Los partidos son <see cref="TestMatches.Reference"/> con la semilla como identificador: reproducibles
 /// con esa semilla. El detector de BB-I necesita jugadores con el perk <c>box_predator</c>, que la referencia
@@ -42,7 +42,9 @@ public sealed class SymptomSweepTests
         int matches = EnvInt("UL_DET_MATCHES", 100);
         ulong seed0 = (ulong)EnvInt("UL_DET_SEED0", 1);
         int threads = EnvInt("UL_DET_THREADS", 2);
-        string outDir = Environment.GetEnvironmentVariable("UL_DET_OUT") ?? Path.Combine(RepoRoot(), "Game", "screenshots", "detectores");
+        // Sin UL_DET_OUT escribe en el temporal: las sondas Category=Diagnostic se ejecutan al cerrar cada hito y no deben pisar
+        // los resultados del barrido guardados en el repositorio (los guarda tools/barrido-detectores.sh).
+        string outDir = Environment.GetEnvironmentVariable("UL_DET_OUT") ?? Path.Combine(Path.GetTempPath(), "underleague-detectores");
         Directory.CreateDirectory(outDir);
 
         var reference = Play(matches, seed0, threads, "ref");
@@ -229,15 +231,4 @@ public sealed class SymptomSweepTests
 
     private static int EnvInt(string name, int fallback)
         => int.TryParse(Environment.GetEnvironmentVariable(name), out int v) && v > 0 ? v : fallback;
-
-    private static string RepoRoot()
-    {
-        string? dir = AppContext.BaseDirectory;
-        while (dir is not null && !File.Exists(Path.Combine(dir, "global.json")))
-        {
-            dir = Path.GetDirectoryName(dir);
-        }
-
-        return dir ?? throw new InvalidOperationException("no se encuentra la raíz del repositorio (global.json)");
-    }
 }
