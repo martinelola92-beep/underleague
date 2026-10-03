@@ -13,6 +13,12 @@ public sealed class AccelerationTests
 {
     private static readonly Catalog Catalog = TestData.LoadCatalog();
 
+    /// <summary>
+    /// El arranque de la ADR 0185 con <c>accelTicks</c> = 3. Los datos lo traen APAGADO (0) hasta resolver las regresiones
+    /// medidas (ver la ADR), así que estos tests encienden la regla en su propio catálogo.
+    /// </summary>
+    private static readonly Catalog On = WithAccel(3);
+
     private readonly ITestOutputHelper _output;
 
     public AccelerationTests(ITestOutputHelper output) => _output = output;
@@ -21,10 +27,9 @@ public sealed class AccelerationTests
     [Fact]
     public void FromStandstillTheTopSpeedArrivesAfterAccelTicks()
     {
-        int accelTicks = Catalog.Tuning.Movement.AccelTicks;
-        Assert.True(accelTicks > 0, "los datos reales debían traer el arranque encendido");
+        int accelTicks = On.Tuning.Movement.AccelTicks;
 
-        var steps = Steps(Catalog, start: new Vec2(2f, 3.5f), target: new Vec2(14f, 3.5f), ticks: accelTicks + 2, out int ceiling);
+        var steps = Steps(On, start: new Vec2(2f, 3.5f), target: new Vec2(14f, 3.5f), ticks: accelTicks + 2, out int ceiling);
         _output.WriteLine($"techo {ceiling} · pasos {string.Join(" ", steps)}");
         for (int t = 0; t < accelTicks - 1; t++)
         {
@@ -46,7 +51,7 @@ public sealed class AccelerationTests
     [Fact]
     public void AtTopSpeedItBrakesBeforeTheTarget()
     {
-        var steps = Steps(Catalog, new Vec2(2f, 3.5f), new Vec2(5f, 3.5f), 40, out int ceiling, preRunTicks: 6);
+        var steps = Steps(On, new Vec2(2f, 3.5f), new Vec2(5f, 3.5f), 40, out int ceiling, preRunTicks: 6);
         _output.WriteLine($"techo {ceiling} · pasos {string.Join(" ", steps)}");
         Assert.InRange(steps.Sum(), 2990, 3010);
         int last = steps.FindLastIndex(s => s > 0);
@@ -62,14 +67,14 @@ public sealed class AccelerationTests
     [Fact]
     public void AHalfTurnStartsFromZeroAndARightAngleKeepsHalf()
     {
-        var engine = Engine(Catalog, out int index, out int ceiling);
+        var engine = Engine(On, out int index, out int ceiling);
         var player = engine.PlayerAtForTest(index);
         engine.PlaceForTest(index, new Vec2(7f, 3.5f));
         player.Velocity = new Vec2(ceiling / 1000f, 0f);
         player.TargetPoint = new Vec2(2f, 3.5f);
         engine.MoveForTest(index);
         int back = Milli(player.Velocity.Length);
-        int accel = ceiling / Catalog.Tuning.Movement.AccelTicks;
+        int accel = ceiling / On.Tuning.Movement.AccelTicks;
         Assert.InRange(back, accel - 2, accel + 2);
 
         engine.PlaceForTest(index, new Vec2(7f, 3.5f));
