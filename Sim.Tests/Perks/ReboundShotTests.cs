@@ -13,13 +13,57 @@ namespace Underleague.Sim.Tests.Perks;
 /// reales cada activación ocurre justo después de que el tiro del portador termine en balón suelto
 /// (bloqueo, rechace del portero o palo) y va seguida de un tiro suyo en el mismo tick.
 /// </summary>
-public sealed class ReboundShotTests
+public sealed class ReboundShotTests : IClassFixture<ReboundShotTests.Plays>
 {
     private static readonly Catalog Catalog = TestData.LoadCatalog();
     private static readonly RefereeSetup Referee = new("Referee", RefereeTrait.Neutral, 0);
     private readonly ITestOutputHelper _output;
+    private readonly Plays _plays;
 
-    public ReboundShotTests(ITestOutputHelper output) => _output = output;
+    public ReboundShotTests(ITestOutputHelper output, Plays plays)
+    {
+        _output = output;
+        _plays = plays;
+    }
+
+    /// <summary>
+    /// Partidos ya jugados de la clase (técnica «compartir lo que se repite»): el partido es función pura de
+    /// (perks del portador, slot, índice), y <c>double_shot</c> en el slot 6 lo juegan tanto la prueba por perk como la
+    /// del límite y el enfriamiento (los primeros 250 índices). xUnit corre las pruebas de la clase una detrás de otra
+    /// y el fixture se suelta al acabar.
+    /// </summary>
+    public sealed class Plays
+    {
+        private readonly Dictionary<(string Perks, int Slot, int Index), (MatchResult Result, int Owner)> _played = new();
+
+        public (MatchResult Result, int Owner) Get(int index, int slot, params string[] perks)
+        {
+            lock (_played)
+            {
+                var key = (string.Join('+', perks), slot, index);
+                if (!_played.TryGetValue(key, out var played))
+                {
+                    played = PlayNew(index, slot, perks);
+                    _played[key] = played;
+                }
+
+                return played;
+            }
+        }
+    }
+
+    private static (MatchResult Result, int Owner) PlayNew(int i, int slot, string[] perks)
+    {
+        var homeRng = RngStreams.Generation(1, i);
+        var awayRng = RngStreams.Generation(1, 10_000 + i);
+        var home = TeamGenerator.Generate(ref homeRng, Catalog, "home", Race.Human, 50, 1, 4);
+        var away = TeamGenerator.Generate(ref awayRng, Catalog, "away", Race.Human, 50, 100001, 4);
+        var players = home.Players.ToList();
+        players[slot] = players[slot] with { Perks = perks };
+        var setup = new MatchSetup(home with { Players = players }, away, Referee);
+        var result = Simulator.Run(setup, RngStreams.MatchSeed(1, i), Catalog, new SimConfig(CollectLog: false));
+        return (result, players[slot].Id);
+    }
 
     [Theory]
     [InlineData("double_shot")]
@@ -31,15 +75,7 @@ public sealed class ReboundShotTests
         {
             for (int i = 0; i < 250; i++)
             {
-                var homeRng = RngStreams.Generation(1, i);
-                var awayRng = RngStreams.Generation(1, 10_000 + i);
-                var home = TeamGenerator.Generate(ref homeRng, Catalog, "home", Race.Human, 50, 1, 4);
-                var away = TeamGenerator.Generate(ref awayRng, Catalog, "away", Race.Human, 50, 100001, 4);
-                var players = home.Players.ToList();
-                players[slot] = players[slot] with { Perks = new[] { perkId } };
-                var setup = new MatchSetup(home with { Players = players }, away, Referee);
-                var result = Simulator.Run(setup, RngStreams.MatchSeed(1, i), Catalog, new SimConfig(CollectLog: false));
-                int owner = players[slot].Id;
+                var (result, owner) = _plays.Get(i, slot, perkId);
 
                 var events = result.Events;
                 for (int k = 0; k < events.Count; k++)
@@ -79,14 +115,7 @@ public sealed class ReboundShotTests
         int matchesWithTwo = 0;
         for (int i = 0; i < 400; i++)
         {
-            var homeRng = RngStreams.Generation(1, i);
-            var awayRng = RngStreams.Generation(1, 10_000 + i);
-            var home = TeamGenerator.Generate(ref homeRng, Catalog, "home", Race.Human, 50, 1, 4);
-            var away = TeamGenerator.Generate(ref awayRng, Catalog, "away", Race.Human, 50, 100001, 4);
-            var players = home.Players.ToList();
-            players[6] = players[6] with { Perks = new[] { "double_shot" } };
-            var setup = new MatchSetup(home with { Players = players }, away, Referee);
-            var result = Simulator.Run(setup, RngStreams.MatchSeed(1, i), Catalog, new SimConfig(CollectLog: false));
+            var (result, _) = _plays.Get(i, 6, "double_shot");
 
             var ticks = result.Events.Where(e => e.Type == EventType.PerkTriggered && e.Detail == "double_shot")
                 .Select(e => e.Tick).ToList();
@@ -114,15 +143,7 @@ public sealed class ReboundShotTests
         int activations = 0, both = 0, shotsAfter = 0;
         for (int i = 0; i < 400; i++)
         {
-            var homeRng = RngStreams.Generation(1, i);
-            var awayRng = RngStreams.Generation(1, 10_000 + i);
-            var home = TeamGenerator.Generate(ref homeRng, Catalog, "home", Race.Human, 50, 1, 4);
-            var away = TeamGenerator.Generate(ref awayRng, Catalog, "away", Race.Human, 50, 100001, 4);
-            var players = home.Players.ToList();
-            players[6] = players[6] with { Perks = new[] { "double_shot", "point_blank" } };
-            var setup = new MatchSetup(home with { Players = players }, away, Referee);
-            var result = Simulator.Run(setup, RngStreams.MatchSeed(1, i), Catalog, new SimConfig(CollectLog: false));
-            int owner = players[6].Id;
+            var (result, owner) = _plays.Get(i, 6, "double_shot", "point_blank");
 
             foreach (var tick in result.Events.Where(e => e.Type == EventType.PerkTriggered && e.Actor == owner
                 && e.Detail is "double_shot" or "point_blank").GroupBy(e => e.Tick))
