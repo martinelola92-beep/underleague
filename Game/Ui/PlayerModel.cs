@@ -938,6 +938,18 @@ public sealed partial class PlayerModel : Node3D
         return perSecond * _skeleton.GlobalTransform.Basis.Scale.X;
     }
 
+    /// <summary>Altura de la cadera en el mundo, en casillas: de pie ~0,5, en el suelo ~0,1. Dice si una caída SE VE. Solo BV-A.</summary>
+    public float DebugHipsY()
+    {
+        if (_skeleton is null)
+        {
+            return 0f;
+        }
+
+        int hips = _skeleton.FindBone("mixamorig_Hips");
+        return hips < 0 ? 0f : (_skeleton.GlobalTransform * _skeleton.GetBoneGlobalPose(hips).Origin).Y;
+    }
+
     /// <summary>Las dos punteras en coordenadas del mundo, ya animadas; ceros si el modelo no tiene esqueleto. Solo BV-A.</summary>
     public void DebugToes(out Vector3 left, out Vector3 right)
     {
@@ -998,6 +1010,8 @@ public sealed partial class PlayerModel : Node3D
 
             int left = skeleton.FindBone("mixamorig_LeftToeBase");
             int right = skeleton.FindBone("mixamorig_RightToeBase");
+            int hips = skeleton.FindBone("mixamorig_Hips");
+            int head = skeleton.FindBone("mixamorig_Head");
             float length = _library.GetAnimation(key).Length;
             anim.Play($"{Library}/{key}");
             for (float t = 0f; t <= length; t += 1f / 60f)
@@ -1005,8 +1019,10 @@ public sealed partial class PlayerModel : Node3D
                 anim.Seek(t, true);
                 var l = skeleton.GetBoneGlobalPose(left).Origin;
                 var r = skeleton.GetBoneGlobalPose(right).Origin;
+                var h = skeleton.GetBoneGlobalPose(hips).Origin;
+                var c = skeleton.GetBoneGlobalPose(head).Origin;
                 sb.Append(System.Globalization.CultureInfo.InvariantCulture,
-                    $"{key},{t:0.####},{l.X:0.###},{l.Y:0.###},{l.Z:0.###},{r.X:0.###},{r.Y:0.###},{r.Z:0.###}\n");
+                    $"{key},{t:0.####},{l.X:0.###},{l.Y:0.###},{l.Z:0.###},{r.X:0.###},{r.Y:0.###},{r.Z:0.###},{h.Y:0.###},{c.Y:0.###}\n");
             }
         }
 

@@ -1466,6 +1466,9 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// contacto y cada parte del cuerpo. Es la comprobación de que la capa se dispara —un gesto que sale
     /// cero veces es código muerto, y eso una captura no lo enseña— y de con qué se está jugando el balón.
     /// </summary>
+    /// <summary>Los eventos con los que se montó la vista, para el instrumento de entradas (BV-A, tercera pasada). Sólo lectura.</summary>
+    public IReadOnlyList<MatchEvent>? DebugEvents => _events;
+
     public string DebugContacts()
     {
         if (Trace is not { FrameCount: > 0 } trace)
@@ -2958,7 +2961,7 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// </summary>
     public readonly record struct BodyProbe(
         bool Visible, bool HasModel, Vector3 Position, float Yaw, string Clip, float ClipTime, float SpeedScale,
-        float InputSpeed, float NaturalSpeed, Vector2 Screen, Vector3 LeftToe = default, Vector3 RightToe = default);
+        float InputSpeed, float NaturalSpeed, Vector2 Screen, Vector3 LeftToe = default, Vector3 RightToe = default, float HipsY = 0f);
 
     /// <summary>Número de cuerpos montados (uno por ficha de la traza). BV-A.</summary>
     public int BodyCount => _bodies.Count;
@@ -2985,7 +2988,7 @@ public partial class MatchPitchView3D : SubViewportContainer
         model.DebugToes(out var leftToe, out var rightToe);
         return new BodyProbe(
             body.Visible, true, center, model.Rotation.Y, model.DebugClip, model.DebugClipTime, model.DebugSpeedScale,
-            model.DebugInputSpeed, model.DebugNaturalCellsPerSecond(model.DebugClip), screen, leftToe, rightToe);
+            model.DebugInputSpeed, model.DebugNaturalCellsPerSecond(model.DebugClip), screen, leftToe, rightToe, model.DebugHipsY());
     }
 
     // ------------------------------------------------------------------ marcas de perk (regla 5, ADR 0119)

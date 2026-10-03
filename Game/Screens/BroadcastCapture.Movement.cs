@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Godot;
 using Underleague.Game.Autoload;
 using Underleague.Sim.Engine;
+using Underleague.Sim.Events;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run;
 using Underleague.Sim.Run.View;
@@ -93,7 +94,11 @@ public partial class BroadcastCapture
         File.WriteAllText(Path.Combine(directory, "clips.csv"), Ui.PlayerModel.DebugDescribeClips());
         File.WriteAllText(
             Path.Combine(directory, "pies.csv"),
-            "clip,t,lx,ly,lz,rx,ry,rz\n" + Ui.PlayerModel.DebugFootProfile(this, "kick") + Ui.PlayerModel.DebugFootProfile(this, "receive"));
+            "clip,t,lx,ly,lz,rx,ry,rz,hipsY,headY\n" + Ui.PlayerModel.DebugFootProfile(this, "kick") + Ui.PlayerModel.DebugFootProfile(this, "receive")
+            + Ui.PlayerModel.DebugFootProfile(this, "tackle") + Ui.PlayerModel.DebugFootProfile(this, "trip")
+            + Ui.PlayerModel.DebugFootProfile(this, "fallen") + Ui.PlayerModel.DebugFootProfile(this, "standup")
+            + Ui.PlayerModel.DebugFootProfile(this, "idle"));
+        WriteEventsCsv(trace, screen.Pitch3D.DebugEvents, Path.Combine(directory, "eventos.csv"));
 
         var windows = custom is { Count: > 0 } ? CustomWindows(trace, hasModel, custom) : PlanMovementWindows(screen, trace, hasModel);
         var plan = new StringBuilder("label,start,end,focus,images\n");
@@ -106,7 +111,7 @@ public partial class BroadcastCapture
         File.WriteAllText(Path.Combine(directory, "tramos.csv"), plan.ToString());
 
         _movementLog = new StringBuilder(
-            "window,n,frame,alpha,frozen,timescale,player,team,hasModel,visible,state,x,z,yaw,clip,clipTime,speedScale,inputSpeed,naturalSpeed,sx,sy,lx,ly,lz,rx,ry,rz,bx,by,bz,owner\n");
+            "window,n,frame,alpha,frozen,timescale,player,team,hasModel,visible,state,x,z,yaw,clip,clipTime,speedScale,inputSpeed,naturalSpeed,sx,sy,lx,ly,lz,rx,ry,rz,bx,by,bz,owner,hipsY\n");
         RenderingServer.FramePostDraw += OnMovementPostDraw;
         foreach (var w in windows)
         {
@@ -200,7 +205,7 @@ public partial class BroadcastCapture
             log.Append(CultureInfo.InvariantCulture,
                 $"{probe.Position.X:0.#####},{probe.Position.Z:0.#####},{probe.Yaw:0.#####},{probe.Clip},{probe.ClipTime:0.####},{probe.SpeedScale:0.####},{probe.InputSpeed:0.####},{probe.NaturalSpeed:0.####},{probe.Screen.X:0.#},{probe.Screen.Y:0.#},");
             log.Append(CultureInfo.InvariantCulture,
-                $"{probe.LeftToe.X:0.####},{probe.LeftToe.Y:0.####},{probe.LeftToe.Z:0.####},{probe.RightToe.X:0.####},{probe.RightToe.Y:0.####},{probe.RightToe.Z:0.####},{ballAt.X:0.####},{ballAt.Y:0.####},{ballAt.Z:0.####},{owner}\n");
+                $"{probe.LeftToe.X:0.####},{probe.LeftToe.Y:0.####},{probe.LeftToe.Z:0.####},{probe.RightToe.X:0.####},{probe.RightToe.Y:0.####},{probe.RightToe.Z:0.####},{ballAt.X:0.####},{ballAt.Y:0.####},{ballAt.Z:0.####},{owner},{probe.HipsY:0.####}\n");
         }
 
         if (w.Images && _movementImages)
@@ -372,6 +377,27 @@ public partial class BroadcastCapture
             }
         }
 
+        // 4b. Derribo: el primer jugador con modelo que cae (derribado o lesionado), con su levantada.
+        for (int f = 150; f < frames; f++)
+        {
+            int victim = -1;
+            for (int i = 0; i < trace.Players.Count; i++)
+            {
+                if (hasModel[i] && trace.OnPitchAt(f, i) && trace.StateAt(f, i) is PlayerState.KnockedDown or PlayerState.Injured
+                    && trace.StateAt(f - 1, i) is not (PlayerState.KnockedDown or PlayerState.Injured))
+                {
+                    victim = i;
+                    break;
+                }
+            }
+
+            if (victim >= 0)
+            {
+                windows.Add(new MovementWindow { Label = "derribo", Start = f - 10, End = f + 40, Focus = Near(f, victim, 3), Images = true });
+                break;
+            }
+        }
+
         // 5. Falta que para el juego (pausa breve, ADR 0173) y la reanudación.
         foreach (var m in screen.Moments.Moments)
         {
@@ -442,6 +468,43 @@ public partial class BroadcastCapture
         // 8. Tramo largo a x1 sin imágenes: la estadística del parpadeo, con el partido tal cual (pausas incluidas).
         windows.Add(new MovementWindow { Label = "tramo", Start = 200, End = Math.Min(frames - 1, 200 + 600), Images = false, MaxEngineFrames = 1500 });
         return windows;
+    }
+
+    /// <summary>
+    /// Los sucesos de contacto de la traza (entrada, falta, lesión), con el fotograma en que caen y los dos implicados
+    /// como índices de la traza (BV-A, tercera pasada: entradas, faltas y caídas). Sólo lee.
+    /// </summary>
+    private static void WriteEventsCsv(MatchTrace trace, IReadOnlyList<MatchEvent>? events, string path)
+    {
+        var sb = new StringBuilder("frame,tick,type,detail,actor,opponent\n");
+        if (events is not null)
+        {
+            var index = new Dictionary<int, int>();
+            for (int i = 0; i < trace.Players.Count; i++)
+            {
+                index[trace.Players[i].Id] = i;
+            }
+
+            for (int f = 0; f < trace.FrameCount; f++)
+            {
+                int from = trace.EventFromAt(f);
+                int count = trace.EventCountAt(f);
+                for (int e = from; e < from + count && e < events.Count; e++)
+                {
+                    var ev = events[e];
+                    if (ev.Type is not (EventType.Tackle or EventType.Foul or EventType.Injury or EventType.Death or EventType.DribbleWon))
+                    {
+                        continue;
+                    }
+
+                    int actor = index.TryGetValue(ev.Actor, out int a) ? a : -1;
+                    int opponent = index.TryGetValue(ev.Opponent, out int o) ? o : -1;
+                    sb.Append(CultureInfo.InvariantCulture, $"{f},{ev.Tick},{ev.Type},{ev.Detail},{actor},{opponent}\n");
+                }
+            }
+        }
+
+        File.WriteAllText(path, sb.ToString());
     }
 
     private static void WriteTraceCsv(MatchTrace trace, bool[] hasModel, string path)
