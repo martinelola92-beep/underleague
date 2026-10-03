@@ -79,3 +79,25 @@ frente a 13,75 sin él en la semilla 1: sigue dentro de la banda de la puerta (5
 Efecto en el juego, `dwarf_good` con `immovable` en el hueco de `crowd_control` contra `human_good`, 4 × 4.000 partidos
 (semillas 1-4, pareadas): 65,90 / 63,85 / 69,70 / 74,40 sin él, 66,00 / 64,20 / 69,62 / 74,62 con él, o sea +0,15 ± 0,1 puntos:
 inerte para la victoria, como corresponde a un `filler` común. No se cambió ninguna build (son la línea base de las puertas, ADR 0118).
+
+### Revisión independiente (3 oct 2026): activaciones reales y decisiones de forma
+
+**Regla J, el instrumento.** `Sim.Tests/Perks/ImmovableCensusTests` (Diagnostic) juega enanos con estilo Bulwark forzado contra
+humanos, 3.000 partidos, mismas semillas con y sin el perk. Control (0 portadores): 0 activaciones, el instrumento no inventa.
+Con 1 portador: **1,32 activaciones por partido** (sufre 1,18 entradas) y victoria 64,73 → 64,87 (+0,14, ruido). Con 6 portadores: 12,7 activaciones
+y 67,60 (+2,87). Así que el «inerte» de antes era imprecisa: el perk **se dispara de sobra**; con un solo portador (el caso de
+`dwarf_good`) no mueve el resultado y con la línea entera sí (LIKELY +2-3 puntos, una sola muestra de 3.000, sin otras semillas).
+
+**Qué ve el jugador.** El pergamino con el nombre del perk sobre el portador cada vez que le entran (PERK_TRIGGERED, pantallas 2D y 3D) y una
+entrada que no se resuelve a su favor. No hay cartel nuevo. **Por qué +50 y no +100**: 50 es el techo de la escala 5/10/15/20/25/50;
+el +100 era una inmunidad sobre la base. **Si se queda corto** (no se implementa): que la activación proteja al compañero Bulwark más
+cercano, o que la entrada evitada devuelva el balón al portador.
+
+**Forma.** `family: "wall"` (es una pieza de La Muralla como `back_to_back` y `bulwark_stance`, así que suma para un maestro de esa línea) y
+frecuencia 150 como sus hermanos: con `tagsRequired: ["Bulwark"]` no sale a quien no puede llevarla, y bajarla a 100 la haría rara sin medida
+que lo pida. `tagsRequired` hace que el motor rechace asignarla a un no Bulwark (`Simulator` lanza) y que el mercado no la ofrezca sin portador.
+
+**`bulwark_stance` NO recibe `tagsRequired`.** Es hermano y tendría el mismo sentido, pero `elf_brawler` (sin `styles`: elfos sin etiqueta Bulwark; `dwarf_fortress` no se ha comprobado) y varios tests de
+medición la asignan a jugadores sin la etiqueta Bulwark; con `tagsRequired` el motor lanzaría y habría que cambiar las líneas base de las
+puertas (ADR 0118). Queda como pendiente de decidir con el revisor: o se corrigen esas builds, o se acepta la carta muerta (hoy su `condition`
+ya la deja inerte fuera de Bulwark).

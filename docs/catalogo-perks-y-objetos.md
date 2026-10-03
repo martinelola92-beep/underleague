@@ -67,7 +67,7 @@ Cuatro líneas con un maestro cada una. El maestro exige llevar ya dos perks de 
 | **Control de multitud** | `crowd_control` | Poco común | 1 | condicional | — | Al encarar, el jugador multiplica por 3 sus opciones de regatear. |
 | **Veterano de seda** | `silky_veteran` | Poco común | 1 | relleno | — | Al ganar un regate, el jugador multiplica por 2 sus opciones de regatear por cada regate (hasta 5 veces). |
 
-### La Muralla (`wall`) — 8 perks
+### La Muralla (`wall`) — 9 perks
 
 | Nombre | id | Rareza | Acto | Tipo | Requisitos | Qué hace |
 |---|---|---|---|---|---|---|
@@ -75,6 +75,7 @@ Cuatro líneas con un maestro cada una. El maestro exige llevar ya dos perks de 
 | **Espalda con espalda** | `back_to_back` | Común | 1 | relleno | — | Al entrar, el jugador multiplica por 2 sus opciones de robar el balón. |
 | **Postura de muro** | `bulwark_stance` | Común | 1 | relleno | — | Cuando le entran, el rival cae derribado. |
 | **Gestión del partido** | `game_management` | Común | 1 | relleno | — | Al entrar, el jugador multiplica por 2 sus opciones de robar el balón. |
+| **Inamovible** | `immovable` | Común | 1 | relleno | etiqueta `Bulwark` | Cuando le entran, el portador multiplica por 1,5 su resistencia a las entradas. |
 | **Ancla del tercio propio** | `own_third_anchor` | Común | 1 | relleno | — | Al entrar, el rival cae derribado. |
 | **Veterano del foso** | `pit_veteran` | Común | 1 | condicional | — | Al entrar, el jugador multiplica por 1,5 sus opciones de robar el balón por cada entrada (hasta 5 veces). |
 | **Red de seguridad** | `safety_net` | Común | 1 | relleno | solo portero | Al parar, el jugador multiplica por 2 sus opciones de parar. |
@@ -93,7 +94,7 @@ Cuatro líneas con un maestro cada una. El maestro exige llevar ya dos perks de 
 | **Ensayo de tirador** | `sharpshooter_drill` | Poco común | 1 | relleno | — | Al tirar, el jugador multiplica por 2 sus opciones de tirar a puerta por cada tiro (hasta 5 veces). |
 | **Punta de lanza** | `spearpoint` | Poco común | 1 | condicional | — | Al empezar el partido, el compañero de delante multiplica por 3 sus opciones de tirar a puerta. |
 
-## Perks sin línea — 77
+## Perks sin línea — 76
 
 No cuentan para ningún maestro ni cierran nada.
 
@@ -102,7 +103,6 @@ No cuentan para ningún maestro ni cierran nada.
 | **Taquillero** | `box_office` | Común | 1 | relleno | — | Al terminar el partido, +1 al contador boxOfficeMatches. |
 | **Presión diagonal** | `diagonal_press` | Común | 1 | relleno | — | Al entrar, el compañero en diagonal hacia delante y compañero en diagonal hacia atrás multiplica por 2 sus opciones de robar el balón. |
 | **Teatrero** | `diver` | Común | 1 | relleno | — | Cuando le hacen falta, criterio del árbitro +10. |
-| **Inamovible** | `immovable` | Común | 1 | relleno | — | Cuando le entran, el portador multiplica por 1,5 su resistencia a las entradas. |
 | **Pulmones de hierro** | `iron_lungs` | Común | 1 | relleno | — | Al empezar el partido, el portador +3 de resistencia por cada partido (máximo 10) durante el partido. |
 | **Ídolo local** | `local_idol` | Común | 1 | relleno | solo Forward | Al marcar, +1 al contador localIdolGoals. |
 | **Sin florituras** | `no_nonsense` | Común | 1 | relleno | — | Al empezar el partido, el portador multiplica por 1,5 sus opciones de interceptar. |

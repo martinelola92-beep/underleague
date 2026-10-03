@@ -1,5 +1,5 @@
 {
-  "_doc": "BB-U, tercer perk de Bulwark (la ADR 0182 desbloquea la puerta de cola de los sumideros). ACTO: al enano de estilo Bulwark al que le entran le cuesta mas perder el balon; se ve como la entrada que no llega a resolverse a favor del rival. PAGA: tackleEvasion +50 en esa jugada, con limit per play una vez para que no se componga con otras entradas de la misma jugada (Regla I: Modifiers.AddProbability multiplica). Es el perk que BB-U tenia previsto (immovable, common, tackleEvasion con hasTag(owner,'Bulwark')), con +50 en vez de +100: 50 es el techo de la escala 5/10/15/20/25/50 de data/perks/README.md y +100 era una inmunidad sobre la base. Misma forma que elf_touch (TACKLE, scope opponent, el dueño es el rival implicado). Valor como perk: provisional, sin medir (protocolo de la ADR 0087 pendiente).",
+  "_doc": "BB-U, tercer perk de Bulwark (la ADR 0182 desbloquea la puerta de cola de los sumideros). ACTO: al enano de estilo Bulwark al que le entran le cuesta mas perder el balon; la entrada no llega a resolverse a favor del rival. LO QUE VE EL JUGADOR: el pergamino con el nombre del perk sobre el portador en cada entrada que sufre (PERK_TRIGGERED, C9, pantallas 2D y 3D) y la entrada que falla; sin cartel nuevo. PAGA: tackleEvasion +50 en esa jugada, con limit per play una vez para que no se componga con otras entradas de la misma jugada (Regla I: Modifiers.AddProbability multiplica). POR QUE +50 Y NO +100: 50 es el techo de la escala 5/10/15/20/25/50 de data/perks/README.md; el +100 de la primera version era una inmunidad sobre la base. MEDIDO (3 oct 2026, Sim.Tests/Perks/ImmovableCensusTests, enanos Bulwark contra humanos, 3.000 partidos): con un portador se activa 1,32 veces por partido (sufre 1,18 entradas por partido) y la victoria pasa de 64,73 a 64,87 (+0,14, dentro del ruido); con seis portadores 12,7 activaciones por partido y 67,60 (+2,87). Se dispara de sobra: no es un perk que nunca salta. Lo que no mueve con un solo portador es el resultado; solo se aprecia cuando la linea entera lo lleva. ALTERNATIVA SIN IMPLEMENTAR si esto se queda corto: que la activacion proteja tambien al companero Bulwark mas cercano (nearAlly) o que la entrada evitada devuelva el balon al portador. FAMILIA wall: es una pieza de La Muralla como sus dos hermanos (back_to_back, bulwark_stance); frecuencia 150 como ellos, porque tagsRequired ['Bulwark'] ya impide que salga a equipos sin portadores y bajarla a 100 solo la haria rara sin motivo medido. Valor como perk: provisional, sin medir (protocolo ADR 0087 pendiente).",
   "id": "immovable",
   "name": {
     "es": "Inamovible",
@@ -11,7 +11,7 @@
   "kind": "filler",
   "axis": "identity",
   "race": null,
-  "family": null,
+  "family": "wall",
   "trigger": "TACKLE",
   "scope": "opponent",
   "links": [],
@@ -33,6 +33,8 @@
   "accumulatesAcrossMatches": false,
   "lethal": false,
   "positionOnly": null,
-  "tagsRequired": [],
+  "tagsRequired": [
+    "Bulwark"
+  ],
   "tagsForbidden": []
 }

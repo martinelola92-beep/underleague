@@ -42,6 +42,7 @@ viva anotada.
 | [BB-S](./BB-S.md) | `build-neutral-reference.py` dice que escribe las referencias y solo imprime | Abierta |
 | [BB-T](./BB-T.md) | La puerta de equipamiento cae a 0,5: era RUIDO de una semilla, no el catálogo | Abierta (arreglo de instrumento) |
 | [BB-U](./BB-U.md) | Un solo perk común rompe el invariante de cero de la puerta de economía | Cerrada (3 oct 2026): `immovable` entra, la cola mide 0,21 % y 0,00 % |
+| [BB-V](./BB-V.md) | Nada comprueba que `docs/catalogo-perks-y-objetos.md` esté al día con `/data` | Abierta |
 | [BC-A](./BC-A.md) | El goleador sigue en campo rival cuando el otro equipo saca de centro | **CERRADA** (24 sep 2026, decisión del revisor): el saque de centro **espera** a que el equipo vuelva andando, con el reloj del partido parado. 85,7 % → **0,0 %**, con test permanente. Dos trampas medidas: fijar `TargetPoint` no basta (`Decide()` lo sobrescribe, y la primera versión salió **peor** que el teletransporte), y partir `ResetPositions` en dos perdió la guarda `!OnPitch`, lo que metía al suplente en el campo desde el tick 0 y tumbaba cuatro tests de run |
 | [BC-G](./BC-G.md) | El balón se queda suelto en el córner y nadie lo coge | **Implementada** 30 sep ([ADR 0177](../decisiones/0177-el-designado-de-un-balon-quieto-va-a-por-el.md)): el designado de un balón quieto va a por él; bloqueos > 40 ticks 6 → 0; BB-G2 observado |
 | [BD-A](./BD-A.md) | El reparto de los penaltis por fila: el sesgo arriba/abajo era ruido; queda la concentración en las filas centrales | Abierta (reducida) |

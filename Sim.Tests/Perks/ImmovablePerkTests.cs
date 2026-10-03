@@ -10,7 +10,7 @@ namespace Underleague.Sim.Tests.Perks;
 
 /// <summary>
 /// BB-U (ADR 0182): «Inamovible», el tercer perk común de Bulwark. Al portador de estilo Bulwark al que le
-/// entran le sube la resistencia a la entrada en esa jugada (RF-069c); a cualquier otro estilo, nada.
+/// entran le sube la resistencia a la entrada en esa jugada (RF-069c); a cualquier otro estilo ni se le puede asignar.
 /// </summary>
 public sealed class ImmovablePerkTests
 {
@@ -32,23 +32,21 @@ public sealed class ImmovablePerkTests
     }
 
     [Fact]
-    public void ANonBulwarkHolderGetsNothing()
+    public void OnlyABulwarkPlayerCanCarryIt()
     {
-        var engine = Engine(StyleTag.Brute);
-        var holder = engine.PlayerById(1)!;
-
-        engine.Effects!.Publish(TackleOn(engine, holder.Id));
-        Assert.Equal(ProbabilityScale.Neutral, engine.Effects.Modifiers.Probability(holder, ProbabilityKind.TackleEvasion));
+        // tagsRequired: no sale como carta muerta a quien no es Bulwark (el motor ni deja asignarlo).
+        var perk = Catalog.Perks.Get("immovable");
+        Assert.Contains("Bulwark", perk.TagsRequired);
+        Assert.Equal("wall", perk.Family);
+        Assert.Throws<ArgumentException>(() => Simulator.Run(Setup(StyleTag.Brute), 1UL, Catalog, new SimConfig(CollectLog: false)));
     }
 
-    private static MatchEngine Engine(StyleTag style)
-    {
-        var setup = new MatchSetup(
-            Team("home", 0, style),
-            Team("away", 100, StyleTag.Neutral),
-            new RefereeSetup("Neutral", RefereeTrait.Neutral, 0));
-        return TestPerks.Engine(Catalog, setup);
-    }
+    private static MatchSetup Setup(StyleTag style) => new(
+        Team("home", 0, style),
+        Team("away", 100, StyleTag.Neutral),
+        new RefereeSetup("Neutral", RefereeTrait.Neutral, 0));
+
+    private static MatchEngine Engine(StyleTag style) => TestPerks.Engine(Catalog, Setup(style));
 
     private static TeamSetup Team(string id, int firstId, StyleTag style)
     {
