@@ -540,3 +540,64 @@ Las demás celdas de `comeback` (d2-d5) no estaban fuera de Bonferroni y no se t
 queda anotado como hallazgo (z −3,5 y −3,4, misma palabra).
 
 **Estado.** Las cinco decisiones del revisor quedan cerradas. Abiertos: `into_the_mob` d2/d3 y `eye_for_eye` d3 (sobrestima, sin tocar), `Prepared` (decisión 3, no se medirá) y el valor de apostar con criterio.
+
+## Enmienda del 3 oct 2026: recensado tras la IA y las entradas (ADR 0184, 0186) y recalibración de las celdas que mentían
+
+**Orden del revisor.** Ajustar `into_the_mob` d2/d3 y `eye_for_eye` d3 (hermanos abiertos de la enmienda del 2 oct) y, con el censo nuevo, cualquier otra celda que haya
+cambiado de palabra o se haya vuelto rentable más allá de Bonferroni: «que lo anunciado sea verdad».
+
+**Instrumento y comando (Regla J: el mismo de la enmienda del 2 oct, sin tocarlo).** Versión: `ad53f44` (con ADR 0184 y 0186). Por cada semilla `S` en 1, 1001
+(etapa 1) y 2001, 3001, 4001, 5001 (etapa 2, ampliada porque en la etapa 1 las tres celdas pedidas ya no sobrestimaban y había que ver si era ruido):
+`dotnet run --project Balance -c Release --no-build -- --full-runs 600 --seed S --bet-doctrine blind --out <dir>`; lectura con
+`tools/bet-aciertos.py <dirs>` y `tools/bet-recalibrar.py <dirs> -- celda:dificultad ...` (nuevo: frecuencia medida, ET binomial, medido por semilla,
+cuota `round(85 / p)`). 6 × 600 runs de `Blind` (≈ 18.000 apuestas por condición más que la etapa 1; 44 celdas con ≥ 100 tomadas, Bonferroni |z| > 3,25).
+
+**Las tres celdas pedidas, con el censo nuevo (6 semillas):**
+
+| celda | tomadas | medido ± ET | anunciado | palabra medida / anunciada | z | por semilla (%) |
+|---|---|---|---|---|---|---|
+| `into_the_mob` d2 | 2.554 | 17,97 ± 0,76 | 19,98 | a menudo / a menudo | −2,5 | 17,6 19,2 15,5 17,2 20,5 18,0 |
+| `into_the_mob` d3 | 2.365 | 17,72 ± 0,79 | 18,38 | a menudo / a menudo | −0,8 | 18,2 17,4 17,3 14,7 20,9 17,5 |
+| `eye_for_eye` d3 | 2.293 | 12,43 ± 0,69 | 13,04 | a menudo / a menudo | −0,9 | 10,3 14,2 11,2 12,6 12,9 13,3 |
+
+**LIKELY (no aislado):** la premisa de la orden ya no se sostiene tal cual. Con la versión actual `into_the_mob` d3 y `eye_for_eye` d3 no sobrestiman
+más allá del ruido (z −0,8 y −0,9; `eye_for_eye` d3 **no cambia de palabra**: 12,43 contra «a menudo» ≥ 12) y `into_the_mob` d2 queda en −2,5, dentro de
+Bonferroni. Los z de −3,5/−3,4 del 2 oct eran de la versión anterior a la IA nueva o ruido de cuatro semillas menos; no hay un experimento que
+separe las dos explicaciones. Se recalibran igualmente (orden explícita del revisor): el movimiento de d3 es ≤ 1 ET, es decir, se ajusta a lo medido pero **no se
+afirma que antes estuvieran mal**; el de `into_the_mob` d2 sí es real en retorno (0,76-0,78 → −23 % contra el −15 % de diseño).
+
+**Otras celdas, con el mismo criterio (≥ 100 tomadas, |z| > 3,25 o cambio de palabra con z < −2; Regla H: el 3,25 es el de Bonferroni de esta tabla, el −2 el de la decisión 2):**
+
+| celda | tomadas | medido ± ET | anunciado | z | neto de oro | motivo |
+|---|---|---|---|---|---|---|
+| `hunt_the_star` d1 | 2.891 | 8,92 ± 0,53 | 6,60 | +5,0 | **+1.389** | rentable, infravalorada |
+| `blood_before_goals` d1 | 3.010 | 18,54 ± 0,71 | 14,38 | +6,5 | **+1.014** | rentable, infravalorada |
+| `blood_before_goals` d2 | 2.546 | 43,87 ± 0,98 | 38,03 | +6,1 | +77 | fuera de Bonferroni (≈ 0 de oro) |
+| `thrashing` d1 | 2.985 | 8,21 ± 0,50 | 11,11 | −5,0 | −3.320 | sobrestima, misma palabra |
+| `thrashing` d2 | 2.603 | 5,07 ± 0,43 | 7,31 | −4,4 | −4.018 | sobrestima, misma palabra |
+| `youth_decides` d5 | 258 | 2,33 ± 0,94 | 6,03 | −2,5 | −864 | otra palabra y z < −2 |
+
+Las filas 1-2 son las que importan al jugador: a ciegas **ya ganaban oro** (+1.389 y +1.014); el cobro de `comeback` d1 de la enmienda del 2 oct era un caso igual.
+
+**Cambio (`data/bets/bets.json`, frecuencia = medido, cuota = `round(85 / p)`; mismo método que `comeback` d1, decisión 5):**
+`hunt_the_star` d1 6,60 → **8,92** %, cobro 1.287 → **953**; `blood_before_goals` d1 14,38 → **18,54**, 591 → **458**; d2 38,03 → **43,87**, 223 → **194**;
+`into_the_mob` d2 19,98 → **17,97**, 425 → **473**; d3 18,38 → **17,72**, 463 → **480**; `eye_for_eye` d3 13,04 → **12,43**, 652 → **684**;
+`thrashing` d1 11,11 → **8,21**, 765 → **1.035**; d2 7,31 → **5,07**, 1.163 → **1.677**. `youth_decides` d5 **no se ofrece** (`withdrawnDifficulties: [5]`, decisión 2:
+la cuota que saldría, 3.655 %, supera el tope del esquema de 2.000, así que no hay recalibración posible). Retorno esperado de cada celda con 3/4/5: 0,83-0,87
+(rango del test [0,82, 0,88]; −13 a −17 %), el margen de la casa más el redondeo del oro. Valor conocido: `BetSystemTests.RecalibratedCellsAnnounceTheMeasuredFrequencyAndReturnInLineWithTheRest`
+(8 celdas: frecuencia, cobro, `cuota = round(85 / p)` y retorno) y `YouthDecidesOnDifficultyFiveIsWithdrawn`; `AWithdrawnCellIsNeverOfferedAndEveryOtherOfferIsUnchanged` pasa a esperar tres condiciones con celdas retiradas.
+Procedencia: igual que `comeback` d1 (`Blind`, 6 × 600 runs), distinta del resto del archivo (censo `Never` con semillas 1 y 7). Sigue valiendo el aviso de `BetCensusRunner`:
+un nuevo `--bet-census` volcado en `data` pisaría estas celdas y `comeback` d1.
+
+**Comprobación en semillas no usadas para calibrar (6001 y 7001, 2 × 600 runs de `Blind`, datos ya recalibrados; es una comprobación, no se reajusta con ella):**
+ninguna de las ocho celdas se aleja más de |z| 2,0 de lo nuevo anunciado y **ninguna gana oro** (netos −752, −501, −795, −262, −993, −364, −62, −464; `thrashing` d1, con ET 0,96, es la más cercana a cero: −62). Por palabra,
+medido / anunciado: rara vez 3,61 / 4,25, de vez en cuando 7,92 / 8,00, a menudo 16,97 / 17,19, casi la mitad 49,38 / 48,46 (z −2,1, −0,3, −0,6, +0,8). Tres celdas de esa
+muestra pequeña (721-750 apuestas) tocan z +2,5/+2,6 con neto ≈ 0/+151 (`blood_before_goals` d3, `comeback` d3): no están en las 6 semillas de calibración fuera de Bonferroni, **sin tocar**.
+
+**Sin tocar, y por qué:** `comeback` d1 (7,76 anunciado contra 6,85 ± 0,47: z −1,8, misma palabra, ya no es rentable; si se quiere el retorno a −15 % hay que bajar la frecuencia anunciada y subir el cobro), `comeback` d5
+(6,60 contra 4,66, otra palabra pero z +1,6 y 288 tomadas) y `hunt_the_star` d5 (z +1,9): por debajo de ambos umbrales, ruido compatible. Anotado como **hermano abierto**, sin decisión.
+`clean_hands` d4 y `blood_before_goals` d3, rentables en la etapa de 2 semillas, dejaron de serlo con 6 (no están en la tabla).
+
+**Etiquetas (Regla F).** CONFIRMED (6 semillas × 600 runs, `Blind`, con la versión `ad53f44`): `hunt_the_star` d1 y `blood_before_goals` d1 estaban infravaloradas y eran rentables a ciegas;
+`thrashing` d1/d2 sobrestimaban; tras la recalibración dejan de serlo en semillas nuevas. LIKELY: que el cambio de IA/entradas (ADR 0184 y 0186) mueva estas frecuencias; no hay experimento que
+lo separe de que el censo anterior se calibrase con otra población (`Never`) o con menos semillas. REJECTED (bajo la versión actual, 6 semillas): «`eye_for_eye` d3 cambia de palabra» y «`into_the_mob` d3 sobrestima más allá del ruido».
