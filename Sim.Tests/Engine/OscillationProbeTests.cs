@@ -305,7 +305,7 @@ public sealed class OscillationProbeTests
     internal static void Report(ITestOutputHelper output, string label, Census c)
     {
         output.WriteLine(
-            $"{label}: partidos {c.Matches} · inversiones {c.Reversals} ({c.PerPlayerSecond:F3}/s por jugador) · " +
+            $"{label}: partidos {c.Matches} · inversiones {c.Reversals} ({c.PerPlayerSecond:F4}/s por jugador) · " +
             $"deshechas ≤{UndoTicks} {c.Undone} ({c.UndonePercent:F1} %) · balón en vuelo {c.BallInFlight} (deshechas {c.UndoneBallInFlight}) · " +
             $"paso-0-paso {c.StopGo} (en reanudación {c.StopGoInRestart}) · pasos de carrera {c.RunningSteps} · excluidas: cortes {c.Cuts}, legítimas {c.Legit}");
         foreach (Cause cause in Enum.GetValues<Cause>())

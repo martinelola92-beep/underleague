@@ -157,14 +157,17 @@ public sealed class AccelerationTests
 
     /// <summary>
     /// ADR 0185, la cifra de cabecera: la sonda limpia de oscilación de la ADR 0184 (40 partidos de referencia, semillas 1-40)
-    /// con el arranque a 0 y a 3, con los demás datos vigentes.
+    /// con el arranque a 0, 1, 2, 3 y 4, con los demás datos vigentes.
     /// </summary>
     [Fact]
     [Trait("Category", "Diagnostic")]
     public void ReversalsWithAndWithoutTheRamp()
     {
-        OscillationProbeTests.Report(_output, "accelTicks 0", OscillationProbeTests.Measure(WithAccel(Catalog, 0), 1, 40));
-        OscillationProbeTests.Report(_output, "accelTicks 3", OscillationProbeTests.Measure(WithAccel(Catalog, 3), 1, 40));
+        // Barrido de la procedencia (ADR 0185, «Procedencia del 3»): 0 a 4.
+        foreach (int ticks in new[] { 0, 1, 2, 3, 4 })
+        {
+            OscillationProbeTests.Report(_output, $"accelTicks {ticks}", OscillationProbeTests.Measure(WithAccel(Catalog, ticks), 1, 40));
+        }
     }
 
     private static List<int> Steps(Catalog catalog, Vec2 start, Vec2 target, int ticks, out int ceiling, int preRunTicks = 0)

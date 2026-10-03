@@ -71,8 +71,10 @@ public sealed class RepeatTackleReachTests
     /// fotograma de juego abierto con el dueño del balón fuera de un estado de portador, y ninguna congelación.
     /// <para>ADR 0185: el caso es una situación fijada por semilla sobre el motor SIN arranque, y se juega con ese motor
     /// (<c>accelTicks</c> 0). Con el arranque, Arrollador —rara, en pocas plantillas de run— no se activa en `run:130` ni en
-    /// ninguna de las 400 primeras semillas (medido: 0 de 400, contra 3 de 400 —130, 155, 393— sin arranque), así que no
-    /// hay otro caso real con el que sustituirlo. La regla no depende de la semilla: la fijan con valores conocidos
+    /// ninguna de las 400 primeras semillas (medido: 0 de 400, contra 3 de 400 —130, 155, 393— sin arranque). No es una
+    /// regresión del perk: con un portador en cada partido dispara MÁS con arranque (ver
+    /// <see cref="WithRealSteamrollerRepeatsNoOwnerIsLeftOutOfACarrierState"/>); es que en las plantillas de run casi nadie
+    /// lo lleva. La regla no depende de la semilla: la fijan con valores conocidos
     /// <see cref="AnEscapedTackleNeverLeavesTheOwnerOutOfACarrierState"/> y el censo de abajo, que sí corre con los datos.</para>
     /// </summary>
     [Fact]
@@ -149,6 +151,61 @@ public sealed class RepeatTackleReachTests
         }
 
         Assert.True(frames == 0, "dueño del balón fuera de estado de portador: " + string.Join(", ", where));
+    }
+
+    /// <summary>
+    /// ADR 0185 (revisión independiente): el censo de arriba con REPETICIONES REALES de Arrollador y los datos vigentes (con
+    /// arranque). Arrollador es rara en las plantillas de run, así que se le da a los seis de campo del local en partidos
+    /// de referencia. Medido en 300 partidos: dispara en 184 (sin arranque) y 215 (con él), y la repetición se resuelve 45 y
+    /// 75 veces; no hay regresión del perk. Aquí: al menos una repetición resuelta, y en ningún partido un dueño del balón
+    /// fuera de estado de portador ni una congelación.
+    /// </summary>
+    [Fact]
+    public void WithRealSteamrollerRepeatsNoOwnerIsLeftOutOfACarrierState()
+    {
+        int repeats = 0;
+        var where = new List<string>();
+        for (ulong seed = 1; seed <= 40; seed++)
+        {
+            var setup = TestMatches.Reference(Catalog, seed);
+            setup = setup with
+            {
+                Home = setup.Home with
+                {
+                    Players = setup.Home.Players
+                        .Select(p => p.Position == Position.Goalkeeper ? p : p with { Perks = p.Perks.Append("steamroller").ToList() })
+                        .ToList(),
+                },
+            };
+            var carriers = setup.Home.Players.Where(p => p.Position != Position.Goalkeeper).Select(p => p.Id).ToHashSet();
+            var result = Simulator.Run(setup, seed, Catalog, SimConfig.Default with { Trace = true });
+            var ev = result.Events;
+            for (int i = 0; i < ev.Count; i++)
+            {
+                if (ev[i].Type != EventType.Recovery || ev[i].Detail != "tackle" || !carriers.Contains(ev[i].Actor))
+                {
+                    continue;
+                }
+
+                // La repetición es una entrada del mismo jugador, en el mismo tick, después de su recuperación.
+                for (int j = i + 1; j < ev.Count && ev[j].Tick == ev[i].Tick; j++)
+                {
+                    if (ev[j].Type == EventType.Tackle && ev[j].Actor == ev[i].Actor && ev[j].Detail != "attempted")
+                    {
+                        repeats++;
+                    }
+                }
+            }
+
+            int frames = OwnerOutOfCarrierFrames(result);
+            if (frames > 0 || SymptomDetectors.Freeze(DetectorTrace.From(result), out _).Count > 0)
+            {
+                where.Add($"ref+arrollador:{seed} ({frames})");
+            }
+        }
+
+        Assert.True(repeats > 0, "ninguna repetición de Arrollador en 40 partidos: el censo no cubre nada");
+        Assert.True(where.Count == 0, "dueño fuera de estado de portador o congelación: " + string.Join(", ", where));
     }
 
     internal static int OwnerOutOfCarrierFrames(MatchResult result)

@@ -88,12 +88,15 @@ public sealed class GrudgeAndMobTests
     public void EnLaTurbaNoSePita()
     {
         int mobs = 0;
+        int startedOnAWhistle = 0;
 
-        for (ulong seed = 1; seed <= 300 && mobs < 3; seed++)
+        // Todas las turbas de 300 partidos, no las tres primeras: las que importan para la reanudación de falta son las que
+        // empiezan en el mismo tick de una falta pitada (medido: semillas 219 y 248).
+        for (ulong seed = 1; seed <= 300; seed++)
         {
             var result = Simulator.Run(
                 TestMatches.Reference(Catalog, seed), seed, Catalog,
-                SimConfig.Default with { CollectLog = true });
+                SimConfig.Default with { CollectLog = true, Trace = true });
 
             var start = result.Events.FirstOrDefault(e => e.Type == EventType.MobStart);
             if (start is null)
@@ -117,6 +120,24 @@ public sealed class GrudgeAndMobTests
                 }
             }
 
+            if (result.Events.Take(from).Any(e => e.Tick == start.Tick && e.Type == EventType.Foul && e.Detail == "foul"))
+            {
+                startedOnAWhistle++;
+            }
+
+            // Ninguna reanudación de falta ni de penalti a partir del MOB_START (la traza dice qué reanudación está pendiente
+            // en cada fotograma).
+            var trace = result.Trace!;
+            for (int f = 0; f < trace.FrameCount; f++)
+            {
+                if (trace.TickAt(f) > start.Tick)
+                {
+                    Assert.False(
+                        trace.RestartAt(f) is RestartKind.FreeKick or RestartKind.Penalty,
+                        $"semilla {seed}: reanudación {trace.RestartAt(f)} en el tick {trace.TickAt(f)}, dentro de la turba");
+                }
+            }
+
             for (int i = from + 1; i < result.Events.Count; i++)
             {
                 var e = result.Events[i];
@@ -134,5 +155,6 @@ public sealed class GrudgeAndMobTests
         }
 
         Assert.True(mobs > 0, "ninguna turba en trescientos partidos: el test no cubre nada");
+        Assert.True(startedOnAWhistle > 0, "ninguna turba empezó en el tick de una falta pitada: el caso de la reanudación pendiente no se cubre");
     }
 }

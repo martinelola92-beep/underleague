@@ -32,13 +32,14 @@ public sealed class MobNarrowingTests
     // antes, y la única diferencia de motor entre los dos es MatchEngine.ShieldCommitTicks: el cambio de huella es suyo.
     // Valores anteriores: 14554122096672490435 / 38 / 12655774248078806088 y, antes de la 0184, 1085505645508475356 / 44 /
     // 9633395058359667205.
-    // Renovadas el 3 oct 2026 por la ADR 0185: arranque y frenada ENCENDIDOS (accelTicks 3), acotados al juego abierto, que
-    // cambian las trayectorias de todos los partidos. Valores anteriores (accelTicks 0): 8091454667448157658 / 39 /
-    // 17818592692118035983. Antes de renovarlas se comprobó que el resto de huellas sólo se mueve por el arreglo sin dato
-    // de abajo (BallDead en la reanudación pedida a mitad de tick).
-    private const ulong RegulationOnlyBefore = 17624325165082323389UL;
-    private const int RegulationOnlyMatches = 43;
-    private const ulong EveryMatchBefore = 16159079094104546418UL;
+    // Renovadas el 3 oct 2026 por la ADR 0185: arranque y frenada ENCENDIDOS (accelTicks 2, elegido con el criterio escrito
+    // de la ADR), acotados al juego abierto, que cambian las trayectorias de todos los partidos. Valores anteriores
+    // (accelTicks 0): 8091454667448157658 / 39 / 17818592692118035983; con accelTicks 3: 17624325165082323389 / 43 /
+    // 16159079094104546418. Antes de renovarlas se comprobó que el resto de huellas sólo se mueve por los arreglos sin dato
+    // de abajo.
+    private const ulong RegulationOnlyBefore = 3129567429540966643UL;
+    private const int RegulationOnlyMatches = 37;
+    private const ulong EveryMatchBefore = 7641109458777701280UL;
 
     // Las mismas tres huellas con las reglas de las ADR 0184/0186 apagadas (positioningHoldBonus = 0, BV-B apagada) y las
     // bases de lesión de antes: el motor de antes de la ADR 0184 más los arreglos sin dato posteriores (BO-A).
@@ -46,9 +47,12 @@ public sealed class MobNarrowingTests
     // reanudación pedida a mitad del bucle de jugadores marca ya el balón muerto para quien decide después
     // (RestartContactTests: 9 contactos resueltos en la cuenta atrás en 300 partidos antes, 0 después). Es la única
     // diferencia de motor con accelTicks 0. Valores anteriores: 2380212350706324353 / 43 / 8084161313723921521.
+    // Y otra vez, sólo la de TODOS los partidos (13369841099302331167 -> 8688216646563204419), por el segundo arreglo sin
+    // dato de la ADR 0185: el sacador del saque de centro tiene que llegar andando (TakerInPlaceCells) también con
+    // accelTicks 0. Con esa comprobación condicionada otra vez al arranque, la huella vieja vuelve (comprobado).
     private const ulong RegulationOnlyBeforeAdr0184PlusBoA = 12818003483072846353UL;
     private const int RegulationOnlyMatchesBeforeAdr0184PlusBoA = 47;
-    private const ulong EveryMatchBeforeAdr0184PlusBoA = 13369841099302331167UL;
+    private const ulong EveryMatchBeforeAdr0184PlusBoA = 8688216646563204419UL;
 
     private const float Eps = 0.001f;
 

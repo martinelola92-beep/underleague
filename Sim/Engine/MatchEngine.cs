@@ -1094,10 +1094,14 @@ internal sealed class MatchEngine : IPerkWorld
 
         UpdatePerception();
 
-        // AW-R (docs/pendientes.md): se lee ANTES del bucle de jugadores de este mismo Step, así que un
-        // foul resuelto dentro de ese bucle (que puede pedir un penalti y arrancar una reanudación nueva a
-        // mitad de tick) no se ve reflejado todavía aquí — ese primer tick de la reanudación nueva no debe
-        // tratarse como balón muerto para ChaseBall (ver el `wasRestarting` de Step()).
+        // AW-R (docs/pendientes.md): se fija ANTES del bucle de jugadores de este mismo Step. Una falta resuelta
+        // dentro de ese bucle puede arrancar una reanudación nueva a mitad de tick; desde la ADR 0185 BeginRestart
+        // pone BallDead a true en ese momento, así que los que deciden DESPUÉS en el mismo tick ya ven el balón muerto
+        // para todo lo que lo lee: no empiezan un contacto (IsInActivePlay), no persiguen el balón aparcado (ChaseBall)
+        // ni toman el deber de balón suelto (HasLooseBallDuty). La salida del portero (UpdateKeeperExit) se calcula antes
+        // del bucle y no cambia hasta el tick siguiente. Lo que sigue sin
+        // contar ese primer tick como de reanudación es el motor (`wasRestarting` de Step: ni descuenta la cuenta atrás
+        // ni se salta UpdateBall), que es lo que este comentario protegía.
         _context.BallDead = _restartTicksLeft > 0;
 
         // Después de la percepción y de BallDead: la designación lee KeeperExitCells de ESTE tick y no del
@@ -2089,6 +2093,14 @@ internal sealed class MatchEngine : IPerkWorld
     }
 
     /// <summary>
+    /// ADR 0185: cuánto le puede faltar al sacador del saque de centro para darlo por colocado
+    /// (<see cref="EveryoneInPlace"/>). Lo que le falte se lo pone <see cref="ResolveRestart"/> de golpe, así que no es
+    /// balance sino el tope del salto residual: ese último ajuste, sumado a su paso de andar (~0,15), no pasa del medio
+    /// casillero que <c>MobNarrowingTests</c> ya considera un salto.
+    /// </summary>
+    private const float TakerInPlaceCells = 0.25f;
+
+    /// <summary>
     /// ¿Están ya las posiciones como la reanudación exige? (BC-A; ADR 0147.)
     ///
     /// <para><b>Comprueba la REGLA, no el punto exacto</b>, y eso es una corrección medida, no una
@@ -2103,16 +2115,11 @@ internal sealed class MatchEngine : IPerkWorld
     /// campo contrario y que el equipo que no saca esté fuera del círculo central. Es la condición que el
     /// árbitro comprueba de verdad antes de pitar.</para>
     ///
-    /// <para>El sacador no cuenta —va al punto de saque, que está en la línea—, ni el derribado, que no
-    /// puede andar y sólo haría que la espera llegara siempre al tope. El que celebra SÍ cuenta: es justo
-    /// el que hay que esperar.</para>
+    /// <para>El sacador cuenta aparte: tiene que haber llegado ANDANDO a menos de <see cref="TakerInPlaceCells"/> del
+    /// punto de saque (ADR 0185; sin eso, uno que venía de lejos se teletransportaba al resolverse el saque). El
+    /// derribado no cuenta, porque no puede andar y sólo haría que la espera llegara siempre al tope. El que celebra SÍ
+    /// cuenta: es justo el que hay que esperar.</para>
     /// </summary>
-    /// <summary>
-    /// ADR 0185: cuánto le puede faltar al sacador para dar el saque por colocado. Lo que le falte se lo pone
-    /// <see cref="ResolveRestart"/> de golpe, así que no es balance: es que ese último ajuste, sumado a su paso de andar
-    /// (~0,15), no pase del medio casillero que <c>MobNarrowingTests</c> ya considera un salto.
-    /// </summary>
-    private const float TakerInPlaceCells = 0.25f;
 
     private bool EveryoneInPlace()
     {
@@ -2122,9 +2129,9 @@ internal sealed class MatchEngine : IPerkWorld
         // ADR 0185 (hermano encontrado midiendo): el sacador también tiene que haber llegado andando a su punto
         // (`TakerInPlaceCells`), con el mismo tope de espera. Sin esto, uno que empezaba la recolocación lejos —medido: en la
         // turba de la semilla 3, desde una esquina, a 8,6 casillas— se teletransportaba 3,2 casillas al resolverse el saque
-        // en cuanto los demás estaban colocados (RF-053: nadie se teletransporta). Sólo con el arranque de la ADR 0185
-        // llegó a darse en las semillas que miden los tests; el mecanismo es anterior.
-        if (_tuning.Movement.AccelTicks > 0 && _restartTaker is { OnPitch: true } taker
+        // en cuanto los demás estaban colocados (RF-053: nadie se teletransporta). El mecanismo no depende del arranque
+        // (el sacador anda a paso constante, WalkRestartTaker), así que la regla vale con cualquier `accelTicks`.
+        if (_restartTaker is { OnPitch: true } taker
             && taker.State is not (PlayerState.KnockedDown or PlayerState.Injured or PlayerState.SentOff)
             && Vec2.Distance(taker.Position, _restartPoint) > TakerInPlaceCells)
         {
@@ -5225,6 +5232,16 @@ internal sealed class MatchEngine : IPerkWorld
     /// <summary>ADR 0175: ¿están todos en su sitio para la reanudación? (la fila cuenta en la turba).</summary>
     internal bool EveryoneInPlaceForTest() => EveryoneInPlace();
 
+    /// <summary>Test: abre una reanudación como lo haría una falta o un fuera (<see cref="BeginRestart"/>).</summary>
+    internal void BeginRestartForTest(RestartKind kind, int team, Vec2 point, int ticks) =>
+        BeginRestart(kind, team, point, ticks, kind == RestartKind.Kickoff ? MatchPhase.Kickoff : MatchPhase.Restart);
+
+    /// <summary>Test: índice del sacador de la reanudación en curso, o -1.</summary>
+    internal int RestartTakerIndexForTest => _restartTaker?.Index ?? -1;
+
+    /// <summary>Test: aplica la barrera de la reanudación en curso una vez.</summary>
+    internal void EnforceRestartClearanceForTest() => EnforceRestartClearance();
+
     /// <summary>ADR 0175: la banda jugable de la fase.</summary>
     internal PlayBand BandForTest => _band;
 
@@ -6728,6 +6745,13 @@ internal sealed class MatchEngine : IPerkWorld
 
             // ADR 0167: el tipo de turba anunciado antes del partido ocurre ahora, y lo que dura, dura hasta el final.
             ApplyMob(untilTheEnd: true, ticks: 0);
+
+            // ADR 0185 (revisión independiente): una falta pitada en el último tick reglamentario deja una reanudación de
+            // falta (o un penalti) pendiente, y el árbitro se acaba de ir (RF-055d). La turba empieza con su saque de centro:
+            // BeginRestart sustituye la reanudación pendiente, y aquí se descarta además cualquier saque de falta que la
+            // falta hubiera dejado por abrir, para que no lo abra nadie ya dentro de la turba. Medido en 300 partidos: dos
+            // turbas (semillas 219 y 248) empiezan en el tick de una falta pitada; ningún saque de falta llega a la turba.
+            _freeKickFor = -1;
             ScheduleKickoff(1);
             return;
         }

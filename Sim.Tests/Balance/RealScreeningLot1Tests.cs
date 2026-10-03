@@ -38,7 +38,9 @@ public sealed class RealScreeningLot1Tests
         // 29 desde el 26 sep 2026: cuatro de los ocho perks nuevos entran en el lote de cribado. 26 desde
         // BM-A: la forma del objetivo depende del alcance. bulwark_stance (que ahora derriba al que le
         // regatea), grudge y killing_range (cuyo efecto ya caía sobre otro jugador) dejan el lote.
-        Assert.Equal(26, perks.Count);
+        // 27 desde BB-U (3 oct 2026): `immovable`, el tercer perk de Bulwark (ADR 0182), es un multiplicador sobre el
+        // portador y entra en el lote. Estas dos sondas son Diagnostic y no corrían en el bucle: el recuento se quedó en 26.
+        Assert.Equal(27, perks.Count);
 
         var totalStopwatch = System.Diagnostics.Stopwatch.StartNew();
         var results = ScreeningRunner.RunBatch(Catalog, perks, seed: 1, checkpointDirectory: null);
