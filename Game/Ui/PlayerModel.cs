@@ -762,9 +762,11 @@ public sealed partial class PlayerModel : Node3D
     /// El pie bloqueado se suelta si la cadera se le aleja más de esta fracción de la pierna medida en reposo (ya no llega)
     /// o si el cuerpo ha girado más de <see cref="FootLockMaxTurnDegrees"/> desde que pisó: entonces vuelve a dar el
     /// paso animado. <b>Provisionales</b>; con 0,95 (primer intento) el pie se soltaba y se volvía a clavar cada dos
-    /// fotogramas en plena zancada, porque en el apoyo la pierna va casi estirada (rodilla a ~160°, medido).
+    /// fotogramas en plena zancada, porque en el apoyo la pierna va casi estirada (rodilla a ~160°, medido); con 1,05 la pierna
+    /// llegaba a 180° y el pie se despegaba del suelo arrastrado antes de soltarse (hoja del giro). 0,985, y sólo con el pie ya
+    /// por DETRÁS de la cadera (despegue): al pisar delante la pierna también va casi estirada y no hay que soltarla.
     /// </summary>
-    private const float FootLockMaxReach = 1.05f;
+    private const float FootLockMaxReach = 0.985f;
     private const float FootLockMaxTurnDegrees = 50f;
 
     /// <summary>Por debajo de esta mezcla espera→marcha se considera parado: los dos pies pisan. Provisional.</summary>
@@ -828,7 +830,7 @@ public sealed partial class PlayerModel : Node3D
                 foot.Pin = ankle;
                 foot.PinYaw = _yaw;
             }
-            else if (hip.DistanceTo(foot.Pin) > foot.Length * FootLockMaxReach
+            else if ((hip.DistanceTo(foot.Pin) > foot.Length * FootLockMaxReach && (foot.Pin - hip).Dot(forward) < 0f)
                 || Mathf.Abs(Mathf.Wrap(_yaw - foot.PinYaw, -Mathf.Pi, Mathf.Pi)) > Mathf.DegToRad(FootLockMaxTurnDegrees))
             {
                 foot.Locked = false;
