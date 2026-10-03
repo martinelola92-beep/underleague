@@ -48,6 +48,34 @@ independiente, rebase y merge a `main`, push):
    - en `/Sim` con ADR: aceleración (H4) y oscilación (H8).
    Ver `docs/pendientes/BV-A.md`.
 
+**CIERRE DEL 3 OCT (tarde)**: `main` ca2ff55, con `.exe` en el Escritorio. Entraron:
+- ADR 0184: la IA deja de dudar (43→13,5 % de inversiones deshechas).
+- ADR 0186: la entrada llega a la víctima; en la falta cae la víctima; quien es más rápido escapa.
+- ADR 0187: tope de 3 prótesis; con la siguiente lesión, el jugador queda lisiado.
+- ADR 0188: la entrada limpia lesiona menos (onTackleBase 90, onFoulBase 110).
+- Apuestas recalibradas contra la IA nueva (ADR 0157): 8 recalibradas y `youth_decides` d5 retirada.
+- `immovable`, tercer perk de Bulwark, en `dwarf_fortress` (BB-U).
+- BH-A arreglada: congelación por alcances distintos al elegir y al resolver.
+- BO-A arreglada: tope exacto de proteger el balón.
+- BW-A: catálogo de tests por hilo.
+- Tests compartiendo runs.
+- `tools/barrido-detectores.sh` (13 detectores).
+
+Puertas rojas, todas documentadas y sin mover bandas:
+- BossGate curva;
+- BuildGate: `orc_violence` débil y `elf_out_of_zone` 45,18;
+- `elf_none` 39,4 (BV-C: el elfo pierde la huida);
+- `betterTeamWinRate` 60-40 ≈ 91 (BV-C);
+- `TheThreeDoctrinesBuyDifferently` (el tope de proteger empata el oro de las doctrinas, Δ +1,12→+0,03).
+
+Abierto para el revisor:
+- BN-A, amontonamiento sobre el portero. Opciones a/b/c; por defecto, c = vigilar la fila de 10 ticks.
+- `bulwark_stance` y `tagsRequired` (BB-U).
+- Opinión sobre la build: ADR 0185 (arranque y frenada), IK de pies.
+- Fase de balance: runWinRate ~16 % (banda 20-30) y las puertas rojas.
+- BB-I: el pergamino de perk dura 1 s tras el tiro (LIKELY presentación).
+- BB-V: nada comprueba que el catálogo esté al día con /data.
+
 **BUILD DE LA MAÑANA (3 oct, 05:15)**: `.exe` en el Escritorio, `main` dfd6875. Lleva:
 - animación 3D en tres pasadas (BV-A, BV-B): locomoción continua, trayectoria Hermite, mirada, balón rodando, entradas sincronizadas con el contacto, caídas que se levantan, inclinación y cabeza al balón;
 - F3 opcional en Ajustes;
