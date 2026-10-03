@@ -52,6 +52,41 @@ public sealed class ShirtNumberTests
     }
 
     [Fact]
+    public void ADeadPlayersNumberIsRetired_AndASoldOnesIsFreeForTheNextSigning()
+    {
+        var state = Started();
+        var dead = state.Roster[1] with { PhysicalState = PhysicalState.Dead };
+        var sold = state.Roster[4];
+        var next = state.WithPlayer(dead).WithoutPlayer(sold.Id);
+
+        var signed = next.WithNewPlayer(state.Roster[0] with { Id = -1, ShirtNumber = 0 });
+        var newcomer = signed.Roster.Single(p => p.Id == signed.NextPlayerId - 1);
+
+        Assert.NotEqual(dead.ShirtNumber, newcomer.ShirtNumber);
+        Assert.Equal(sold.ShirtNumber, newcomer.ShirtNumber);
+    }
+
+    [Fact]
+    public void ARealVersionEightSaveLoadsAndIsNumbered()
+    {
+        var state = Started();
+        using var document = JsonDocument.Parse(RunSave.Save(state));
+        string v8 = WithoutShirtNumbers(document.RootElement)
+            .Replace("\"schemaVersion\":9", "\"schemaVersion\":8", StringComparison.Ordinal)
+            .Replace("\"pendingMatch\":null,", string.Empty, StringComparison.Ordinal)
+            .Replace(",\"pendingMatch\":null", string.Empty, StringComparison.Ordinal);
+        Assert.Contains("\"schemaVersion\":8", v8, StringComparison.Ordinal);
+        Assert.DoesNotContain("shirtNumber", v8, StringComparison.Ordinal);
+
+        var loaded = RunSave.Load(v8, out _, out var pending);
+
+        Assert.Null(pending);
+        Assert.Equal(RunState.CurrentSchemaVersion, loaded.SchemaVersion);
+        Assert.Equal(state.Roster.Count, loaded.Roster.Select(p => p.ShirtNumber).Distinct().Count());
+        Assert.All(loaded.Roster, p => Assert.True(p.ShirtNumber > 0));
+    }
+
+    [Fact]
     public void TheNumberSurvivesPositionChangesAndSaveLoad()
     {
         var state = Started();
@@ -112,7 +147,7 @@ public sealed class ShirtNumberTests
             Copy(writer, root);
         }
 
-        return System.Text.Encoding.UTF8.GetString(stream.ToArray()).Replace("\"schemaVersion\":10", "\"schemaVersion\":9", StringComparison.Ordinal);
+        return System.Text.Encoding.UTF8.GetString(stream.ToArray()).Replace($"\"schemaVersion\":{RunState.CurrentSchemaVersion}", "\"schemaVersion\":9", StringComparison.Ordinal);
 
         static void Copy(Utf8JsonWriter w, JsonElement e)
         {

@@ -60,4 +60,26 @@ public sealed class LineupEditTests
         Assert.Contains(swapped.Slots, s => s.PlayerId == bench.Id);
         Assert.DoesNotContain(swapped.Slots, s => s.PlayerId == occupied.PlayerId);
     }
+
+    /// <summary>
+    /// BX-1, RF-012d: lo que Equipo enseña es lo que juega. La pantalla pinta <c>RunLineup.Effective</c> (la misma llamada que
+    /// <c>Build</c>), no la guardada: con la guardada podada, el once mostrado ya trae el relleno colocado y marcado, y
+    /// confirmarlo no cambia a nadie.
+    /// </summary>
+    [Fact]
+    public void TheElevenEquipoShowsIsTheElevenThatPlays()
+    {
+        var state = Pruned(4);
+        var shown = RunLineup.Effective(state);
+        var played = RunLineup.Build(state, Catalog).Lineup;
+
+        Assert.Equal(played.Slots, shown.Lineup.Slots);
+        Assert.Equal(RunRules.MaxStarters, shown.Lineup.Slots.Count);
+        Assert.Equal(3, shown.FilledIds.Count);
+
+        // El jugador mueve una ficha del once mostrado: se guarda ese once entero y ya nadie entra de oficio.
+        var moved = RunEngine.Apply(state, new SetLineup(shown.Lineup), Catalog, SystemsTestSupport.Systems);
+        Assert.Equal(played.Slots, RunLineup.Build(moved, Catalog).Lineup.Slots);
+        Assert.Empty(RunLineup.Effective(moved).FilledIds);
+    }
 }

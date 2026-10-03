@@ -158,4 +158,51 @@ public sealed class RosterSwapTests
 
         throw new InvalidOperationException("instrumento: ninguna semilla ofrece un jugador de recompensa");
     }
+
+    /// <summary>
+    /// Soltar a un tocado, a un grave o a un lisiado a cambio: el precio es el de su estado (ADR 0108), no el del sano, y el
+    /// veto de «aún no ha jugado» manda sobre todos (se descarta). Es lo que enseña la vista antes de confirmar.
+    /// </summary>
+    [Fact]
+    public void ReplacingAnInjuredOrCrippledPlayerPaysItsStatePriceAndAFreshOneIsReleased()
+    {
+        var (state, index) = MarketWithARecruit();
+        var healthy = state.Roster[2] with { Experience = 50, PhysicalState = PhysicalState.Healthy };
+        var minor = state.Roster[3] with { Experience = 50, PhysicalState = PhysicalState.MinorInjury };
+        var severe = state.Roster[4] with { Experience = 50, PhysicalState = PhysicalState.SevereInjury };
+        var crippled = state.Roster[5] with
+        {
+            Experience = 50,
+            PhysicalState = PhysicalState.SevereInjury,
+            Prostheses = Enumerable.Range(0, RunRules.MaxProstheses).Select(i => new RunProsthesis("slot" + i, "effect" + i)).ToList(),
+        };
+        var fresh = state.Roster[6] with { Experience = 0, PhysicalState = PhysicalState.SevereInjury };
+        state = state.WithPlayer(healthy).WithPlayer(minor).WithPlayer(severe).WithPlayer(crippled).WithPlayer(fresh);
+        Assert.True(crippled.IsCrippled);
+
+        var rows = RosterSwapView.Candidates(state, Economy);
+        foreach (var player in new[] { healthy, minor, severe, crippled })
+        {
+            var row = rows.Single(c => c.PlayerId == player.Id);
+            Assert.Equal(SwapOutcome.Sold, row.Outcome);
+            Assert.Equal(MarketSystem.SalePrice(player, Economy), row.Gold);
+
+            var before = state.Gold;
+            var next = RunEngine.Apply(
+                state, new BuyOffer(MarketCategories.Player, index, -1, player.Id), SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+            Assert.Equal(row.Gold, next.Gold - (before - PriceOf(state, index)));
+        }
+
+        Assert.True(MarketSystem.SalePrice(severe, Economy) < MarketSystem.SalePrice(healthy, Economy));
+        Assert.Equal(SwapOutcome.Released, rows.Single(c => c.PlayerId == fresh.Id).Outcome);
+        Assert.Equal(0, rows.Single(c => c.PlayerId == fresh.Id).Gold);
+    }
+
+    private static int PriceOf(RunState state, int index)
+    {
+        var node = state.GetNode(state.PendingNodeId);
+        return MarketOfferGenerator.Generate(
+            state, node, SystemsTestSupport.Catalog, Economy, SystemsTestSupport.Systems.Items, SystemsTestSupport.Systems.Consumables)
+            .Recruits[index].Price;
+    }
 }
