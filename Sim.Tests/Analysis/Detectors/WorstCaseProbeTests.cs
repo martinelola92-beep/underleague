@@ -236,14 +236,56 @@ public sealed class WorstCaseProbeTests
                     string k = "BN how " + (how.Length == 0 ? "?" : how);
                     h[k] = h.GetValueOrDefault(k) + 1;
                     int gk = t.Owner[hit.Frame];
-                    int f = hit.Frame + Math.Min(hit.Length - 1, 5);
-                    for (int p = 0; p < t.Players; p++)
+                    int f = hit.Frame + Math.Min(hit.Length - 1, SymptomDetectors.GoalkeeperCrowdPersistTicks);
+                    if (!SymptomDetectors.GoalkeeperCrowdPersisting(t).Any(x => x.Frame == hit.Frame))
+                    {
+                        f = -1;
+                    }
+
+                    for (int p = 0; p < t.Players && f >= 0; p++)
                     {
                         if (p != gk && t.Team[p] == t.Team[gk] && t.On(f, p) && Vec2.Distance(t.Pos(f, p), t.Pos(f, gk)) < SymptomDetectors.GoalkeeperCrowdRadius)
                         {
                             string a = t.Action[t.Slot(f, p)] < 0 ? "none" : ((PlayerAction)t.Action[t.Slot(f, p)]).ToString();
-                            string k2 = "BN mate@+5 " + t.Role[p] + "/" + t.State[t.Slot(f, p)] + "/" + a;
+                            string k2 = "BN mate@+10 persistente " + t.Role[p] + "/" + t.State[t.Slot(f, p)] + "/" + a;
                             h[k2] = h.GetValueOrDefault(k2) + 1;
+                            var tg = result.Trace!.TargetAt(f, p);
+                            string where = Pitch.IsInArea(tg, t.Team[gk]) ? "inArea" : (Vec2.Distance(tg, t.Pos(f, gk)) < SymptomDetectors.GoalkeeperCrowdRadius ? "near<2" : "away");
+                            string inNow = Pitch.IsInArea(t.Pos(f, gk), t.Team[gk]) ? "gkInArea" : "gkOut";
+                            string k4 = "BN target " + a + " " + where + " " + inNow;
+                            h[k4] = h.GetValueOrDefault(k4) + 1;
+                        }
+                    }
+
+                    foreach (int off in new[] { 0, 3, 6, 10, 15 })
+                    {
+                        if (off >= hit.Length)
+                        {
+                            continue;
+                        }
+
+                        int ff = hit.Frame + off;
+                        int m = 0;
+                        for (int p = 0; p < t.Players; p++)
+                        {
+                            if (p != gk && t.Team[p] == t.Team[gk] && t.On(ff, p) && Vec2.Distance(t.Pos(ff, p), t.Pos(ff, gk)) < SymptomDetectors.GoalkeeperCrowdRadius)
+                            {
+                                m++;
+                            }
+                        }
+
+                        string kc = $"BN crowd@{off:00} {(m >= 2 ? ">=2" : "<2")}";
+                        h[kc] = h.GetValueOrDefault(kc) + 1;
+                    }
+
+                    int f0 = Math.Max(0, hit.Frame - 1);
+                    for (int p = 0; p < t.Players; p++)
+                    {
+                        if (p != gk && t.Team[p] == t.Team[gk] && t.On(hit.Frame, p) && Vec2.Distance(t.Pos(hit.Frame, p), t.Pos(hit.Frame, gk)) < SymptomDetectors.GoalkeeperCrowdRadius)
+                        {
+                            string a0 = t.Action[t.Slot(f0, p)] < 0 ? "none" : ((PlayerAction)t.Action[t.Slot(f0, p)]).ToString();
+                            string k5 = "BN at-catch prev " + t.Role[p] + "/" + a0 + (Pitch.IsInArea(t.Pos(hit.Frame, p), t.Team[gk]) ? " inArea" : " out");
+                            h[k5] = h.GetValueOrDefault(k5) + 1;
                         }
                     }
 

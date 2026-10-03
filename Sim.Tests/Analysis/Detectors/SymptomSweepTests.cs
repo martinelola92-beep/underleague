@@ -153,6 +153,7 @@ public sealed class SymptomSweepTests
         hits["BB-G2 portero perseguidor (abrazo mortal)"] = SymptomDetectors.GoalkeeperChaser(t, out int chase);
         m["BB-G2 ticks del portero eligiendo ChaseBall fuera del área"] = chase;
         hits["BN-A amontonamiento sobre el portero"] = SymptomDetectors.GoalkeeperCrowd(t);
+        hits["BN-A amontonamiento que sigue a los 10 ticks"] = SymptomDetectors.GoalkeeperCrowdPersisting(t);
         hits["BO-A portador y rival atascados >3 s"] = SymptomDetectors.CarrierStuck(t);
         hits["BB-A/L salto inexplicado"] = SymptomDetectors.Teleports(t, out int explained, out int leaving, out int restartJumps);
         m["BB-A salto explicado (reposición, control)"] = explained;

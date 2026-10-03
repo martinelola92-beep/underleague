@@ -234,6 +234,32 @@ public sealed class SymptomDetectorsValidationTests
         Assert.Empty(SymptomDetectors.GoalkeeperCrowd(calm));
     }
 
+    /// <summary>BN-A persistente: el mismo grupo 10 ticks es caso; uno que se disuelve a los 5 ticks no lo es.</summary>
+    [Fact]
+    public void GoalkeeperCrowdPersistingPositiveAndNegative()
+    {
+        var stays = DetectorTrace.Synthetic(40);
+        var leaves = DetectorTrace.Synthetic(40);
+        for (int f = 5; f < 30; f++)
+        {
+            stays.Owner[f] = 0;
+            leaves.Owner[f] = 0;
+            stays.SetPos(f, 0, 0.5f, 3.5f);
+            leaves.SetPos(f, 0, 0.5f, 3.5f);
+            stays.SetPos(f, 1, 1f, 3.2f);
+            stays.SetPos(f, 2, 0.8f, 3.9f);
+            if (f < 10)
+            {
+                leaves.SetPos(f, 1, 1f, 3.2f);
+                leaves.SetPos(f, 2, 0.8f, 3.9f);
+            }
+        }
+
+        Assert.Single(SymptomDetectors.GoalkeeperCrowdPersisting(stays));
+        Assert.Single(SymptomDetectors.GoalkeeperCrowd(leaves));
+        Assert.Empty(SymptomDetectors.GoalkeeperCrowdPersisting(leaves));
+    }
+
     // ---- BO-A ----
 
     [Fact]

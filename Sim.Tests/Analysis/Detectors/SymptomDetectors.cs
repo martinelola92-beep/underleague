@@ -62,6 +62,12 @@ internal static class SymptomDetectors
 
     public const int GoalkeeperCrowdMates = 2;
 
+    /// <summary>
+    /// BN-A persistente: 10 ticks (0,67 s) tras coger el balón el portero. Provisional, sin medir como umbral de «bien»:
+    /// es el tiempo en que, medido, se ha disuelto el 85-90 % de los grupos del instante de la parada (3 oct 2026).
+    /// </summary>
+    public const int GoalkeeperCrowdPersistTicks = 10;
+
     /// <summary>BG-G2: balón suelto sin que ningún compañero de campo lo persiga durante ≥ 15 ticks (= BC-G).</summary>
     public const int EmbraceMinTicks = LooseBallMinTicks;
 
@@ -404,6 +410,43 @@ internal static class SymptomDetectors
             {
                 string context = t.Restart[start] != RestartKind.None ? t.Restart[start].ToString() : "juego abierto";
                 hits.Add(new Hit(start, t.Tick[start], f - start, maxMates, $"portero {t.Id[gk]}, {maxMates} compañeros a <2 ({context})"));
+            }
+        }
+
+        return hits;
+    }
+
+    /// <summary>
+    /// BN-A, la parte que se ve como amontonarse: de los casos de <see cref="GoalkeeperCrowd"/>, los que siguen con ≥ 2
+    /// compañeros a menos de 2 casillas <see cref="GoalkeeperCrowdPersistTicks"/> ticks después de que el portero coja
+    /// el balón. El detector de base cuenta también a los defensas que ya estaban cubriendo dentro del área en el
+    /// instante de la parada y salen andando (RF-053): el 95 % de sus casos tiene el grupo en el fotograma 0 (barrido
+    /// del 3 oct, sonda <c>WorstCaseProbeTests.StuckAndCrowdByVariant</c>).
+    /// </summary>
+    public static IReadOnlyList<Hit> GoalkeeperCrowdPersisting(DetectorTrace t)
+    {
+        var hits = new List<Hit>();
+        foreach (var hit in GoalkeeperCrowd(t))
+        {
+            if (hit.Length <= GoalkeeperCrowdPersistTicks)
+            {
+                continue;
+            }
+
+            int f = hit.Frame + GoalkeeperCrowdPersistTicks;
+            int gk = t.Owner[f];
+            int mates = 0;
+            for (int p = 0; p < t.Players; p++)
+            {
+                if (p != gk && t.Team[p] == t.Team[gk] && t.On(f, p) && Vec2.Distance(t.Pos(f, p), t.Pos(f, gk)) < GoalkeeperCrowdRadius)
+                {
+                    mates++;
+                }
+            }
+
+            if (mates >= GoalkeeperCrowdMates)
+            {
+                hits.Add(hit with { Magnitude = mates, Note = hit.Note + $", {mates} a los {GoalkeeperCrowdPersistTicks} ticks" });
             }
         }
 
