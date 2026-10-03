@@ -235,8 +235,14 @@ public partial class RunController
     /// Sólo para el arnés de capturas (BX-19): el partido actual simulado otra vez en el hilo principal y con el
     /// catálogo de la pantalla, para comprobar que el del hilo de fondo es el mismo.
     /// </summary>
-    public MatchPlayback ReplayOnMainThreadForCheck() =>
-        Replay(_stateBeforeMatch!, _matchNodeId, Catalog!, _systems, Decisions, _floorTick).Playback;
+    public (MatchPlayback Playback, string StateAfter) ReplayOnMainThreadForCheck()
+    {
+        var replay = Replay(_stateBeforeMatch!, _matchNodeId, Catalog!, _systems, Decisions, _floorTick);
+        return (replay.Playback, RunSave.Save(replay.Entry.State));
+    }
+
+    /// <summary>Sólo para el arnés (BX-19): el estado de después del partido actual, serializado.</summary>
+    public string StateAfterForCheck() => RunSave.Save(State!);
 
     private static bool Fired(MatchPlayback playback, string consumableId)
     {

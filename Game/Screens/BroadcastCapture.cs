@@ -1454,7 +1454,8 @@ public partial class BroadcastCapture : Control
                 }
 
                 double waitMs = total.Elapsed.TotalMilliseconds;
-                string same = Fingerprint(run.Playback!) == Fingerprint(run.ReplayOnMainThreadForCheck()) ? "igual" : "DISTINTO";
+                var check = run.ReplayOnMainThreadForCheck();
+                string same = Fingerprint(run.Playback!) == Fingerprint(check.Playback) && run.StateAfterForCheck() == check.StateAfter ? "igual" : "DISTINTO";
                 GD.Print($"paron: semilla {seed} fotograma {frame} {step} · clic {clickMs:F1} ms · {held} fotogramas sostenidos en {waitMs:F0} ms "
                     + $"(peor lógica de un fotograma {worstMs:F1} ms) · fotograma que aplica {applyMs:F1} ms · uno normal {normalMs:F1} ms · partido {same}");
                 if (seed == Seeds[0] && step == "o2" && frame == 300)

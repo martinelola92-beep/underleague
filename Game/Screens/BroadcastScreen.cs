@@ -222,6 +222,9 @@ public partial class BroadcastScreen : Control
 
         _run = run;
 
+        // ADR 0191: si se volvió (F3) con una decisión simulándose, se aplica antes de atar la reproducción.
+        _run.CompleteDecision();
+
         // Idempotencia (ADR 0119): igual que MatchScreen, solo se juega si SelectedNodeId sigue apuntando
         // al nodo — RunController.Enter lo pone a -1 al terminar, así que volver a entrar (F3, o esta
         // misma pantalla tras el informe) no vuelve a jugar el partido.

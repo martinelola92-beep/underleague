@@ -86,6 +86,10 @@ public partial class MatchScreen : Control
 
         _run = run;
 
+        // ADR 0191: una decisión que se estaba simulando en la retransmisión (se salió con F3) se aplica antes de
+        // enseñar nada, para que esta vista y el informe vean el mismo partido.
+        run.CompleteDecision();
+
         // El partido se juega al entrar en la pantalla: el mapa eligió el nodo y el ojeo lo confirmó.
         // Si ya se había jugado (se vuelve del informe), no se juega otra vez.
         if (_run.SelectedNodeId >= 0 && _run.State!.GetNode(_run.SelectedNodeId).IsMatch)
