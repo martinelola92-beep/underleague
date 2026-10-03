@@ -212,7 +212,7 @@ public static class RunEngine
         // ADR 0157: una apuesta tomada para OTRO nodo se devuelve al entrar, antes de resolver nada de este.
         state = Systems.Bets.BetSystem.RefundOnEntering(state, nodeId);
         return node.IsMatch
-            ? ResolveMatch(state, node, catalog, systems, MatchDecisions.None).State
+            ? ResolveMatch(state, node, catalog, systems, MatchDecisions.None, resolved: null).State
             : EnterInteractive(state, node, catalog, systems);
     }
 
@@ -254,7 +254,34 @@ public static class RunEngine
         }
 
         state = Systems.Bets.BetSystem.RefundOnEntering(state, nodeId);
-        return ResolveMatch(state, node, catalog, systems, decisions ?? MatchDecisions.None);
+        return ResolveMatch(state, node, catalog, systems, decisions ?? MatchDecisions.None, resolved: null);
+    }
+
+    /// <summary>
+    /// BX-19, ADR 0191: <see cref="EnterMatch(RunState, int, Catalog, IRunSystems?, MatchDecisions?)"/> con el partido
+    /// ya resuelto por la reproducción, para no simularlo dos veces. Interno a propósito: sólo
+    /// <see cref="View.MatchPlaybacks.PlayAndEnter"/> lo llama, y sólo cuando ha comprobado que la reproducción no
+    /// deja ningún punto del jugador sin responder —entonces <c>ResolveAutomatically</c> con la política para los dos
+    /// equipos habría tomado exactamente las mismas respuestas en el mismo orden—. Un llamador externo podría pasar
+    /// un partido que no es el de este estado; por eso no es público.
+    /// </summary>
+    internal static MatchEntry EnterResolvedMatch(
+        RunState state, int nodeId, Catalog catalog, IRunSystems systems, MatchDecisions decisions, MatchSetup setup, MatchResult result)
+    {
+        if (Outcome(state).IsOver)
+        {
+            throw new InvalidOperationException("la run ha terminado: no se puede entrar en más nodos");
+        }
+
+        if (state.Phase != RunPhase.OnMap)
+        {
+            throw new InvalidOperationException(
+                $"hay un nodo abierto ({state.PendingNodeId}): resuélvelo con Apply antes de entrar en otro");
+        }
+
+        var node = Accessible(state, nodeId);
+        state = Systems.Bets.BetSystem.RefundOnEntering(state, nodeId);
+        return ResolveMatch(state, node, catalog, systems, decisions, (setup, result));
     }
 
     /// <summary>
@@ -573,14 +600,16 @@ public static class RunEngine
             nameof(nodeId));
     }
 
-    private static MatchEntry ResolveMatch(RunState state, MapNode node, Catalog catalog, IRunSystems systems, MatchDecisions decisions)
+    private static MatchEntry ResolveMatch(
+        RunState state, MapNode node, Catalog catalog, IRunSystems systems, MatchDecisions decisions, (MatchSetup Setup, MatchResult Result)? resolved)
     {
         var (built, seed, lineup) = BuildMatch(
             state, node.Id, catalog, systems, decisions.ManualActivations, decisions.Substitutions, decisions.PlayOns,
             decisions.OrderChanges);
         // ADR 0094: las sustituciones que el llamador no trajo (ninguna en /Balance; las del rival siempre)
         // se resuelven con la política por defecto volviendo a jugar el partido con ellas en el estado inicial.
-        var (setup, result) = SubstitutionPoints.ResolveAutomatically(
+        // ADR 0191: salvo que la reproducción ya lo haya resuelto (EnterResolvedMatch).
+        var (setup, result) = resolved ?? SubstitutionPoints.ResolveAutomatically(
             built, seed, catalog, systems.MatchConfig(state, node, catalog), usesPolicy: null, decisions.Declines);
         var applied = MatchResolution.Apply(state, node, lineup, result, catalog, built.Referee, systems.Nemesis);
 

@@ -123,4 +123,34 @@ public static class MatchPlaybacks
 
         throw new InvalidOperationException("la resolución de los puntos bloqueados no converge (ADR 0183)");
     }
+
+    /// <summary>
+    /// BX-19, ADR 0191: la reproducción con traza (<see cref="OfResolvingBlockedPoints"/>) y la entrada en el nodo
+    /// (<see cref="RunEngine.EnterMatch(RunState, int, Catalog, IRunSystems?, MatchDecisions?)"/>) con una sola
+    /// simulación del partido cuando se puede, que es lo que hace <c>/Game</c> en cada decisión en vivo.
+    ///
+    /// <para>Se puede cuando la reproducción no deja ningún punto de sustitución del jugador pendiente: la única
+    /// diferencia entre las dos resoluciones es que la reproducción deja los puntos del jugador sin responder
+    /// (para abrir la ventana) y la entrada los responde con la política. Sin ninguno pendiente, las dos toman las
+    /// mismas respuestas en el mismo orden y la traza sólo lee el motor, así que el partido es el mismo
+    /// (comprobado byte a byte en <c>PlayAndEnterTests</c>). Con uno pendiente se resuelve aparte, como antes.</para>
+    /// </summary>
+    public static (MatchPlayback Playback, MatchEntry Entry) PlayAndEnter(
+        RunState stateBeforeMatch,
+        int nodeId,
+        Catalog catalog,
+        IRunSystems? systems,
+        MatchDecisions decisions,
+        int watchedTick,
+        out MatchDecisions resolved)
+    {
+        systems ??= DefaultRunSystems.Instance;
+        var playback = OfResolvingBlockedPoints(stateBeforeMatch, nodeId, catalog, systems, trace: true, decisions, watchedTick, out resolved);
+        bool playerPointPending =
+            SubstitutionPoints.Pending(playback.Setup, playback.Result, playback.PlayerTeam, catalog, resolved.Declines) is not null;
+        var entry = playerPointPending
+            ? RunEngine.EnterMatch(stateBeforeMatch, nodeId, catalog, systems, resolved)
+            : RunEngine.EnterResolvedMatch(stateBeforeMatch, nodeId, catalog, systems, resolved, playback.Setup, playback.Result);
+        return (playback, entry);
+    }
 }
