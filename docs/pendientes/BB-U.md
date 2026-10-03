@@ -1,7 +1,6 @@
 # BB-U — Un solo perk común rompe el invariante de cero de la puerta de economía
 
-**Estado:** **descartada bajo la ADR 0182** (la puerta de cero exacto era frágil; la economía no tiene problema real) — historia abajo. Antes: abierta, sin causa. El perk que lo destapó se ha retirado para no dejar la puerta roja; el
-hallazgo es lo que importa.
+**Estado:** **CERRADA (3 oct 2026).** Descartada bajo la ADR 0182 (la puerta de cero exacto era frágil; la economía no tiene problema real) y **el tercer perk de `Bulwark` ya está en `/data`** (`immovable`, ver «Cierre del 3 oct» al final). Historia abajo.
 
 ## Observación
 
@@ -56,3 +55,27 @@ cero exacto se ponía rojo en ~30 % de las muestras sin que pasara nada. La puer
 (ya no puede romper esta puerta por una mariposa), **sin implementarlo**: sigue pendiente de `perk-authoring` y de que
 la cola con ese perk se mida bajo el techo. Límite: el 0,196 de entonces (~20 % de los actos) era mucho mayor que la
 cola actual; no se ha re-medido aquel perk concreto (LIKELY que era otro efecto de catálogo antiguo).
+
+## Cierre del 3 oct 2026: `immovable` entra
+
+El perk previsto era `immovable` (common, `filler`, `tackleEvasion`, `hasTag(owner,'Bulwark')`; commit `66e979c`). Entra con
+la misma forma que `elf_touch` bajo la ADR 0149 (`TACKLE`, `scope: opponent`, el dueño es a quien entran, `limit` 1 por
+jugada para que `Modifiers.AddProbability` no lo componga, Regla I) y con **+50 en vez de +100**: 50 es el techo de la escala
+5/10/15/20/25/50 de `data/perks/README.md`. El valor como perk es **provisional, sin medir** (protocolo de la ADR 0087 pendiente).
+Descripción generada (RT-035): «Cuando le entran, el portador multiplica por 1,5 su resistencia a las entradas. Condición: si el
+portador es Muro (enanos). Límite: 1 por jugada.»
+
+Medido con `Balance --full-runs 240` (la muestra de la puerta), con el perk en el catálogo:
+
+| semilla | `actsWithAllSinksAffordable` (techo 1,0) | `sinksAffordablePerAct` (2,0-3,0) |
+|---|---|---|
+| 1 | 0,21 IN | 2,39 IN |
+| 2 | 0,00 IN | 2,39 IN |
+
+La puerta de cola **no se rompe** (CONFIRMED para este perk y estas dos semillas; el 0,196 de 2026-09-19 no se reproduce y es LIKELY que
+fuera otro efecto del catálogo de entonces, como ya decía el cierre de la ADR 0182). `brokeMarketRunShare` midió 7,9 y 7,5 con el perk
+frente a 13,75 sin él en la semilla 1: sigue dentro de la banda de la puerta (5-25) y es ruido de muestra (7,83-8,50 en BA-H, antes del perk).
+
+Efecto en el juego, `dwarf_good` con `immovable` en el hueco de `crowd_control` contra `human_good`, 4 × 4.000 partidos
+(semillas 1-4, pareadas): 65,90 / 63,85 / 69,70 / 74,40 sin él, 66,00 / 64,20 / 69,62 / 74,62 con él, o sea +0,15 ± 0,1 puntos:
+inerte para la victoria, como corresponde a un `filler` común. No se cambió ninguna build (son la línea base de las puertas, ADR 0118).
