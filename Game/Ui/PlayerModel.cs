@@ -77,6 +77,20 @@ public readonly record struct KickCue(int Release, float SecondsToContact)
     public static KickCue None { get; } = new(-1, -1f);
 }
 
+/// <summary>
+/// Entradas, faltas y caídas de este jugador según la traza ya calculada (BV-A, tercera pasada). Todo en segundos de
+/// partido desde el instante dibujado; −1 = no aplica.
+/// </summary>
+/// <param name="SecondsToTackle">Cuánto falta para el contacto de una entrada SUYA (el tick del TACKLE).</param>
+/// <param name="TacklerFalls">Si tras esa entrada acaba en el suelo (falta pitada o entrada fallada): plancha; si no, toque de pie.</param>
+/// <param name="SecondsToUp">Estando en el suelo, cuánto falta para que <c>/Sim</c> lo dé por levantado; −1 si no se levanta (sale del campo).</param>
+/// <param name="SecondsSinceHit">Cuánto hace que recibió una entrada o falta sin caer (trastabilla).</param>
+/// <param name="Impact">Dirección del golpe recibido (del que entra hacia él), o cero.</param>
+public readonly record struct FallCue(float SecondsToTackle, bool TacklerFalls, float SecondsToUp, float SecondsSinceHit, Vector2 Impact)
+{
+    public static FallCue None { get; } = new(-1f, false, -1f, -1f, Vector2.Zero);
+}
+
 public sealed partial class PlayerModel : Node3D
 {
     /// <summary>La carpeta del material de fútbol: personaje y clips, todos del mismo esqueleto.</summary>
@@ -218,6 +232,59 @@ public sealed partial class PlayerModel : Node3D
     private const float BallLookMinCells = 0.3f;
 
     /// <summary>
+    /// Segundo del clip <c>tackle</c> (plancha de 2,73 s) en que la pierna llega al balón. <b>Medido</b> en el perfil del
+    /// clip (`pies.csv`): la puntera adelantada al máximo a 0,67–0,77 s, y la cadera cruzando la mitad de su altura al
+    /// lanzarse a 0,97–1,07 s; se toma 1,0 s, el pie bajo y por delante con el cuerpo yéndose al suelo.
+    /// </summary>
+    private const float TackleContactSeconds = 1.0f;
+
+    /// <summary>Cuánto antes del contacto entra la plancha: desde el último paso (0,75 s del clip, medido). Provisional el corte exacto.</summary>
+    private const float TackleLeadSeconds = 0.25f;
+
+    /// <summary>Fin de la plancha con su levantada, medido: la cadera vuelve a la altura de pie a 2,6 s.</summary>
+    private const float TackleEndSeconds = 2.65f;
+
+    /// <summary>
+    /// Desde dónde se usa el clip <c>trip</c> (1,6 s) al recibir el golpe: el trastabilleo empieza a 0,2 s y la cadera toca
+    /// el suelo a 0,62 s (medido); arrancar en 0,25 s deja caer el cuerpo ~0,4 s después del contacto.
+    /// </summary>
+    private const float TripStartSeconds = 0.25f;
+
+    /// <summary>Instante del <c>trip</c> en que la cadera ya está en el suelo (0,62–0,72 s, medido).</summary>
+    private const float TripGroundSeconds = 0.68f;
+
+    /// <summary>Tramo útil de <c>standup</c> (1,67 s): la cadera empieza a subir a 0,35 s y está de pie a 1,6 s (medido).</summary>
+    private const float StandupFromSeconds = 0.35f;
+    private const float StandupToSeconds = 1.6f;
+
+    /// <summary>
+    /// Lo más deprisa que se reproduce una caída o una levantada para caber en el tiempo que <c>/Sim</c> deja en el suelo
+    /// (18 ticks = 1,2 s; 9 en la entrada fallada). <b>Provisional, sin medir</b>: por encima de ×2 se ve a cámara rápida.
+    /// </summary>
+    private const float MaxFallSpeed = 2.0f;
+
+    /// <summary>
+    /// El trastabilleo de quien recibe una falta y no cae (en <c>/Sim</c> cae el que la comete): el principio del
+    /// <c>trip</c>, de 0,1 a 0,4 s, antes de que el cuerpo se vaya al suelo (medido en el perfil). Así la falta se ve.
+    /// </summary>
+    private const float StaggerFromSeconds = 0.1f;
+    private const float StaggerLengthSeconds = 0.3f;
+
+    /// <summary>
+    /// Cuánto se desplaza el DIBUJO del cuerpo en la dirección del golpe al caer, en casillas (BV-A: «caída con peso»).
+    /// El clip <c>trip</c> horneaba ~2 casillas de avance que la fijación de la raíz quita; esto devuelve un poco, sin
+    /// alejar el muñeco de su anillo. <b>Provisional, sin medir</b> (~60 cm); vuelve a 0 mientras se levanta.
+    /// </summary>
+    private const float FallLurchCells = 0.3f;
+
+    /// <summary>Tiempo en que se completa ese desplazamiento, en segundos de partido: lo que tarda en tocar el suelo. Provisional.</summary>
+    private const float FallLurchSeconds = 0.4f;
+
+    /// <summary>Giro rápido hacia la dirección del golpe al caer (el golpe lo voltea). Provisional: ×4 el giro normal durante 0,15 s.</summary>
+    private const float HitTurnBoost = 4f;
+    private const float HitTurnSeconds = 0.15f;
+
+    /// <summary>
     /// Remate del golpeo que se deja ver tras el contacto antes de poder soltarlo. <b>Medido</b> (BV-A, segunda pasada):
     /// el pasador está QUIETO durante <c>Passing</c> y <c>/Sim</c> lo echa a correr en el mismo tick en que sale el balón,
     /// así que el patinaje del golpeo no estaba en la carrerilla sino en el remate (0,20-0,30 s del clip, cuerpo a 2,2 c/s).
@@ -239,7 +306,7 @@ public sealed partial class PlayerModel : Node3D
     /// </summary>
     private static readonly string[] GestureKeys =
     {
-        "kick", "header", "tackle", "trip", "fallen", "receive", "throwin", "penalty", "gk_save", "gk_catch",
+        "kick", "header", "tackle", "trip", "fallen", "receive", "throwin", "penalty", "gk_save", "gk_catch", "standup", "stagger",
     };
 
     /// <summary>
@@ -268,6 +335,13 @@ public sealed partial class PlayerModel : Node3D
     private bool _hasLast;
     private bool _faceBall;
     private float _gestureFade = BlendSeconds;
+    private float _gestureSpeed = 1f;
+    private float _baseY;
+    private Vector2 _lurchDir;
+    private float _lurchTime = -1f;
+    private float _lurchScale = 1f;
+    private float _turnBoostLeft;
+    private float _lastHitSeen = -1f;
     private float _debugFeetScale;
     private float _debugFeetNatural;
 
@@ -359,6 +433,7 @@ public sealed partial class PlayerModel : Node3D
 
         // El personaje tiene el origen en los pies y la cápsula está centrada en su mitad.
         model.Position = new Vector3(0f, -bodyHeight / 2f, 0f);
+        model._baseY = -bodyHeight / 2f;
 
         model._instance = instance;
         model._anim = FindAnimationPlayer(instance);
@@ -401,7 +476,7 @@ public sealed partial class PlayerModel : Node3D
     /// del muñeco —zancada, gestos, fundidos— van con él: congelada la imagen, congelado el muñeco (H6).
     /// <b>El modelo no decide nada</b>: sólo mira lo que está escrito (RT-014).
     /// </summary>
-    public void Pose(Vector2 velocity, Vector2 facing, Vector2 toBall, bool receiving, PlayerState state, ContactCue cue, KickCue kick, float rate, float delta)
+    public void Pose(Vector2 velocity, Vector2 facing, Vector2 toBall, bool receiving, PlayerState state, ContactCue cue, KickCue kick, FallCue fall, float rate, float delta)
     {
         if (_tree is null)
         {
@@ -415,7 +490,20 @@ public sealed partial class PlayerModel : Node3D
         // Segundos de PARTIDO que han pasado en este fotograma: lo que mueve todos los relojes del muñeco.
         float simDelta = delta * rate;
         bool down = state is PlayerState.KnockedDown or PlayerState.Injured;
-        Turn(ChooseFacing(velocity, facing, toBall, receiving, down), simDelta, snap: delta <= 0f);
+        var want = ChooseFacing(velocity, facing, toBall, receiving, down);
+        if (down && _lurchTime < 0f && fall.Impact.LengthSquared() > 0.0001f && _gesture != "tackle")
+        {
+            // Lo voltea el golpe: cae en la dirección del impacto (el clip cae hacia delante).
+            want = fall.Impact;
+            _turnBoostLeft = HitTurnSeconds;
+        }
+        else if (_turnBoostLeft > 0f && _lurchDir.LengthSquared() > 0f)
+        {
+            want = _lurchDir;
+        }
+
+        Turn(want, simDelta, snap: delta <= 0f);
+        _turnBoostLeft = Mathf.Max(0f, _turnBoostLeft - simDelta);
         DebugInputSpeed = speed;
         AdvanceGesture(simDelta);
 
@@ -429,7 +517,8 @@ public sealed partial class PlayerModel : Node3D
             StopGesture();
             _outFade = GestureRunOutSeconds;
         }
-        ChooseGesture(state, cue, kick, speed);
+        ChooseGesture(state, cue, kick, fall, speed);
+        Lurch(down, fall, simDelta);
 
         // Locomoción continua: una posición de mezcla idle→trote→carrera en lugar de tres clips con umbral.
         float target = _runCells > 0.01f ? Mathf.Clamp(speed / _runCells, 0f, 1f) : 0f;
@@ -445,7 +534,7 @@ public sealed partial class PlayerModel : Node3D
         _tree.Set("parameters/jog_seek/seek_request", ClipTimeAtPhase("jog", _jogOffset));
         _tree.Set("parameters/run_seek/seek_request", ClipTimeAtPhase("run", _runOffset));
         _tree.Set("parameters/idle_scale/scale", rate);
-        _tree.Set("parameters/gesture_scale/scale", rate);
+        _tree.Set("parameters/gesture_scale/scale", rate * _gestureSpeed);
 
         float weightTarget = _gesture.Length > 0 ? 1f : 0f;
         float fade = weightTarget > _gestureWeight ? _gestureFade : _outFade;
@@ -657,7 +746,7 @@ public sealed partial class PlayerModel : Node3D
             else
             {
                 float diff = Mathf.Wrap(want - _yaw, -Mathf.Pi, Mathf.Pi);
-                float max = Mathf.DegToRad(TurnDegreesPerSecond) * simDelta;
+                float max = Mathf.DegToRad(TurnDegreesPerSecond * (_turnBoostLeft > 0f ? HitTurnBoost : 1f)) * simDelta;
                 _yaw = Mathf.Wrap(_yaw + Mathf.Clamp(diff, -max, max), -Mathf.Pi, Mathf.Pi);
             }
 
@@ -674,25 +763,62 @@ public sealed partial class PlayerModel : Node3D
     /// Qué gesto toca encima de la locomoción. El suelo manda (el que cae, cae); después el gesto de evento
     /// —que se deja terminar—, y por último el de estado, que vive mientras dura su estado y se funde al salir.
     /// </summary>
-    private void ChooseGesture(PlayerState state, ContactCue cue, KickCue kick, float speed)
+    private void ChooseGesture(PlayerState state, ContactCue cue, KickCue kick, FallCue fall, float speed)
     {
         if (state is PlayerState.KnockedDown or PlayerState.Injured)
         {
-            if (_gesture == "trip" && _gestureTime >= _gestureLength)
+            ChooseFallGesture(fall);
+            return;
+        }
+
+        // Ya no está en el suelo para /Sim. Si aún no se había levantado (la traza no avisó a tiempo), se levanta deprisa
+        // en vez de reaparecer de pie; si ya se está levantando o acaba la plancha, se deja terminar.
+        if (_gesture is "trip" or "fallen")
+        {
+            StartGesture("standup", held: true, StandupFromSeconds);
+            _gestureSpeed = MaxFallSpeed;
+        }
+
+        if (_gesture is "standup" or "tackle" && _gestureHeld)
+        {
+            if (speed > GestureReleaseCellsPerSecond)
             {
-                StartGesture("fallen", held: true);
-            }
-            else if (_gesture is not ("trip" or "fallen"))
-            {
-                StartGesture("trip", held: true);
+                _gestureSpeed = Mathf.Max(_gestureSpeed, MaxFallSpeed);
             }
 
             return;
         }
 
-        if (_gesture is "trip" or "fallen")
+        // La entrada, ALINEADA con el tick del contacto (BV-A, tercera pasada): plancha si acaba en el suelo, y si sigue de
+        // pie (gana el balón o la pierde sin caer) un toque con la pierna, que es el golpeo, para no levantarse de golpe.
+        if (fall.SecondsToTackle >= 0f && _gesture is not ("tackle" or "kick"))
         {
-            StopGesture();
+            if (fall.TacklerFalls && fall.SecondsToTackle <= TackleLeadSeconds)
+            {
+                StartGesture("tackle", held: true, TackleContactSeconds - fall.SecondsToTackle);
+                _gestureFade = Mathf.Clamp(fall.SecondsToTackle * 0.75f, 0.03f, BlendSeconds);
+                return;
+            }
+
+            if (!fall.TacklerFalls && fall.SecondsToTackle <= KickContactSeconds)
+            {
+                StartGesture("kick", held: true, KickContactSeconds - fall.SecondsToTackle);
+                _gestureFade = Mathf.Clamp(fall.SecondsToTackle * 0.75f, 0.03f, BlendSeconds);
+                return;
+            }
+        }
+
+        // Recibe una entrada o una falta y no cae: trastabilla, una vez por golpe.
+        if (fall.SecondsSinceHit >= 0f && fall.SecondsSinceHit < 0.1f && _lastHitSeen < 0f)
+        {
+            _lastHitSeen = fall.SecondsSinceHit;
+            StartGesture("stagger", held: true);
+            return;
+        }
+
+        if (fall.SecondsSinceHit < 0f)
+        {
+            _lastHitSeen = -1f;
         }
 
         // El golpeo, ALINEADO con la traza (H7): la vista avisa de cuántos segundos de partido faltan para que
@@ -755,10 +881,97 @@ public sealed partial class PlayerModel : Node3D
         }
     }
 
+    /// <summary>
+    /// En el suelo: cae (o sigue la plancha si es él quien entró), se queda tumbado y se LEVANTA a tiempo de estar de pie
+    /// cuando <c>/Sim</c> lo da por levantado. Los clips se aceleran hasta ×<see cref="MaxFallSpeed"/> para caber en el
+    /// tiempo que deja el motor (18 ticks, 9 en la entrada fallada). Sin aviso de levantada (sale del campo), se queda.
+    /// </summary>
+    private void ChooseFallGesture(FallCue fall)
+    {
+        if (_gesture == "tackle")
+        {
+            // La plancha ya lleva su caída, su deslizamiento y su levantada: sólo se ajusta su ritmo al tiempo en el suelo.
+            if (fall.SecondsToUp > 0f && _gestureTime >= TackleContactSeconds)
+            {
+                _gestureSpeed = Mathf.Clamp((TackleEndSeconds - _gestureTime) / fall.SecondsToUp, 1f, MaxFallSpeed);
+            }
+
+            return;
+        }
+
+        if (_gesture == "standup")
+        {
+            return;
+        }
+
+        if (_gesture is not ("trip" or "fallen"))
+        {
+            StartGesture("trip", held: true, TripStartSeconds);
+        }
+
+        if (_gesture == "trip" && _gestureTime >= _gestureLength)
+        {
+            StartGesture("fallen", held: true);
+        }
+
+        // ¿Hora de levantarse? Cuando lo que queda en el suelo ya sólo da para la levantada al ritmo máximo, y no antes de
+        // haber tocado el suelo (el que cae tiene que caer).
+        if (fall.SecondsToUp > 0f)
+        {
+            float rise = StandupToSeconds - StandupFromSeconds;
+            bool grounded = _gesture == "fallen" || _gestureTime >= TripGroundSeconds;
+            if (grounded && fall.SecondsToUp <= rise)
+            {
+                StartGesture("standup", held: true, StandupFromSeconds);
+                _gestureSpeed = Mathf.Clamp(rise / fall.SecondsToUp, 1f, MaxFallSpeed);
+            }
+            else if (_gesture == "trip")
+            {
+                // Si el suelo dura poco (entrada fallada), la caída se acelera para llegar al suelo con tiempo de levantarse.
+                float needed = (TripGroundSeconds - _gestureTime) + (rise / MaxFallSpeed);
+                _gestureSpeed = Mathf.Clamp(needed / Mathf.Max(0.05f, fall.SecondsToUp), 1f, MaxFallSpeed);
+            }
+        }
+    }
+
+    /// <summary>
+    /// El peso de la caída: el dibujo del cuerpo se va un poco en la dirección del golpe mientras cae y vuelve a su sitio al
+    /// levantarse (sólo dibujo; el anillo y la traza no se mueven, RT-014).
+    /// </summary>
+    private void Lurch(bool down, FallCue fall, float simDelta)
+    {
+        if (down && _lurchTime < 0f && _gesture is "trip")
+        {
+            _lurchDir = fall.Impact.LengthSquared() > 0.0001f ? fall.Impact.Normalized() : new Vector2(Mathf.Sin(_yaw), Mathf.Cos(_yaw));
+            _lurchTime = 0f;
+        }
+
+        float amount = 0f;
+        if (_lurchTime >= 0f)
+        {
+            _lurchTime += simDelta;
+            float t = Mathf.Clamp(_lurchTime / FallLurchSeconds, 0f, 1f);
+            amount = FallLurchCells * (1f - ((1f - t) * (1f - t)));
+            if (_gesture == "standup")
+            {
+                float progress = Mathf.Clamp((_gestureTime - StandupFromSeconds) / (StandupToSeconds - StandupFromSeconds), 0f, 1f);
+                amount *= 1f - progress;
+            }
+            else if (!down && _gesture.Length == 0)
+            {
+                _lurchTime = -1f;
+                amount = 0f;
+            }
+        }
+
+        var offset = _lurchDir * amount;
+        Position = new Vector3(offset.X, _baseY, offset.Y);
+    }
+
     /// <summary>Lanza un gesto desde su principio (la transición admite volver a sí misma: dos pases seguidos son dos golpeos).</summary>
     private void StartGesture(string key, bool held, float offset = 0f)
     {
-        if (_tree is null || _library is null || !_library.HasAnimation(key))
+        if (_tree is null || _library is null || !_library.HasAnimation(key == "stagger" ? "trip" : key))
         {
             return;
         }
@@ -770,12 +983,13 @@ public sealed partial class PlayerModel : Node3D
         }
 
         _gesture = key;
+        _gestureSpeed = 1f;
         _gestureFade = BlendSeconds;
         _outFade = BlendSeconds;
         _gestureHeld = held;
         _gestureTime = offset;
-        var clip = _library.GetAnimation(key);
-        _gestureLength = key == "receive"
+        var clip = _library.GetAnimation(key == "stagger" ? "trip" : key);
+        _gestureLength = key == "stagger" ? StaggerLengthSeconds : key == "receive"
             ? ReceiveLengthSeconds
             : clip.LoopMode == Animation.LoopModeEnum.None ? clip.Length : float.MaxValue;
     }
@@ -797,7 +1011,7 @@ public sealed partial class PlayerModel : Node3D
             return;
         }
 
-        _gestureTime += delta;
+        _gestureTime += delta * _gestureSpeed;
         if (_gestureTime >= _gestureLength && _gesture != "trip")
         {
             StopGesture();
@@ -866,7 +1080,16 @@ public sealed partial class PlayerModel : Node3D
             gestures.SetInputName(i, GestureKeys[i]);
             gestures.SetInputReset(i, true);
             var node = Clip(GestureKeys[i]);
-            if (GestureKeys[i] == "receive")
+            if (GestureKeys[i] == "stagger")
+            {
+                node = Clip("trip");
+                node.UseCustomTimeline = true;
+                node.StretchTimeScale = false;
+                node.StartOffset = StaggerFromSeconds;
+                node.TimelineLength = StaggerLengthSeconds;
+                node.LoopMode = Animation.LoopModeEnum.None;
+            }
+            else if (GestureKeys[i] == "receive")
             {
                 // Sólo el control, no los cinco segundos de pasitos (H7).
                 node.UseCustomTimeline = true;

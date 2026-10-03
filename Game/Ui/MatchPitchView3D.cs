@@ -2314,7 +2314,7 @@ public partial class MatchPitchView3D : SubViewportContainer
             float delta = IsTeleportCut(trace, frame, i) ? 0f : poseDelta;
             model.Pose(
                 SmoothedVelocity(trace, frame, i), FacingOf(trace, frame, i), LookAtBall(trace, frame, i, at, lookBall),
-                i == receiver, trace.StateAt(frame, i), CueFor(trace, frame, i), KickFor(trace, frame, i), _playbackRate, delta);
+                i == receiver, trace.StateAt(frame, i), CueFor(trace, frame, i), KickFor(trace, frame, i), FallFor(trace, frame, i), _playbackRate, delta);
         }
 
         var ball = InterpolateBall(trace, frame);
@@ -2571,6 +2571,133 @@ public partial class MatchPitchView3D : SubViewportContainer
 
         var step = new Vector2(next.X - here.X, next.Y - here.Y);
         return step.Length() > TeleportThresholdCells ? Vector2.Zero : step;
+    }
+
+    /// <summary>Cuántos ticks adelante se busca la entrada propia (cubre la plancha, que entra 0,25 s antes del contacto). Provisional.</summary>
+    private const int TackleLookAheadTicks = 6;
+
+    /// <summary>Hasta cuántos ticks adelante se busca cuándo se levanta el derribado: el derribo más largo de /Sim es de 18 ticks y un perk lo alarga. Provisional.</summary>
+    private const int GetUpLookAheadTicks = 90;
+
+    private MatchTrace? _indexedTrace;
+    private readonly Dictionary<int, int> _traceIndexById = new();
+
+    private int TraceIndexOf(MatchTrace trace, int id)
+    {
+        if (!ReferenceEquals(_indexedTrace, trace))
+        {
+            _traceIndexById.Clear();
+            for (int i = 0; i < trace.Players.Count; i++)
+            {
+                _traceIndexById[trace.Players[i].Id] = i;
+            }
+
+            _indexedTrace = trace;
+        }
+
+        return _traceIndexById.TryGetValue(id, out int index) ? index : -1;
+    }
+
+    private static bool IsDown(PlayerState state) => state is PlayerState.KnockedDown or PlayerState.Injured;
+
+    /// <summary>
+    /// Entradas, faltas y caídas de este jugador leídas de la traza y sus eventos (BV-A, tercera pasada; RT-014: sólo se
+    /// lee). La entrada propia que viene (el tick del TACKLE y si acaba en el suelo), cuándo se levanta si está en el suelo,
+    /// si acaba de recibir un golpe sin caer, y la dirección del golpe (del que entra hacia él).
+    /// </summary>
+    private FallCue FallFor(MatchTrace trace, int frame, int player)
+    {
+        if (_events is null)
+        {
+            return FallCue.None;
+        }
+
+        float now = frame + Mathf.Clamp(Alpha, 0f, 1f);
+        float toTackle = -1f;
+        bool tacklerFalls = false;
+        int last = System.Math.Min(trace.FrameCount - 1, frame + TackleLookAheadTicks);
+        for (int g = frame; g <= last && toTackle < 0f; g++)
+        {
+            foreach (var ev in EventsAt(trace, g))
+            {
+                if (ev.Type == EventType.Tackle && TraceIndexOf(trace, ev.Actor) == player && g >= now)
+                {
+                    toTackle = (g - now) / TicksPerSecond;
+                    tacklerFalls = (g + 1 < trace.FrameCount && IsDown(trace.StateAt(g + 1, player))) || IsDown(trace.StateAt(g, player));
+                    break;
+                }
+            }
+        }
+
+        // El golpe recibido: una entrada o falta de otro sobre él en los últimos ticks (o en el que empieza su caída).
+        var impact = Vector2.Zero;
+        float sinceHit = -1f;
+        int downStart = -1;
+        if (IsDown(trace.StateAt(frame, player)))
+        {
+            downStart = frame;
+            while (downStart > 0 && frame - downStart < GetUpLookAheadTicks && IsDown(trace.StateAt(downStart - 1, player)))
+            {
+                downStart--;
+            }
+        }
+
+        int from = downStart >= 0 ? downStart - 2 : frame - 7;
+        int to = downStart >= 0 ? downStart + 1 : frame;
+        for (int g = System.Math.Max(0, from); g <= to && g < trace.FrameCount; g++)
+        {
+            foreach (var ev in EventsAt(trace, g))
+            {
+                if (ev.Type is not (EventType.Tackle or EventType.Foul) || TraceIndexOf(trace, ev.Opponent) != player)
+                {
+                    continue;
+                }
+
+                int hitter = TraceIndexOf(trace, ev.Actor);
+                if (hitter >= 0)
+                {
+                    var a = trace.PositionAt(g, hitter);
+                    var b = trace.PositionAt(g, player);
+                    impact = new Vector2(b.X - a.X, b.Y - a.Y);
+                }
+
+                if (downStart < 0 && g <= now)
+                {
+                    sinceHit = (now - g) / TicksPerSecond;
+                }
+            }
+        }
+
+        float toUp = -1f;
+        if (downStart >= 0)
+        {
+            int end = System.Math.Min(trace.FrameCount - 1, frame + GetUpLookAheadTicks);
+            for (int g = frame + 1; g <= end; g++)
+            {
+                if (!trace.OnPitchAt(g, player))
+                {
+                    break;
+                }
+
+                if (!IsDown(trace.StateAt(g, player)))
+                {
+                    toUp = (g - now) / TicksPerSecond;
+                    break;
+                }
+            }
+        }
+
+        return new FallCue(toTackle, tacklerFalls, toUp, sinceHit, impact);
+    }
+
+    private IEnumerable<MatchEvent> EventsAt(MatchTrace trace, int frame)
+    {
+        int from = trace.EventFromAt(frame);
+        int count = trace.EventCountAt(frame);
+        for (int e = from; e < from + count && e < _events!.Count; e++)
+        {
+            yield return _events[e];
+        }
     }
 
     /// <summary>
