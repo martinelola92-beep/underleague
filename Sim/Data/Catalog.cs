@@ -628,7 +628,7 @@ public sealed record SaveTuning(
     int RetreatTicks = 0);
 
 /// <summary>tuning.tackle.</summary>
-public sealed record TackleTuning(int BaseWin, int PressureFactor, int StrengthSharePercent, int FoulBase, int OffBallFoulBase, int FoulStrengthFactor, int HardTackleThreshold, int YellowCardBase, int RedCardBase, int HardTackleYellowBonus, int HardTackleRedBonus, bool SecondYellowIsRed, int ShieldResistance = 0, bool FollowVictimWhileTackling = false, bool WhistledFoulDownsVictim = false);
+public sealed record TackleTuning(int BaseWin, int PressureFactor, int StrengthSharePercent, int FoulBase, int OffBallFoulBase, int FoulStrengthFactor, int HardTackleThreshold, int YellowCardBase, int RedCardBase, int HardTackleYellowBonus, int HardTackleRedBonus, bool SecondYellowIsRed, int ShieldResistance = 0, bool FollowVictimWhileTackling = false, bool WhistledFoulDownsVictim = false, bool EscapeBeyondDecisionReach = false);
 
 /// <summary>tuning.injury.</summary>
 /// <summary>

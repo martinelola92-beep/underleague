@@ -712,8 +712,13 @@ internal static class SymptomDetectors
             int p = t.IndexOfId(e.Actor);
             if (e.Type == EventType.Shot && p >= 0)
             {
-                var pos = t.Pos(t.FrameOfTick(e.Tick), p);
-                // Al disparar, el tirador está en el punto de tiro: la apertura se mide desde ahí (ApertureCenti).
+                // Al disparar, el tirador está en el punto de tiro: la apertura se mide desde ahí (ApertureCenti). El tiro
+                // sale al principio de SU actualización del tick, antes de moverse y antes de la separación de cuerpos,
+                // así que su posición es la del fotograma ANTERIOR, no la del final del tick del suceso (ADR 0186: con
+                // quien entra siguiendo a la víctima, la del final del tick ya incluía empujones y el detector dejó de
+                // cuadrar con el contador del motor).
+                int frame = t.FrameOfTick(e.Tick);
+                var pos = t.Pos(frame > 0 ? frame - 1 : frame, p);
                 double ap = Aperture(pos, Pitch.GoalCenter(t.Team[p]));
                 lastShotAperture[e.Actor] = (ap, pos);
                 shots++;

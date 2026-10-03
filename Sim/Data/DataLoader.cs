@@ -1135,7 +1135,7 @@ public static class DataLoader
 
     private static TackleTuning ParseTackle(Json node)
     {
-        node.EnsureKnownKeys("baseWin", "pressureFactor", "strengthSharePercent", "foulBase", "offBallFoulBase", "foulStrengthFactor", "hardTackleThreshold", "yellowCardBase", "redCardBase", "hardTackleYellowBonus", "hardTackleRedBonus", "secondYellowIsRed", "shieldResistance", "followVictimWhileTackling", "whistledFoulDownsVictim");
+        node.EnsureKnownKeys("baseWin", "pressureFactor", "strengthSharePercent", "foulBase", "offBallFoulBase", "foulStrengthFactor", "hardTackleThreshold", "yellowCardBase", "redCardBase", "hardTackleYellowBonus", "hardTackleRedBonus", "secondYellowIsRed", "shieldResistance", "followVictimWhileTackling", "whistledFoulDownsVictim", "escapeBeyondDecisionReach");
         return new TackleTuning(
             node.Prop("baseWin").AsInt(),
             node.Prop("pressureFactor").AsInt(),
@@ -1151,7 +1151,8 @@ public static class DataLoader
             node.Prop("secondYellowIsRed").AsBool(),
             node.Prop("shieldResistance").AsInt(),
             node.Prop("followVictimWhileTackling").AsBool(),
-            node.Prop("whistledFoulDownsVictim").AsBool());
+            node.Prop("whistledFoulDownsVictim").AsBool(),
+            node.Prop("escapeBeyondDecisionReach").AsBool());
     }
 
     private static InjuryTuning ParseInjury(Json node)

@@ -109,6 +109,36 @@ public sealed class TackleReachTests
         Assert.True(off.Count(x => x.BeforeResolving > 0.9f) * 100 > off.Count * 15, "control: sin seguir a la víctima debían verse entradas resueltas a más de 0,9");
     }
 
+    /// <summary>
+    /// ADR 0186, enmienda (valor conocido): una víctima que se ha escapado más allá del alcance con el que se decidió
+    /// la entrada (<c>tackleDistanceMaxCells</c>) la deja en nada: ni suceso ni contacto. Con el dato apagado, el
+    /// margen de 0,3 de antes la alcanza a la misma distancia.
+    /// </summary>
+    [Fact]
+    public void AVictimWhoEscapedTheDecisionReachMakesTheTackleFail()
+    {
+        float decisionReach = Catalog.Ai.Context.TackleDistanceMaxCells;
+        Assert.True(Catalog.Tuning.Tackle.EscapeBeyondDecisionReach, "los datos reales debían traer la regla encendida");
+        Assert.Equal(0, TackleEventsAt(Catalog, decisionReach + 0.15f));
+        Assert.Equal(1, TackleEventsAt(Catalog, decisionReach - 0.15f));
+
+        var off = Catalog with { Tuning = Catalog.Tuning with { Tackle = Catalog.Tuning.Tackle with { EscapeBeyondDecisionReach = false } } };
+        Assert.Equal(1, TackleEventsAt(off, decisionReach + 0.15f));
+    }
+
+    /// <summary>Sucesos TACKLE resueltos de un defensa local sobre el portador rival a <paramref name="gap"/> casillas.</summary>
+    private static int TackleEventsAt(Catalog catalog, float gap)
+    {
+        var engine = new MatchEngine(TestMatches.Reference(catalog, 5), 5, catalog, SimConfig.Default);
+        int victim = engine.OutfieldIndexForTest(1, 5);
+        int tackler = engine.OutfieldIndexForTest(0, 0);
+        engine.GiveBallForTest(victim, new Vec2(6f, 3.5f));
+        engine.PlaceForTest(tackler, new Vec2(6f - gap, 3.5f));
+        int before = engine.EventsForTest.Count;
+        engine.ResolveTackleForTest(tackler, victim);
+        return engine.EventsForTest.Skip(before).Count(e => e.Type == EventType.Tackle && e.Detail != "attempted");
+    }
+
     private static Catalog With(bool follow, bool foulDownsVictim) =>
         Catalog with
         {

@@ -146,7 +146,8 @@
     "secondYellowIsRed": true,
     "shieldResistance": 1000,
     "followVictimWhileTackling": true,
-    "whistledFoulDownsVictim": true
+    "whistledFoulDownsVictim": true,
+    "escapeBeyondDecisionReach": true
   },
   "injury": {
     "_doc": "ADR 0041: probabilidad = onTackleBase (+onFoulBase si hubo falta) + relativeFactor*(fuerza del que entra - resistencia de la victima). Sin ninguna constante de por medio: un nivel 8 que entra a otro nivel 8 lesiona aproximadamente lo mismo que un nivel 1 contra otro nivel 1. ADR 0043: el desgaste crece por acto (actScalePercent, un multiplicador en tanto por ciento sobre esa probabilidad, sin tocar la formula) y el partido de elite anade su propio recargo (eliteScalePercent). Solo los aplica el bucle de run, que es quien sabe en que acto y en que nodo esta; un partido suelto usa SimConfig.Default y por tanto el 100%. ADR 0050 P2: la lesion NO es una de las cuatro resoluciones decisivas y su tirada sigue siendo uniforme, pero onTackleBase baja de 175 a 140 porque el promedio de dos sube la actividad del partido un 3 por ciento (mas entradas, mas bloqueos, mas faltas) y con 175 injuriesPerMatch se iba a 0,80-0,81, justo en el techo de RT-056. Con 140 vuelve a 0,75-0,76, el valor de siempre. La correccion parece grande para un desvio del 7 por ciento porque onTackleBase solo aporta un tercio de la probabilidad: el resto sale del termino relativo y de onFoulBase. Medido en docs/fase2-diseno.md 22.",

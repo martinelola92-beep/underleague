@@ -810,6 +810,10 @@
         "whistledFoulDownsVictim": {
           "description": "BV-B (ii), ADR 0186: en una falta pitada cae quien la recibe, y quien la comete sólo si la entrada fue dura. false = el motor de antes (cae siempre el infractor).",
           "type": "boolean"
+        },
+        "escapeBeyondDecisionReach": {
+          "description": "ADR 0186, enmienda: al resolver una entrada, la víctima tiene que seguir dentro del alcance con el que se decidió (ai.context.tackleDistanceMaxCells), sin el margen de 0,3; si se ha escapado, la entrada falla. false = el motor de antes.",
+          "type": "boolean"
         }
       },
       "required": [
@@ -827,7 +831,8 @@
         "secondYellowIsRed",
         "shieldResistance",
         "followVictimWhileTackling",
-        "whistledFoulDownsVictim"
+        "whistledFoulDownsVictim",
+        "escapeBeyondDecisionReach"
       ],
       "additionalProperties": false
     },

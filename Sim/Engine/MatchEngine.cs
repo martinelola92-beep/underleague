@@ -31,8 +31,9 @@ internal sealed class MatchEngine : IPerkWorld
 
     /// <summary>
     /// BV-B (i), ADR 0186: a qué distancia se planta quien entra mientras sigue a quien la recibe. No es balance: es el
-    /// alcance de una pierna, por debajo del de la decisión (<c>tackleDistanceMaxCells</c> 1,0) y por encima del
-    /// contacto de dos cuerpos humanos (0,76 con dos orcos, ADR 0176), para no empujar al que la recibe.
+    /// alcance de una pierna, por debajo del de la decisión (<c>tackleDistanceMaxCells</c> 1,0). Medido con 0,8 (por
+    /// encima del contacto de dos orcos, 0,76): la mitad de las entradas vuelven a resolverse a más de 0,9 casillas en el
+    /// fotograma del suceso, así que se queda en 0,6 aunque roce el cuerpo de dos humanos (0,64).
     /// </summary>
     private const float TackleContactCells = 0.6f;
 
@@ -3544,6 +3545,16 @@ internal sealed class MatchEngine : IPerkWorld
     private bool _repeatingTackle;
 
     /// <summary>Cierra la repetición armada de una entrada que el test publicó a mano (BM-B).</summary>
+    /// <summary>ADR 0186: resuelve ya una entrada de <paramref name="tacklerIndex"/> sobre <paramref name="victimIndex"/>, estén donde estén.</summary>
+    internal void ResolveTackleForTest(int tacklerIndex, int victimIndex)
+    {
+        var tackler = _players[tacklerIndex];
+        tackler.TackleTarget = _players[victimIndex];
+        tackler.TackleOffBall = !ReferenceEquals(_ball.Owner, _players[victimIndex]);
+        tackler.EnterState(PlayerState.Tackling, 0);
+        ResolveTackle(tackler);
+    }
+
     internal void FinishRepeatedTackleForTest(MatchPlayer tackler) => FinishRepeatedTackle(tackler, wasFoul: false, won: false, deferredFall: false);
 
     /// <summary>
@@ -4257,7 +4268,12 @@ internal sealed class MatchEngine : IPerkWorld
         // que ninguna resolución posterior herede la bandera de una decisión vieja.
         bool offBall = tackler.TackleOffBall;
         tackler.TackleOffBall = false;
-        float reach = _catalog.Ai.Context.TackleDistanceMaxCells + TackleReachMargin;
+
+        // ADR 0186, enmienda (elf_none): ESCAPAR SIRVE. Quien entra sigue a la víctima, pero al resolver ésta tiene que
+        // seguir dentro del alcance con el que se decidió la entrada, sin el margen; si se ha ido más allá, la entrada
+        // falla (no hay contacto ni suceso). La velocidad vuelve a servir para escapar de una entrada.
+        float reach = _catalog.Ai.Context.TackleDistanceMaxCells
+            + (_tuning.Tackle.EscapeBeyondDecisionReach ? 0f : TackleReachMargin);
         if (carrier is null || !carrier.OnPitch || Vec2.Distance(tackler.Position, carrier.Position) > reach)
         {
             // El rival se fue de su alcance antes de que la entrada llegara: no hay contacto ni evento.

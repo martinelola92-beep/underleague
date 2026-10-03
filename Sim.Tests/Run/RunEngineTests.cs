@@ -186,8 +186,9 @@ public class RunEngineTests
         var systems = new TestRunSystems { OpponentQuality = 20 };
         // La semilla se elige para que el partido se gane: con calidad 80 contra 20 se gana casi
         // siempre, pero "casi" no es "siempre", y el id del nodo de jefe -del que sale la semilla del
-        // partido- se movió con el mapa de cuatro carriles (ADR 0053).
-        var state = RunStateBuilder.From(TestRuns.Setup(quality: 80), 4115, Catalog)
+        // partido- se movió con el mapa de cuatro carriles (ADR 0053). ADR 0186: con la 4115 este partido se pierde
+        // (medido: 39 de 40 semillas 4100-4139 ganan; la 4115 es la única derrota), así que pasa a la 4116.
+        var state = RunStateBuilder.From(TestRuns.Setup(quality: 80), 4116, Catalog)
             .AtAct(3)
             .BeforeBoss()
             .Build();
