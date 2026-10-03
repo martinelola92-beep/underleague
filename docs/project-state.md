@@ -48,6 +48,15 @@ independiente, rebase y merge a `main`, push):
    - en `/Sim` con ADR: aceleración (H4) y oscilación (H8).
    Ver `docs/pendientes/BV-A.md`.
 
+**3 OCT (noche)**: `main` 0c14921, `.exe` en el Escritorio. Entraron:
+- ADR 0185 arranque y frenada en juego abierto (`accelTicks` 2, elegido con criterio previo; 3 medido como alternativa): inversiones 0,093→0,020/s;
+- IK de pies (BV-A cuarta pasada): pie apoyado en giros 0,45-0,51 → 0,27-0,34;
+- arreglos de paso: `BallDead` al empezar reanudación (sacador derribado), saque de falta pendiente en la turba, Caño con el defensor derribado (congelación de 411 ticks), teletransporte del sacador.
+
+Puertas rojas, sin mover bandas: curva de jefes, `orc_violence`, doctrinas, `betterTeamWinRate` 90,36, `elf_brawler`. `elf_none` vuelve a la banda con poco margen.
+
+Siguiente: que el revisor lo juegue; fase de balance (runWinRate, puertas rojas); BN-A (opción c por defecto).
+
 **CIERRE DEL 3 OCT (tarde)**: `main` ca2ff55, con `.exe` en el Escritorio. Entraron:
 - ADR 0184: la IA deja de dudar (43→13,5 % de inversiones deshechas).
 - ADR 0186: la entrada llega a la víctima; en la falta cae la víctima; quien es más rápido escapa.
