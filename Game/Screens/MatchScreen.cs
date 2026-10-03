@@ -520,6 +520,7 @@ public partial class MatchScreen : Control
     private void ChooseSubstitute(SubstitutionPoint point, int playerId)
     {
         _run.Substitute(new Substitution(point.Tick, point.OutPlayerId, playerId));
+        _run.CompleteDecision(); // vista de depuración: espera la simulación (ADR 0191)
         _window?.QueueFree();
         _window = null;
         ReloadPlayback(point.Tick);

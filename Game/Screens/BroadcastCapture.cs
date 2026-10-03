@@ -102,6 +102,14 @@ public partial class BroadcastCapture : Control
             return;
         }
 
+        // BX-19: `-- paron` mide cuánto se para la retransmisión al cambiar de orden o usar un consumible.
+        if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "paron") >= 0)
+        {
+            await MeasureReplanStall(run);
+            GetTree().Quit();
+            return;
+        }
+
         // ADR 0175: `-- turba` captura sólo la turba con el campo estrechado (salta el recorrido entero): el
         // primer partido que llega a la prórroga, con el público ocupando las filas exteriores.
         if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "turba") >= 0)
@@ -1376,6 +1384,104 @@ public partial class BroadcastCapture : Control
         await Save("pausa-3-reanuda");
         Drop(instance);
         return true;
+    }
+
+    /// <summary>
+    /// BX-19, ADR 0191: cuánto se para la retransmisión en cada decisión en vivo (orden táctica, consumible), con la
+    /// pantalla de verdad y la decisión en segundo plano como con el ratón. Mide el hilo principal: el clic, cada
+    /// fotograma mientras se simula (lógica de la pantalla, sin el dibujo) y el fotograma en que se aplica; cuenta los
+    /// fotogramas sostenidos y comprueba que el partido del hilo de fondo es el mismo que el del hilo principal.
+    /// </summary>
+    private async Task MeasureReplanStall(RunController run)
+    {
+        const double Delta = 1d / 60d;
+        foreach (var seed in new[] { Seeds[0], Seeds[1], Seeds[2] })
+        {
+            run.NewRun("orc_ironworks", Race.Orc, seed);
+            run.SeedForCapture(state => state.WithTakenConsumable("field_bandage"));
+            int node = FirstOfKind(run, n => n.IsMatch);
+            if (node < 0)
+            {
+                continue;
+            }
+
+            run.SelectedNodeId = node;
+            var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+            if (instance is not BroadcastScreen screen)
+            {
+                Drop(instance);
+                continue;
+            }
+
+            int frame = 300;
+            foreach (var step in new[] { "o2", "o0", "o1", "c", "o2", "o0" })
+            {
+                await ShowFrame(screen, frame, "paron");
+                var normal = System.Diagnostics.Stopwatch.StartNew();
+                StepManual(screen, Delta, 1);
+                double normalMs = normal.Elapsed.TotalMilliseconds;
+
+                var total = System.Diagnostics.Stopwatch.StartNew();
+                if (step == "c")
+                {
+                    screen.ChooseConsumable("field_bandage", wait: false);
+                }
+                else
+                {
+                    screen.ChooseOrder(step[1] - '0', wait: false);
+                }
+
+                double clickMs = total.Elapsed.TotalMilliseconds;
+                int held = 0;
+                double worstMs = 0;
+                double applyMs = 0;
+                while (screen.AwaitingDecision && held < 2000)
+                {
+                    await Settle(1);
+                    var one = System.Diagnostics.Stopwatch.StartNew();
+                    bool waiting = screen.AwaitingDecision;
+                    StepManual(screen, Delta, 1);
+                    double ms = one.Elapsed.TotalMilliseconds;
+                    if (waiting && !screen.AwaitingDecision)
+                    {
+                        applyMs = ms;
+                    }
+                    else
+                    {
+                        worstMs = Math.Max(worstMs, ms);
+                        held++;
+                    }
+                }
+
+                double waitMs = total.Elapsed.TotalMilliseconds;
+                string same = Fingerprint(run.Playback!) == Fingerprint(run.ReplayOnMainThreadForCheck()) ? "igual" : "DISTINTO";
+                GD.Print($"paron: semilla {seed} fotograma {frame} {step} · clic {clickMs:F1} ms · {held} fotogramas sostenidos en {waitMs:F0} ms "
+                    + $"(peor lógica de un fotograma {worstMs:F1} ms) · fotograma que aplica {applyMs:F1} ms · uno normal {normalMs:F1} ms · partido {same}");
+                if (seed == Seeds[0] && step == "o2" && frame == 300)
+                {
+                    // La retransmisión sigue tras la decisión en segundo plano: la orden nueva en el tablero y el campo en marcha.
+                    StepManual(screen, Delta, 90);
+                    await Settle(2);
+                    await Save("paron-tras-orden");
+                }
+
+                frame += 200;
+            }
+
+            Drop(instance);
+        }
+    }
+
+    private static string Fingerprint(Underleague.Sim.Run.View.MatchPlayback playback)
+    {
+        var text = new System.Text.StringBuilder();
+        text.Append(playback.Result.Trace?.FrameCount).Append('|');
+        foreach (var e in playback.Result.Events)
+        {
+            text.Append(e.Tick).Append(':').Append(e.Type).Append(':').Append(e.Actor).Append(':').Append(e.Detail).Append(';');
+        }
+
+        return text.ToString();
     }
 
     private async Task CaptureOrder(RunController run, ulong seed, int node)

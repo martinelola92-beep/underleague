@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Underleague.Sim.Data;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Events;
 using Underleague.Sim.Model;
@@ -49,7 +51,7 @@ public partial class RunController
     private int _floorTick;
     private PendingMatch? _resume;
 
-    // True mientras PlayMatch/Answer llaman a Enter: es la entrada «legítima» al partido abierto. Cualquier otra
+    // True mientras PlayMatch o una decisión aplican el partido (ApplyReplay): es la entrada «legítima» al partido abierto. Cualquier otra
     // entrada o decisión con un partido abierto significa que el jugador ya salió de él sin pasar por el informe.
     private bool _replaying;
 
@@ -103,12 +105,150 @@ public partial class RunController
     /// resuelven con la política por defecto en <c>/Sim</c> (ADR 0183) y quedan anotados en
     /// <see cref="Decisions"/>, para que lo que se enseña y lo que se aplica sean el mismo partido.
     /// </summary>
-    private MatchPlayback PlaybackFor(RunState before, int nodeId)
+    // BX-19, ADR 0191: cada decisión en vivo vuelve a simular el partido, y eso se hace FUERA del hilo principal para
+    // que la retransmisión no se congele. `_decision` es la simulación en marcha; `_decisionConsumable`, el manual
+    // pulsado (si no llega a dispararse, la pulsación se retira). `/Sim` no es reentrante: el hilo de fondo juega con
+    // su PROPIO catálogo (`_decisionCatalog`, cargado de la misma fuente que `Catalog`), nunca con el de la pantalla.
+    private Task<DecisionReplay>? _decision;
+    private string? _decisionConsumable;
+    private Func<Catalog>? _catalogFactory;
+    private Task<Catalog>? _decisionCatalog;
+
+    private sealed record DecisionReplay(MatchPlayback Playback, MatchEntry Entry, MatchDecisions Resolved);
+
+    /// <summary>Qué pasó con una decisión en vivo al consultarla (<see cref="TryCompleteDecision"/>).</summary>
+    public enum DecisionProgress
     {
-        var playback = MatchPlaybacks.OfResolvingBlockedPoints(
-            before, nodeId, Catalog!, Engine, trace: true, Decisions, _floorTick, out var resolved);
-        Decisions = resolved;
-        return playback;
+        /// <summary>No había ninguna decisión simulándose.</summary>
+        None,
+
+        /// <summary>Sigue simulándose: la pantalla mantiene el fotograma de la decisión.</summary>
+        Pending,
+
+        /// <summary>Terminada y aplicada (o retirada, si era un manual que no llegó a dispararse).</summary>
+        Applied,
+    }
+
+    /// <summary>True mientras una decisión en vivo se está simulando en segundo plano (ADR 0191).</summary>
+    public bool DecisionPending => _decision is not null;
+
+    /// <summary>
+    /// El catálogo propio del hilo de fondo: se empieza a cargar al abrir el partido, en segundo plano, para que la
+    /// primera decisión no lo pague. Mismos ficheros que <see cref="Catalog"/>, así que el partido es el mismo.
+    /// </summary>
+    private Task<Catalog> DecisionCatalog()
+    {
+        var factory = _catalogFactory ?? throw new InvalidOperationException("no hay catálogo de la run");
+        return _decisionCatalog ??= Task.Run(factory);
+    }
+
+    /// <summary>
+    /// La reproducción y la entrada en el nodo con las decisiones dadas, con UNA simulación cuando se puede
+    /// (<see cref="MatchPlaybacks.PlayAndEnter"/>, ADR 0191). Los puntos de sustitución por debajo de lo ya visto se
+    /// resuelven con la política por defecto en <c>/Sim</c> (ADR 0183), y van en <c>Resolved</c>.
+    /// </summary>
+    private static DecisionReplay Replay(
+        RunState before, int nodeId, Catalog catalog, IRunSystems systems, MatchDecisions decisions, int floorTick)
+    {
+        var (playback, entry) = MatchPlaybacks.PlayAndEnter(before, nodeId, catalog, systems, decisions, floorTick, out var resolved);
+        return new DecisionReplay(playback, entry, resolved);
+    }
+
+    /// <summary>
+    /// Deja el partido como la simulación dice: la reproducción, las decisiones resueltas y el estado de después, y
+    /// avisa y guarda como una entrada (<see cref="AfterTransition"/>: el guardado del peor caso, ADR 0183).
+    /// </summary>
+    private void ApplyReplay(DecisionReplay replay)
+    {
+        Decisions = replay.Resolved;
+        Playback = replay.Playback;
+        LastMatch = replay.Entry;
+        State = replay.Entry.State;
+        SelectedNodeId = -1;
+        _replaying = true;
+        try
+        {
+            AfterTransition();
+        }
+        finally
+        {
+            _replaying = false;
+        }
+    }
+
+    /// <summary>
+    /// Para la pantalla, una vez por fotograma mientras <see cref="DecisionPending"/>: si la simulación de fondo ya
+    /// terminó, la aplica (en el hilo principal) y devuelve <see cref="DecisionProgress.Applied"/>.
+    /// </summary>
+    public DecisionProgress TryCompleteDecision()
+    {
+        if (_decision is null)
+        {
+            return DecisionProgress.None;
+        }
+
+        if (!_decision.IsCompleted)
+        {
+            return DecisionProgress.Pending;
+        }
+
+        FinishDecision();
+        return DecisionProgress.Applied;
+    }
+
+    /// <summary>
+    /// Espera a la decisión en marcha y la aplica. Para quien necesita el partido nuevo YA (la vista de depuración, el
+    /// arnés de capturas) y para todo lo que cierra o guarda el partido: una decisión no se pierde por salir.
+    /// </summary>
+    public void CompleteDecision()
+    {
+        if (_decision is not null)
+        {
+            FinishDecision();
+        }
+    }
+
+    private void FinishDecision()
+    {
+        var task = _decision!;
+        string? consumable = _decisionConsumable;
+        _decision = null;
+        _decisionConsumable = null;
+
+        // GetResult relanza aquí, en el hilo principal, cualquier excepción de /Sim: una decisión que el motor
+        // rechaza falla igual que antes, no se pierde en el hilo de fondo.
+        var replay = task.GetAwaiter().GetResult();
+
+        // Un manual sólo cuenta como usado si el partido re-simulado lo disparó de verdad (CONSUMABLE_USED de nuestro
+        // equipo): si el tick queda fuera del partido, o el partido cambió y acabó antes, la pulsación se retira y el
+        // botón vuelve a estar vivo. Lo mismo hace /Sim al gastar (solo sale del hueco el que se activó, RF-085). El
+        // partido de antes sigue en Playback/State, así que retirarla es no aplicar nada.
+        if (consumable is not null && !Fired(replay.Playback, consumable))
+        {
+            return;
+        }
+
+        ApplyReplay(replay);
+    }
+
+    /// <summary>
+    /// Sólo para el arnés de capturas (BX-19): el partido actual simulado otra vez en el hilo principal y con el
+    /// catálogo de la pantalla, para comprobar que el del hilo de fondo es el mismo.
+    /// </summary>
+    public MatchPlayback ReplayOnMainThreadForCheck() =>
+        Replay(_stateBeforeMatch!, _matchNodeId, Catalog!, _systems, Decisions, _floorTick).Playback;
+
+    private static bool Fired(MatchPlayback playback, string consumableId)
+    {
+        foreach (var e in playback.Result.Events)
+        {
+            if (e.Type == EventType.ConsumableUsed && e.Team == 0 && string.Equals(e.Detail, consumableId, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void WriteCheckpoint(bool pessimistic)
@@ -125,6 +265,7 @@ public partial class RunController
     /// </summary>
     public void CommitMatch()
     {
+        CompleteDecision();
         if (!_matchOpen)
         {
             return;
@@ -136,6 +277,9 @@ public partial class RunController
 
     private void ForgetMatch()
     {
+        // Una run nueva o cargada: la decisión que se estuviera simulando era de otro partido, se tira.
+        _decision = null;
+        _decisionConsumable = null;
         _matchOpen = false;
         _watchedTick = 0;
         _floorTick = 0;
@@ -154,6 +298,7 @@ public partial class RunController
     /// </summary>
     public void Substitute(Substitution substitution)
     {
+        CompleteDecision(); // ADR 0191: la decisión se construye sobre el partido que dejó la anterior
         if (!CanDecideAt(substitution.Tick + 1))
         {
             return;
@@ -175,6 +320,7 @@ public partial class RunController
     /// </summary>
     public void Decline(SubstitutionPoint point)
     {
+        CompleteDecision(); // ADR 0191: la decisión se construye sobre el partido que dejó la anterior
         ArgumentNullException.ThrowIfNull(point);
         if (!CanDecideAt(point.Tick + 1))
         {
@@ -200,6 +346,7 @@ public partial class RunController
     /// </summary>
     public void PlayOn(SubstitutionPoint point)
     {
+        CompleteDecision(); // ADR 0191: la decisión se construye sobre el partido que dejó la anterior
         ArgumentNullException.ThrowIfNull(point);
         if (State is null || Catalog is null || _stateBeforeMatch is null)
         {
@@ -239,6 +386,7 @@ public partial class RunController
     /// </summary>
     public void ChangeOrder(int tick, Mentality order)
     {
+        CompleteDecision(); // ADR 0191: la decisión se construye sobre el partido que dejó la anterior
         if (!CanDecideAt(tick))
         {
             return;
@@ -302,6 +450,7 @@ public partial class RunController
     /// </summary>
     public void UseConsumable(string id, int tick)
     {
+        CompleteDecision(); // ADR 0191: la decisión se construye sobre el partido que dejó la anterior
         ArgumentException.ThrowIfNullOrEmpty(id);
         if (!CanDecideAt(tick))
         {
@@ -317,28 +466,8 @@ public partial class RunController
             }
         }
 
-        var before = Decisions;
         activations.Add(new ManualActivation(id, tick));
-        Answer(Decisions with { ManualActivations = activations });
-
-        // Un manual solo cuenta como usado si el partido re-simulado lo disparó de verdad (CONSUMABLE_USED de
-        // nuestro equipo): si el tick queda fuera del partido, o el partido cambió y acabó antes, la pulsación
-        // se retira y el botón vuelve a estar vivo. Lo mismo hace /Sim al gastar (solo sale del hueco el que
-        // se activó, RF-085).
-        bool fired = false;
-        foreach (var e in Playback!.Result.Events)
-        {
-            if (e.Type == EventType.ConsumableUsed && e.Team == 0 && string.Equals(e.Detail, id, StringComparison.Ordinal))
-            {
-                fired = true;
-                break;
-            }
-        }
-
-        if (!fired)
-        {
-            Answer(before);
-        }
+        Answer(Decisions with { ManualActivations = activations }, consumableId: id);
     }
 
     /// <summary>
@@ -346,17 +475,28 @@ public partial class RunController
     /// run vuelve a entrar en el nodo desde el estado previo, así que la reproducción y lo que se aplica de
     /// verdad son el mismo partido (ADR 0094, RT-024).
     /// </summary>
-    private void Answer(MatchDecisions decisions)
+    /// <para>BX-19, ADR 0191: la simulación va en segundo plano y se aplica en <see cref="TryCompleteDecision"/> o
+    /// <see cref="CompleteDecision"/>; mientras tanto <see cref="Playback"/> y el estado siguen siendo los de antes. El
+    /// partido que sale es el mismo que con la simulación en el hilo principal: mismo estado previo, mismas
+    /// decisiones, mismo suelo y un catálogo cargado de los mismos ficheros.</para>
+    /// </summary>
+    private void Answer(MatchDecisions decisions, string? consumableId = null)
     {
         if (State is null || Catalog is null || _stateBeforeMatch is null || _matchNodeId < 0)
         {
             throw new InvalidOperationException("no hay ningún partido en reproducción");
         }
 
-        Decisions = decisions;
-        Playback = PlaybackFor(_stateBeforeMatch, _matchNodeId);
-        State = _stateBeforeMatch;
-        EnterOpenMatch(_matchNodeId);
+        // Una decisión a la vez: la siguiente se toma sobre el partido que deja la anterior.
+        CompleteDecision();
+
+        var before = _stateBeforeMatch;
+        int nodeId = _matchNodeId;
+        int floorTick = _floorTick;
+        var systems = _systems;
+        var catalog = DecisionCatalog();
+        _decisionConsumable = consumableId;
+        _decision = Task.Run(() => Replay(before, nodeId, catalog.GetAwaiter().GetResult(), systems, decisions, floorTick));
     }
 
     /// <summary>
@@ -383,21 +523,10 @@ public partial class RunController
         _stateBeforeMatch = State;
         _matchNodeId = nodeId;
         _matchOpen = true;
-        Playback = PlaybackFor(State, nodeId);
-        EnterOpenMatch(nodeId);
-    }
 
-    private void EnterOpenMatch(int nodeId)
-    {
-        _replaying = true;
-        try
-        {
-            Enter(nodeId);
-        }
-        finally
-        {
-            _replaying = false;
-        }
+        // ADR 0191: el catálogo de las decisiones en vivo se carga ya, en segundo plano, mientras se ve el partido.
+        DecisionCatalog();
+        ApplyReplay(Replay(State, nodeId, Catalog, _systems, Decisions, _floorTick));
     }
 
     /// <summary>Log de eventos del último partido (RF-121); vacío si todavía no se ha jugado ninguno.</summary>

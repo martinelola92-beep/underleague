@@ -128,6 +128,8 @@ public partial class RunController : Node
     {
         var files = GameData.Snapshot;
         Catalog = DataLoader.FromJson(files);
+        _catalogFactory = () => DataLoader.FromJson(files);
+        _decisionCatalog = null;
         Systems = StandardRunSystems.FromJson(files);
         Bosses = BossCatalog.FromJson(files);
 
@@ -194,6 +196,8 @@ public partial class RunController : Node
             var loaded = RunSave.Load(file.GetAsText(), out var lostConsumables, out var pendingMatch);
             var state = SnapshotCompletion.Complete(loaded, GameData.Snapshot);
             Catalog = RunSave.CatalogFromSnapshot(state);
+            _catalogFactory = () => RunSave.CatalogFromSnapshot(state);
+            _decisionCatalog = null;
             Systems = StandardRunSystems.FromJson(state.DataSnapshot, fromRunSnapshot: true);
             Bosses = BossCatalog.FromJson(state.DataSnapshot);
             _systems = new BossRunSystems(Bosses, Systems);
@@ -315,6 +319,8 @@ public partial class RunController : Node
     /// </summary>
     public void Save()
     {
+        // ADR 0191: una decisión que se está simulando en segundo plano entra en el guardado; salir no la pierde.
+        CompleteDecision();
         if (State is null)
         {
             return;

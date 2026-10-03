@@ -251,6 +251,12 @@ public partial class BroadcastScreen : Control
             return;
         }
 
+        // ADR 0191: con una decisión simulándose, se sostiene el fotograma de la decisión (el campo 3D sigue dibujándolo).
+        if (!ResumeIfDecided(wait: false))
+        {
+            return;
+        }
+
         int candidate = _frame;
         if (!_frozenLastFrame)
         {
@@ -585,7 +591,7 @@ public partial class BroadcastScreen : Control
         var point = _pendingPoint;
         _pendingPoint = null;
         _run.Substitute(new Substitution(point.Tick, point.OutPlayerId, playerId));
-        AfterDecision(point.Tick, alreadyShown: true);
+        AwaitDecision(point.Tick, alreadyShown: true);
     }
 
     /// <summary>
@@ -612,8 +618,53 @@ public partial class BroadcastScreen : Control
             _run.Decline(point);
         }
 
-        AfterDecision(point.Tick, alreadyShown: true);
+        AwaitDecision(point.Tick, alreadyShown: true);
     }
+
+    // BX-19, ADR 0191: la decisión se simula en segundo plano (RunController). Mientras tanto la pantalla sigue
+    // dibujando el fotograma de la decisión —lo anterior a ese tick no cambia— y no avanza el reloj ni admite otra
+    // decisión; al terminar, AfterDecision reanuda exactamente como antes. `_awaitedTick` < 0: nada que esperar.
+    private int _awaitedTick = -1;
+    private bool _awaitedAlreadyShown;
+
+    /// <summary>True mientras la pantalla espera a que se simule una decisión (ADR 0191).</summary>
+    public bool AwaitingDecision => _awaitedTick >= 0;
+
+    private void AwaitDecision(int decisionTick, bool alreadyShown)
+    {
+        _awaitedTick = decisionTick;
+        _awaitedAlreadyShown = alreadyShown;
+        ResumeIfDecided(wait: false);
+    }
+
+    /// <summary>
+    /// Reanuda en cuanto la decisión está simulada. <paramref name="wait"/> la espera en el hilo principal: sólo el
+    /// arnés de capturas, que necesita el partido nuevo en la misma llamada. True si ya no hay nada que esperar.
+    /// </summary>
+    private bool ResumeIfDecided(bool wait)
+    {
+        if (_awaitedTick < 0)
+        {
+            return true;
+        }
+
+        if (wait)
+        {
+            _run.CompleteDecision();
+        }
+        else if (_run.TryCompleteDecision() == RunController.DecisionProgress.Pending)
+        {
+            return false;
+        }
+
+        int tick = _awaitedTick;
+        _awaitedTick = -1;
+        AfterDecision(tick, _awaitedAlreadyShown);
+        return true;
+    }
+
+    /// <summary>Para el arnés de capturas: espera la decisión en marcha y reanuda, como si ya hubiera terminado.</summary>
+    public void FinishDecisionForCapture() => ResumeIfDecided(wait: true);
 
     /// <summary>Lo que hay que rehacer en la pantalla después de cualquiera de las tres respuestas.</summary>
     /// <param name="alreadyShown">
@@ -1859,7 +1910,15 @@ public partial class BroadcastScreen : Control
     /// reanuda desde aquí, por el mismo camino que una sustitución.
     /// </summary>
     /// <summary>Para el arnés de capturas: lo mismo que pulsar el botón de orden.</summary>
-    public void ChooseOrder(int index) => OnOrderChosen(index);
+    /// <param name="wait">False sólo para medir el parón (BX-19): la decisión se simula en segundo plano, como con el ratón.</param>
+    public void ChooseOrder(int index, bool wait = true)
+    {
+        OnOrderChosen(index);
+        if (wait)
+        {
+            FinishDecisionForCapture();
+        }
+    }
 
     private void OnOrderChosen(int index)
     {
@@ -1876,7 +1935,7 @@ public partial class BroadcastScreen : Control
         }
 
         _run.ChangeOrder(tick, order);
-        AfterDecision(tick, alreadyShown: false);
+        AwaitDecision(tick, alreadyShown: false);
     }
 
     /// <summary>
@@ -1885,7 +1944,15 @@ public partial class BroadcastScreen : Control
     /// dentro y se reanuda desde aquí.
     /// </summary>
     /// <summary>Para el arnés de capturas: lo mismo que pulsar el botón del consumible.</summary>
-    public void ChooseConsumable(string id) => OnConsumableChosen(id);
+    /// <param name="wait">False sólo para medir el parón (BX-19): la decisión se simula en segundo plano, como con el ratón.</param>
+    public void ChooseConsumable(string id, bool wait = true)
+    {
+        OnConsumableChosen(id);
+        if (wait)
+        {
+            FinishDecisionForCapture();
+        }
+    }
 
     private void OnConsumableChosen(string id)
     {
@@ -1896,7 +1963,7 @@ public partial class BroadcastScreen : Control
 
         int tick = trace.TickAt(Mathf.Clamp(_frame, 0, trace.FrameCount - 1)) + 1;
         _run.UseConsumable(id, tick);
-        AfterDecision(tick, alreadyShown: false);
+        AwaitDecision(tick, alreadyShown: false);
     }
 
     /// <summary>
@@ -1907,7 +1974,7 @@ public partial class BroadcastScreen : Control
     /// consumible manual: las dos son "el jugador interviene ahora mismo en el partido en marcha".
     /// </summary>
     private bool CanActNow() =>
-        !_matchEnded && _pendingPoint is null && _pendingDeathEvent is null && !_deathTrayPending && !_frozenLastFrame
+        !_matchEnded && _awaitedTick < 0 && _pendingPoint is null && _pendingDeathEvent is null && !_deathTrayPending && !_frozenLastFrame
         && HasNextTick() && CanDecideNextTick();
 
     /// <summary>
@@ -2151,6 +2218,7 @@ public partial class BroadcastScreen : Control
 
         var recommended = SubstitutionPolicy.Default(_pendingPoint, outPlayer);
         OnSubstituteChosen(recommended.Id);
+        FinishDecisionForCapture();
         return true;
     }
 }
