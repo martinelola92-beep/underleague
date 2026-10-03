@@ -20,10 +20,10 @@ se quedaba corta ahora llega (+5 % de entradas resueltas), y el elfo «pierde si
 raza). Opciones para el revisor, sin medir: un ajuste de raza del elfo (técnica o evasión), o que la evasión en la
 entrada (`TackleWinChance`) pese más la técnica del portador.
 
-**Actualización (3 oct 2026, ADR 0185 encendida, `accelTicks` 3 acotado al juego abierto):** `elf_none` **41,27 · 44,10 ·
-42,30** (semillas 1-3), dentro de la banda; la puerta completa en verde. Mecanismo **sin aislar** (no se ha medido qué
-parte del arranque lo devuelve). El enano queda alto
-(58,65 · 57,15 · 58,58, techo 60). `betterTeamWinRate` de la puerta también en verde en esa pasada.
+**Actualización (3 oct 2026, ADR 0185 encendida, `accelTicks` 2 acotado al juego abierto):** `elf_none` **40,85 · 42,55 ·
+40,80** (semillas 1-3; con 3 eran 41,27 · 44,10 · 42,30), dentro de la banda pero con poco margen; la puerta completa en
+verde. Mecanismo **sin aislar** (no se ha medido qué parte del arranque lo devuelve). El enano, 57,33 · 55,88 · 57,95
+(techo 60).
 
 ## 2. `StatisticalTests` — `betterTeamWinRate` 60-40 por encima de 90 en la semilla 1
 
