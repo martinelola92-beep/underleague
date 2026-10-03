@@ -592,11 +592,13 @@ public sealed partial class PlayerModel : Node3D
         // pedida al lanzar el gesto se perdía, porque la transición reinicia su entrada a 0 después de buscar; la plancha
         // arrancaba en su segundo 0 y no en el 0,83 pedido, y el instrumento (que leía este reloj) no lo veía (Regla J).
         // Colocándolo siempre, el reloj de aquí y el clip que se ve son el mismo.
-        _tree.Set("parameters/gesture_scale/scale", 0f);
+        // El ritmo NO puede ser 0: con él el fundido de la transición tampoco avanzaba y el gesto anterior se quedaba
+        // mezclado para siempre (era la otra mitad del «gesto clavado en su segundo 0»).
+        _tree.Set("parameters/gesture_scale/scale", rate * _gestureSpeed);
         if (_gesture.Length > 0)
         {
             float clipTime = _gestureLength == float.MaxValue ? Mathf.PosMod(_gestureTime, ClipLength(_gesture)) : _gestureTime;
-            _tree.Set("parameters/gesture_seek/seek_request", Mathf.Max(0f, clipTime));
+            _tree.Set($"parameters/s_{_gesture}/seek_request", Mathf.Max(0f, clipTime));
         }
 
         float weightTarget = _gesture.Length > 0 ? 1f : 0f;
@@ -1134,7 +1136,7 @@ public sealed partial class PlayerModel : Node3D
         _tree.Set("parameters/gesture/transition_request", key);
         if (offset > 0f)
         {
-            _tree.Set("parameters/gesture_seek/seek_request", offset);
+            _tree.Set($"parameters/s_{key}/seek_request", offset);
         }
 
         _gesture = key;
@@ -1258,14 +1260,18 @@ public sealed partial class PlayerModel : Node3D
                 node.LoopMode = Animation.LoopModeEnum.None;
             }
 
+            // Cada gesto con su propia búsqueda JUNTO al clip, por debajo de la transición (BV-A, tercera pasada): medido con
+            // la cadera dibujada, una búsqueda por encima de la transición no llegaba al clip y el gesto se quedaba en su
+            // segundo 0. Es el mismo montaje que la marcha (jog_seek/run_seek), que sí se ve en fase.
             root.AddNode("g_" + GestureKeys[i], node);
-            root.ConnectNode("gesture", i, "g_" + GestureKeys[i]);
+            root.AddNode("s_" + GestureKeys[i], new AnimationNodeTimeSeek());
+            root.ConnectNode("s_" + GestureKeys[i], 0, "g_" + GestureKeys[i]);
+            root.ConnectNode("gesture", i, "s_" + GestureKeys[i]);
         }
 
-        root.AddNode("gesture_seek", new AnimationNodeTimeSeek());
-        root.ConnectNode("gesture_seek", 0, "gesture");
+
         root.AddNode("gesture_scale", new AnimationNodeTimeScale());
-        root.ConnectNode("gesture_scale", 0, "gesture_seek");
+        root.ConnectNode("gesture_scale", 0, "gesture");
         root.AddNode("mix", new AnimationNodeBlend2());
         root.ConnectNode("mix", 0, "loco");
         root.ConnectNode("mix", 1, "gesture_scale");
