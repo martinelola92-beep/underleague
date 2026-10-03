@@ -30,8 +30,11 @@ la jugada): la carnicería sigue, la segunda muerte no. Cuenta `MatchPlayer.Deat
 muerte efectiva de un rival: una muerte anulada (`no_dying`) no gasta el tope. 0 = sin tope, el comportamiento
 anterior y el control de la medición.
 
-La ficha del perk lo dice (RT-035, plantilla `lethalContactRisk`): «puede matar al rival implicado en la jugada,
-aunque esté sano; una sola vida por partido». Un test ata el texto al dato.
+La ficha de los **cuatro** letales lo dice (RT-035, plantillas `lethalContactRisk` y `lethalRisk`): «…; una sola vida
+por partido». Un test ata el texto al dato. El tope es del **perk**: la vía 1 de RF-093 (alinear a un lesionado grave
+que vuelve a lesionarse, `Kill(…, "severeInjury", …)`) no pasa por él y sigue avisada aparte
+(`SevereInjuryDeathRisk`); como cuenta `DeathsCaused`, una muerte por esa vía sí gasta el tope del portador. Las dos
+cosas juntas son raras (0,004-0,006 muertes por partido por la vía 1).
 
 **Y para no salir de la banda de la ADR 0170**, `marrow_thirst.lethalChance` **900 → 1800** (ver Medición).
 
@@ -92,8 +95,9 @@ Partecráneos no cambia (84 %): el tope corta la serie, no la primera muerte.
 
 **`marrow_thirst` sube**, y el revisor sospechaba de él. La sonda lo absuelve del patrón (sus muertes llegan de una
 en una) y es el único letal que reparte en actos 2 y 3 sin concentrar: subirlo pone las muertes que el tope quita
-en partidos **distintos**, cada uno con su portador en el ojeo. Contra él muere alguien en el 28 % → ~40 % de los
-partidos. La alternativa —aceptar 0,095-0,101 y bajar el suelo de la banda— es posible (la ADR 0170 la llama
+en partidos **distintos**, cada uno con su portador en el ojeo. Contra él muere alguien en el **28 % → 48 %** de los
+partidos (semilla 1), y el ojeo enseña al más expuesto **9,5 % → 18,6 %** (el indicador lee `lethalChance`): sigue
+por debajo de lo real, la misma proporción que antes (AY-A). La alternativa —aceptar 0,095-0,101 y bajar el suelo de la banda— es posible (la ADR 0170 la llama
 provisional) pero esta ADR no la toma: la cifra de la ADR 0048 se respeta.
 
 **Las dos políticas siguen sin separarse** (0,128/0,108 frente a 0,132/0,116): la alineación casi no mueve la
@@ -113,5 +117,13 @@ muerte del mismo portador), no hubo que renovarlas.
 - **El número del ojeo sigue sin ser exacto (AY-A).** Contra Partecráneos enseña ~35 % al más expuesto y la
   probabilidad de que muera alguien es ~84 %. Con el tope la escala del error baja de «1,75 muertos» a «uno», pero
   el porcentaje sigue por debajo. Es la siguiente decisión de diseño de esta zona.
+- **El portador gastado sigue disparando su pergamino** (`PERK_TRIGGERED`) y en el partido nada dice que ya no
+  puede matar. «Gastar» al carnicero no se ve durante el partido; se lee en la ficha. Candidato a un aviso en `/Game`
+  (revisión independiente).
+- **La compensación descansa en dos semillas** (0,128 / 0,108, media 0,118 a 0,008 del suelo provisional). Si la
+  puerta de run vuelve a rozar el suelo, la discusión es el suelo de la ADR 0170, no otro letal.
+- **La sonda de BX-20 no está versionada**; lo reproducible desde el repo es la puerta de run (`deathsPerMatch`) y
+  los tests. El flujo de dados con y sin tope lo fija `TheCapDoesNotChangeTheDiceStream` (comprobado que cae si el
+  portador gastado deja de tirar).
 - **La condición 2 no se mide**: `RunPolicy.ChooseNode` no mira al rival. Lo que dice esta ADR sobre la política
   «que no lee» vale para quien entra en todos los partidos.
