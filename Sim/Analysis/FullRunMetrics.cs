@@ -479,7 +479,7 @@ public static class FullRunMetrics
     public static RosterCensus ProstheticCensus(IReadOnlyList<Underleague.Sim.Run.RunPlayer> roster)
     {
         ArgumentNullException.ThrowIfNull(roster);
-        int prosthetic = 0, plain = 0, maxProsthetic = 0, maxPlain = 0, maxProstheses = 0;
+        int prosthetic = 0, plain = 0, maxProsthetic = 0, maxPlain = 0, maxProstheses = 0, crippled = 0;
         long prostheticSum = 0, plainSum = 0;
         for (int i = 0; i < roster.Count; i++)
         {
@@ -491,6 +491,10 @@ public static class FullRunMetrics
                 prostheticSum += best;
                 maxProsthetic = Math.Max(maxProsthetic, best);
                 maxProstheses = Math.Max(maxProstheses, roster[i].Prostheses.Count);
+                if (roster[i].IsCrippled)
+                {
+                    crippled++;
+                }
             }
             else
             {
@@ -500,13 +504,13 @@ public static class FullRunMetrics
             }
         }
 
-        return new RosterCensus(prosthetic, plain, prostheticSum, plainSum, maxProsthetic, maxPlain, maxProstheses);
+        return new RosterCensus(prosthetic, plain, prostheticSum, plainSum, maxProsthetic, maxPlain, maxProstheses, crippled);
     }
 
     /// <summary>Resultado de <see cref="ProstheticCensus"/>.</summary>
     public readonly record struct RosterCensus(
         int ProstheticPlayers, int PlainPlayers, long ProstheticBestSum, long PlainBestSum,
-        int MaxProstheticBest, int MaxPlainBest, int MaxProstheses);
+        int MaxProstheticBest, int MaxPlainBest, int MaxProstheses, int Crippled = 0);
 
     /// <summary>Métricas de un solo conjunto de runs (una doctrina), con sus bandas y su desglose INFO.</summary>
     public static List<MetricResult> Describe(IReadOnlyList<RunPlayResult> runs, EconomyConfig economy)
@@ -534,7 +538,7 @@ public static class FullRunMetrics
         // los jugadores sin prótesis como grupo de control. Máximos sobre todas las runs, no medias.
         int maxProsthesesOnPlayer = 0, maxAttrProsthetic = 0, maxAttrPlain = 0;
         long prostheticPlayers = 0, plainPlayers = 0, prostheticAttrSum = 0, plainAttrSum = 0;
-        long slots = 0;
+        long slots = 0, crippledPlayers = 0;
         long roster = 0, level = 0, perks = 0, starterPerks = 0, items = 0, injuries = 0, severe = 0, counters = 0, ownInjuries = 0, matchInjuries = 0;
         long offers = 0, affordable = 0, purchases = 0, marketVisits = 0, goldAtMarket = 0;
         var actReached = new int[RunRules.Acts + 1];
@@ -635,6 +639,7 @@ public static class FullRunMetrics
                 maxAttrProsthetic = Math.Max(maxAttrProsthetic, census.MaxProstheticBest);
                 maxAttrPlain = Math.Max(maxAttrPlain, census.MaxPlainBest);
                 maxProsthesesOnPlayer = Math.Max(maxProsthesesOnPlayer, census.MaxProstheses);
+                crippledPlayers += census.Crippled;
             }
             enrollment += run.GoldSpentEnrollment;
             slots += run.SlotsBought;
@@ -824,6 +829,8 @@ public static class FullRunMetrics
         // con prótesis y sin ellas. Si el forjado supera con holgura al resto, hace falta un tope; si no, el techo
         // estructural (una prótesis por ranura, atributos a 99) basta.
         rows.Add(Info("maxProsthesesOnOnePlayer", maxProsthesesOnPlayer));
+        // ADR 0187: lisiados en la plantilla final (grave con el tope de prótesis); los vendidos o muertos no cuentan.
+        rows.Add(Info("crippledPerRun", (double)crippledPlayers / runs.Count));
         rows.Add(Info("maxAttributeProsthetic", maxAttrProsthetic));
         rows.Add(Info("maxAttributePlain", maxAttrPlain));
         rows.Add(Info("meanBestAttributeProsthetic", prostheticPlayers == 0 ? 0 : (double)prostheticAttrSum / prostheticPlayers));
