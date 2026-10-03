@@ -239,6 +239,25 @@ en el plazo con garantías. Queda como siguiente paso: retroceso y lateral son l
 `movimiento-despues.mp4` (10 s a 30 fps, x1, semilla 20260905, recepción y pase), todo en `Game/screenshots/movimiento/`.
 `ffmpeg` 7.0.2 estático en `~/.local/bin` (del paquete `imageio-ffmpeg` de PyPI).
 
+## Tercera pasada (3 oct 2026, madrugada): sensación (B) y entradas (ficha aparte)
+
+Entradas, faltas y caídas van en [BV-B](./BV-B.md). Aquí, lo procedural sin clips nuevos (commit `1614048`, más la
+histéresis de `8d35b19`):
+
+- **B1, inclinación**: el muñeco se inclina sobre sus pies con la aceleración filtrada (0,15 s) de su trayectoria DIBUJADA:
+  adelante al arrancar, atrás al frenar, hacia dentro en las curvas; 1,8°/(c/s²) con tope 12° (provisionales).
+- **B2, mirada**: cabeza (peso 0,8, tope 70°) y torso (0,25) siguen al balón con `LookAtModifier3D` de Godot 4.6 sobre el
+  esqueleto animado (sin tocar huesos ni nombres); quien lo lleva, poco; en el suelo, nada. En las hojas la cabeza no se
+  retuerce; que mire exactamente al balón es **LIKELY** (a esta escala no se resuelve).
+- **B4, espera**: cada jugador empieza su espera en otro punto del clip y a otro ritmo (±10 %), sin RNG (por número).
+- **B3, IK del pie apoyado: no hecho** (tiempo). `TwoBoneIK3D` existe en esta versión; habría que clavar el pie que pisa en
+  los giros, que es lo que deja el *pie de apoyo / cuerpo* en p90 ~1,1.
+- **Histéresis de la marcha lateral**: la segunda pasada hacía que el muñeco alternase entre mirar al balón y a la marcha en
+  fotogramas alternos (±24° cada fotograma, visto en el registro); ahora entra a 70° y sale a 63°.
+
+Medido con 3 semillas (tramo largo, x1): *pie de apoyo / cuerpo* p50 0,32 · 0,23 · 0,26 → 0,33 · 0,23 · 0,25 (sin cambio:
+B1-B4 no lo tocan); giros de yaw > 30° 0,09 · 0,24 · 0,12 % → 0,09 · 0,24 · 0,14 %.
+
 ## Riesgos
 
 - Suavizar con look-ahead hace que el cuerpo dibujado vaya hasta ~1 tick por detrás o por delante de la traza: el balón

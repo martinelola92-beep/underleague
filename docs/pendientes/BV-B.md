@@ -1,0 +1,79 @@
+# BV-B — Entradas, faltas y caídas: lo que se ve y lo que viene de `/Sim`
+
+**Estado:** **Parte `/Game` implementada (3 oct 2026, tercera pasada de BV-A)**, medida antes/después con 3 semillas (tabla
+abajo). **Abierto en `/Sim`** (sin tocar, anotado con semilla y tick): entradas que se resuelven desde lejos y la falta
+pitada en la que cae quien la comete y no quien la recibe. Hermanas: [BV-A](./BV-A.md) (movimiento de los modelos), BI-H
+(contacto con el balón), ADR 0173 (pausa breve en lo que para el juego).
+
+## Observación (revisor, vía coordinador)
+
+> «otro punto flaco son las entradas, faltas y caídas».
+
+## Cómo es hoy en `/Sim` (leído en `MatchEngine.ResolveTackle`, `WhistleOrLetPlay`; no supuesto)
+
+- La entrada se **decide** a ≤ `tackleDistanceMaxCells` = 1,0 casillas (`data/ai/weights.json`), dura `TacklingTicks` = 3
+  y se **resuelve** si el rival sigue a ≤ 1,0 + `TackleReachMargin` 0,3 = **1,3 casillas**. El suceso `TACKLE` cae en el tick
+  de la resolución.
+- Quién cae, en el mismo tick del suceso (desfase medido 0 en las 3 semillas): **ganada** → cae quien la recibe
+  (`KnockedDownTicks` 18 = 1,2 s); **fallada** → cae quien entra, la mitad (9 ticks = 0,6 s); **falta pitada** → cae **quien la
+  comete** (18 ticks) y la víctima **sigue de pie**; falta no vista y bloqueos, igual que la falta.
+
+## Medición (instrumento de BV-A: `-- movimiento`, tramos `caidaNN` alrededor de cada entrada o falta con jugadores con
+modelo; `tools/entradas-analisis.py`)
+
+Validación (Regla J): la cadera dibujada de pie corriendo da 0,49 casillas en las 3 semillas; tumbada, 0,08–0,15. El
+instrumento leía al principio el **reloj del muñeco** como «segundo del clip» y daba la plancha perfectamente alineada
+mientras la cadera dibujada bajaba 0,8 s tarde: la búsqueda del gesto se perdía tras la transición (arreglado en
+`8d35b19`). Desde entonces la medida que manda es la cadera.
+
+### Lo que viene de `/Sim` (anotado, no tocado)
+
+- **Entradas que golpean al aire**: en el tick de la resolución, la distancia entre los dos es p50 0,81–0,84 casillas y
+  p90 1,0–1,15; **11 de 28** entradas se resuelven a más de 0,9 casillas (dos radios de humano y una pierna). El patrón
+  es siempre el mismo: se decide a ~0,7 y durante los 3 ticks de `Tackling` el rival se aleja (la distancia crece). Casos:
+  - semilla 20260905: ticks 150 (1,01), 1398 (falta, 0,91), 1428 (ganada, 0,97), 1439 (falta sin balón, 1,19);
+  - semilla 20260906: ticks 453 (1,15), 616 (0,96), 664 (1,02), 916 (falta sin balón, **1,34**);
+  - semilla 20260907: ticks 116 (1,16), 691 (0,91), 799 (ganada, 1,08).
+  Lo que lo arreglaría es de `/Sim`: que quien entra cierre la distancia durante `Tackling`, o que el alcance de la
+  resolución no supere al de la decisión. Cambia quién gana entradas: ADR y `balance-measure`.
+- **Falta pitada: cae quien la comete y la víctima sigue de pie.** Es una regla del motor (`WhistleOrLetPlay`), no un
+  error de la vista; visualmente se lee como «el que entra se tira». La vista añade un trastabilleo a quien la recibe
+  (abajo), pero si la víctima debe caer es una decisión de diseño (`game-design-review`).
+
+### Antes / después (`/Game`), semillas 20260905 · 20260906 · 20260907 (tramos `caidaNN`, jugadores con modelo)
+
+| Medida (cadera dibujada) | Antes (`b47af2d`) | Después (`82fbd58`) | Etiqueta |
+|---|---|---|---|
+| Quien entra lleva el clip de entrada en el tick del contacto | 0 de 3 · 0 de 4 · 0 de 1 | **2 de 3 · 4 de 4 · 1 de 1**, en el segundo 1,00 del clip (el contacto medido) | Arreglada; la que falta es una entrada sin aviso a tiempo en la traza |
+| Del golpe a tocar el suelo, p50 | 0,57 s ×3 | **0,03 · 0,03 · 0,30 s** (la plancha ya va al suelo en el contacto; el derribado, 0,3 s) | Arreglada |
+| Tiempo en el suelo en pantalla, p50 | 0,67 · 0,07 · 0,60 s | 0,83 · 0,60 · 0,40 s | Mejorada: deja de haber caídas de 1-2 fotogramas (p10 0,03 → 0,27-0,40 s) |
+| Del suelo a de pie (cadera 0,22 → 0,45), por caída | 0,10-0,17 s todas (un fundido: **reaparece de pie**) | levantada **0,53-0,57 s**; plancha 0,17-0,30 s (su propia levantada, acelerada al tiempo de `/Sim`); queda un caso de 0,10 s (`idle`) en dos de las semillas | Arreglada salvo un caso por semilla |
+| Caídas que se ven | 4/4 · 9/9 · 3/3 | 3/4 · 7/9 · 3/3 | Las que no bajan de 0,22 son planchas cortas (9 ticks) aceleradas ×2; LIKELY, no aislado |
+
+**Qué se hizo** (`PlayerModel.ChooseFallGesture`, `MatchPitchView3D.FallFor`, commits `1c6603c`, `8d35b19`, `db16253`, `82fbd58`):
+la vista lee de la traza y sus eventos el `TACKLE` propio que viene y si quien entra acaba en el suelo; si cae, **plancha**
+(`tackle`) colocada para que su segundo 1,0 (medido: pie bajo y por delante, cadera lanzándose) caiga en el tick del contacto,
+que ya trae su deslizamiento y su levantada, acelerada para acabar cuando `/Sim` lo levanta; si sigue de pie (ganada o perdida
+sin caer), **toque de pie** con el golpeo alineado. Quien recibe y cae: **gira hacia la dirección del golpe** (×4 el giro
+durante 0,15 s), `trip` desde su 0,25 s (toca el suelo 0,4 s después), el dibujo del cuerpo se desplaza 0,3 casillas en la
+dirección del golpe (peso, provisional) y **se levanta** con `standup` (0,35-1,6 s medidos) a tiempo de estar de pie cuando
+`/Sim` lo da por levantado; sin aviso a tiempo, se levanta deprisa en vez de reaparecer. Quien recibe una falta y no cae
+**trastabilla** (`trip` 0,1-0,4 s). Las cifras de clip salen del perfil medido (`pies.csv`: punteras, cadera y cabeza por clip);
+el resto está marcado provisional en el código.
+
+**Defecto encontrado por el camino (Regla J)**: los gestos no se veían donde el reloj del muñeco decía. La búsqueda iba por
+encima de la transición y no llegaba al clip, y con el ritmo de los gestos a 0 el fundido de la transición no avanzaba. El
+instrumento de la segunda pasada leía ese reloj, así que la alineación del golpeo de la segunda pasada estaba medida sobre
+el reloj, no sobre el clip (desfase pequeño allí, 0,07 s, porque el golpeo se lanzaba casi desde su principio). Ahora cada
+gesto lleva su búsqueda junto al clip y se coloca cada fotograma; la medida que manda es la cadera dibujada.
+
+**Acento en faltas fuertes y lesiones: no se añade (Regla G).** Ya existen: la falta pitada, la tarjeta y la lesión que para
+el juego congelan 0,6 s con su sello (ADR 0173), y la lesión y la roja sacuden la cámara a ×1 (`BroadcastScreen.ShowInjuryBanner`,
+`ShowRedBanner`). Uno más los duplicaría.
+
+**Clips (punto 3)**: la UAL2 de Quaternius del repo trae `Hit_Knockback`, `LayToIdle` y `Slide_*`, pero con otro esqueleto
+(`pelvis`, `thigh_l`…); usarlos exige retargetear o renombrar huesos de los que dependen el balón y el contacto. **No usados**.
+El pack de Mixamo ya tenía `trip`, `fallen`, `standing up` y la plancha: el defecto era cómo se usaban, no qué clips había.
+
+Hojas: `Game/screenshots/movimiento/hoja-caida-v3-antes.png` / `-despues.png` (el mismo bloqueo con falta, semilla 20260905,
+fotogramas 36-81 cada 3: antes `trip` y de pie de golpe; después plancha, deslizamiento y levantada).

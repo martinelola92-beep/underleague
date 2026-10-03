@@ -21,9 +21,9 @@ from collections import defaultdict
 FPS = 30.0
 DOWN = {"KnockedDown", "Injured"}
 # Cadera por debajo de esto = en el suelo; por encima de STAND = de pie. Medido en el propio instrumento: de pie la cadera
-# del humano dibujado va a ~0,45 casillas (ver la línea «cadera de pie» que imprime este script), tumbado a ~0,1.
+# del humano dibujado va a 0,49 casillas (medido, línea «cadera de pie» que imprime este script), tumbado a 0,08-0,15.
 GROUND = 0.22
-STAND = 0.38
+STAND = 0.45
 # Distancia de cuerpo a cuerpo a la que una entrada puede tocar: dos radios de humano (0,32) más una pierna estirada
 # en plancha. Provisional, sin medir: sólo separa «llega» de «golpea al aire» en el informe.
 CONTACT = 0.9
@@ -110,6 +110,7 @@ def analyse(folder):
     ground_secs = []
     pops = 0
     rise_rates = []
+    rise_clips = []
     reach_ground = []
     for p, seq in drawn.items():
         for r in seq:
@@ -134,6 +135,7 @@ def analyse(folder):
                     if up is not None:
                         secs = (up - last) / FPS
                         rise_rates.append(secs)
+                        rise_clips.append(f"{secs:.2f}s:{seq[min(len(seq) - 1, i + last)]['clip']}")
                         if secs <= 2 / FPS:
                             pops += 1
                 i = j
@@ -146,6 +148,7 @@ def analyse(folder):
     out["tiempo en el suelo en pantalla, s (p10/p50/p90)"] = (pct(ground_secs, 10), pct(ground_secs, 50), pct(ground_secs, 90))
     out["levantarse: del suelo a de pie, s (p10/p50/p90)"] = (pct(rise_rates, 10), pct(rise_rates, 50), pct(rise_rates, 90))
     out["reaparece de pie (≤ 2 fotogramas)"] = f"{pops} de {len(rise_rates)}"
+    out["cada levantada (segundos:clip al dejar el suelo)"] = " ".join(rise_clips)
 
     # El golpe: en qué segundo del clip `tackle` está quien entra en el fotograma del suceso (sólo con modelo).
     at_contact = []
