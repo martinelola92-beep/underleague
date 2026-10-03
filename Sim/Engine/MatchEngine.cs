@@ -1449,16 +1449,6 @@ internal sealed class MatchEngine : IPerkWorld
 
         TickBody(player, tackleCooldowns);
 
-        // ADR 0184 (hermano encontrado midiendo, invariante como la de BB-O): el dueño del balón decide como
-        // portador. Medido con la sostenida a 50: un jugador acabó con el balón en Positioning, donde no hay
-        // pases ni regate, eligió perseguir su propio balón y se quedó 414 ticks en Chasing con un rival encima
-        // (semilla 70, StalledDuelTests). Con la sostenida a 0, cero fotogramas así en 100 partidos: la guarda
-        // no cambia ningún partido de antes (lo fija MobNarrowingTests.WithTheHoldOffEveryTraceIsTheOneBeforeAdr0184).
-        if (ReferenceEquals(_ball.Owner, player) && player.State is PlayerState.Positioning or PlayerState.Chasing)
-        {
-            player.EnterState(PlayerState.Dribbling, 0);
-        }
-
         // Un estado de decisión CON contador no vuelve a decidir hasta que se le acaba: es lo que hace de
         // la conducción un compromiso y no una intención que se reevalúa cada dos ticks. Comprobado antes
         // de añadirlo: hoy los tres estados de decisión —Positioning, Chasing, Dribbling— se entran
@@ -2945,7 +2935,12 @@ internal sealed class MatchEngine : IPerkWorld
         _ball.LastTouchPlayer = player;
         _ball.LastTouchTeam = player.Team;
 
-        if (player.State is PlayerState.Positioning or PlayerState.Chasing or PlayerState.Tackling)
+        // ADR 0184 (hermano latente, CONFIRMED con el censo de repliegues de reserva): también quien recoge el balón
+        // a mitad de un BLOQUEO pasa a portador. Antes se quedaba en Blocking, el Decide de abajo no encontraba
+        // ninguna acción legal, caía al repliegue de reserva y lo dejaba en Positioning CON el balón: sin pases ni
+        // regate, elegía perseguir su propio balón (414 ticks en la semilla 70, StalledDuelTests). Con la sostenida
+        // a 0 no ocurría en 200 partidos de referencia y con ella a 50, dos veces: el mecanismo es anterior.
+        if (player.State is PlayerState.Positioning or PlayerState.Chasing or PlayerState.Tackling or PlayerState.Blocking)
         {
             player.EnterState(PlayerState.Dribbling, 0);
         }

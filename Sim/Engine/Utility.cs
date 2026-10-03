@@ -60,6 +60,12 @@ public sealed class UtilityCensus
     /// <summary>BV-A H8: cambios de acción en los que la anterior quedó descartada por cualquier otra razón.</summary>
     public long[,] SwitchesFromDiscard { get; } = new long[Actions, Actions];
 
+    /// <summary>
+    /// Decisiones en las que TODAS las acciones legales quedaron descartadas y se cayó al repliegue de reserva, por
+    /// estado del jugador (ADR 0184: el dueño del balón que acababa en Positioning venía de aquí).
+    /// </summary>
+    public long[] Fallbacks { get; } = new long[Enum.GetValues<PlayerState>().Length];
+
     /// <summary>Ancho de un tramo de <see cref="SwitchMargin"/>, en puntos de utilidad.</summary>
     public const int SwitchMarginBucket = 10;
 
@@ -523,6 +529,10 @@ internal static class Utility
             // Todas descartadas (solo posible con datos degenerados): replegar es siempre alcanzable.
             best = PlayerAction.Retreat;
             bestTarget = p.EffectiveHome;
+            if (ctx.Census is { } fallbackCensus)
+            {
+                fallbackCensus.Fallbacks[(int)p.State]++;
+            }
         }
 
         // BV-A H8 (ADR 0184): UNA COLOCACIÓN SE SOSTIENE. Si gana otra acción de colocación por menos de

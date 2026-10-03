@@ -209,6 +209,24 @@ public sealed class PositioningHoldTests
         Assert.True(attacking > 0, "al recuperar el balón alguien debía pasar a buscar hueco u ofrecerse");
     }
 
+    /// <summary>
+    /// Hermano latente de la ADR 0184: quien recogía el balón a mitad de un bloqueo se quedaba en <c>Blocking</c>, la
+    /// decisión no encontraba acción legal, caía al repliegue de reserva y lo dejaba en <c>Positioning</c> con el balón
+    /// (sin pases ni regate): el atasco de 414 ticks de la semilla 70. Con la sostenida de los datos, en 200 partidos
+    /// de referencia ese repliegue de reserva se disparaba 2 veces, siempre desde <c>Blocking</c>; ahora ninguna.
+    /// </summary>
+    [Fact]
+    public void NoDecisionFallsBackToTheReserveRetreat()
+    {
+        var census = new UtilityCensus();
+        for (ulong seed = 1; seed <= 200; seed++)
+        {
+            Simulator.Run(TestMatches.Reference(Catalog, seed), seed, Catalog, SimConfig.Default with { Census = census });
+        }
+
+        Assert.Equal(0L, census.Fallbacks.Sum());
+    }
+
     private static bool IsPositioning(PlayerAction action) =>
         action is PlayerAction.CoverSpace or PlayerAction.Retreat or PlayerAction.MarkOpponent
             or PlayerAction.FindSpace or PlayerAction.OfferSupport;

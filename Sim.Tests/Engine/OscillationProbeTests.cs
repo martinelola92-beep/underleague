@@ -434,6 +434,28 @@ public sealed class OscillationProbeTests
         }
     }
 
+    /// <summary>
+    /// ADR 0184: de dónde sale el dueño del balón en <c>Positioning</c>. Cuenta las decisiones en las que todas las
+    /// acciones legales quedaron descartadas y se cayó al repliegue de reserva, por estado, con y sin sostenida.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "Diagnostic")]
+    public void FallbackDecisionsWithAndWithoutTheHold()
+    {
+        foreach (int hold in new[] { 0, 50 })
+        {
+            var catalog = WithHold(Catalog, hold);
+            var census = new UtilityCensus();
+            for (ulong seed = 1; seed <= 200; seed++)
+            {
+                Simulator.Run(TestMatches.Reference(catalog, seed), seed, catalog, SimConfig.Default with { Census = census });
+            }
+
+            var parts = Enum.GetValues<PlayerState>().Where(s => census.Fallbacks[(int)s] > 0).Select(s => $"{s} {census.Fallbacks[(int)s]}");
+            _output.WriteLine($"hold {hold}, 200 partidos: caídas al repliegue de reserva: {string.Join(", ", parts)}");
+        }
+    }
+
     [Fact]
     [Trait("Category", "Diagnostic")]
     public void MarginOfActionSwitches()
