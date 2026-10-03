@@ -179,7 +179,9 @@ public sealed class MobNarrowingTests
 
     private static Catalog Before(Catalog catalog)
     {
-        var held = OscillationProbeTests.WithHold(catalog, 0);
+        // ADR 0188 (BV-D): el motor de antes de la ADR 0184 tenía también las bases de lesión de antes (140 / 60); con las de
+        // ahora (90 / 110) estas trayectorias sí cruzan la franja que se movió y la huella deja de ser la de antes.
+        var held = OscillationProbeTests.WithHold(InjuryChanceTests.WithOldInjuryBases(catalog), 0);
         return held with
         {
             Tuning = held.Tuning with
