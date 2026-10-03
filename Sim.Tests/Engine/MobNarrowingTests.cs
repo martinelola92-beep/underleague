@@ -27,14 +27,20 @@ public sealed class MobNarrowingTests
     // Renovadas el 3 oct 2026 por la ADR 0184 (positioningHoldBonus 0 -> 50) y de la ADR 0186 (BV-B: seguir a la víctima, la falta tira a la víctima, escapar del alcance de la decisión): cambian las trayectorias de todos los
     // partidos). Antes de renovarlas se comprobó que con el dato a 0 los tres valores viejos (1085505645508475356, 44,
     // 9633395058359667205) seguían saliendo: la sostenida apagada es el motor de antes, bit a bit.
-    private const ulong RegulationOnlyBefore = 14554122096672490435UL;
-    private const int RegulationOnlyMatches = 38;
-    private const ulong EveryMatchBefore = 12655774248078806088UL;
+    // Renovadas otra vez el 3 oct 2026 por BO-A (el último compromiso de proteger es lo que queda de shieldMaxTicks, sin
+    // dato propio: es un arreglo de código). Antes de renovarlas, el commit anterior (BH-A) pasaba con las seis huellas de
+    // antes, y la única diferencia de motor entre los dos es MatchEngine.ShieldCommitTicks: el cambio de huella es suyo.
+    // Valores anteriores: 14554122096672490435 / 38 / 12655774248078806088 y, antes de la 0184, 1085505645508475356 / 44 /
+    // 9633395058359667205.
+    private const ulong RegulationOnlyBefore = 8091454667448157658UL;
+    private const int RegulationOnlyMatches = 39;
+    private const ulong EveryMatchBefore = 17818592692118035983UL;
 
-    // Las mismas tres huellas antes de la ADR 0184; con positioningHoldBonus = 0 tienen que seguir saliendo.
-    private const ulong RegulationOnlyBeforeAdr0184 = 1085505645508475356UL;
-    private const int RegulationOnlyMatchesBeforeAdr0184 = 44;
-    private const ulong EveryMatchBeforeAdr0184 = 9633395058359667205UL;
+    // Las mismas tres huellas con las reglas de las ADR 0184/0186 apagadas (positioningHoldBonus = 0, BV-B apagada) y las
+    // bases de lesión de antes: el motor de antes de la ADR 0184 más los arreglos sin dato posteriores (BO-A).
+    private const ulong RegulationOnlyBeforeAdr0184 = 2380212350706324353UL;
+    private const int RegulationOnlyMatchesBeforeAdr0184 = 43;
+    private const ulong EveryMatchBeforeAdr0184 = 8084161313723921521UL;
 
     private const float Eps = 0.001f;
 

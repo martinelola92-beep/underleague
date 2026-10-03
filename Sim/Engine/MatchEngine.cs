@@ -1620,6 +1620,20 @@ internal sealed class MatchEngine : IPerkWorld
             fatigue.MaxPenaltyPoints * (MatchPlayer.MaxEnergy - player.Energy) / MatchPlayer.MaxEnergy;
     }
 
+    /// <summary>
+    /// BO-A (barrido de detectores del 3 oct): el compromiso de proteger no pasa del tope de la posesión. Con
+    /// <c>shieldMaxTicks</c> = 36 la ADR 0153 quería «tres compromisos de 12», pero el tope sólo se miraba al ELEGIR:
+    /// un compromiso que empezaba con 35 ticks gastados llegaba a 47, y todos los tramos de más de 3 s del barrido
+    /// tenían entre 40 y 49 ticks de protección. Ahora el último compromiso es sólo lo que queda del tope. Sin tope
+    /// (<c>shieldMaxTicks</c> = 0) el compromiso es el de siempre.
+    /// </summary>
+    private int ShieldCommitTicks(MatchPlayer player)
+    {
+        int ticks = _tuning.States.ShieldingTicks;
+        int max = _catalog.Ai.Context.ShieldMaxTicks;
+        return max > 0 ? Math.Max(1, Math.Min(ticks, max - player.ShieldedTicks)) : ticks;
+    }
+
     private int DriveTicks(MatchPlayer player)
     {
         var dribble = _tuning.Dribble;
@@ -1790,7 +1804,7 @@ internal sealed class MatchEngine : IPerkWorld
                     // no una intención que se reevalúa cada dos ticks. Si fuera un estado sin contador, el
                     // portador volvería a decidir en el acto y la protección no existiría como conducta
                     // observable — que es exactamente lo que le pasaba al regate antes de la ADR 0137.
-                    player.EnterState(PlayerState.Shielding, _tuning.States.ShieldingTicks);
+                    player.EnterState(PlayerState.Shielding, ShieldCommitTicks(player));
                 }
 
                 break;
@@ -5061,6 +5075,9 @@ internal sealed class MatchEngine : IPerkWorld
 
     /// <summary>Peligro percibido sobre la portería de un equipo (0-100) tras la preparación del tick.</summary>
     internal int DangerForTest(int team) => _context.Danger[team];
+
+    /// <summary>BO-A: los ticks del compromiso de proteger que tomaría ahora este jugador (sólo lectura).</summary>
+    internal int ShieldCommitTicksForTest(int playerIndex) => ShieldCommitTicks(_players[playerIndex]);
 
     /// <summary>Recalcula la percepción compartida sin avanzar el partido.</summary>
     internal void RefreshPerceptionForTest()

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using Underleague.Sim.Data;
 using Underleague.Sim.Engine;
+using Underleague.Sim.Events;
 using Underleague.Sim.Model;
 using Underleague.Sim.Run;
 using Underleague.Sim.Run.Bosses;
@@ -168,10 +169,114 @@ public sealed class WorstCaseProbeTests
         File.WriteAllText(Environment.GetEnvironmentVariable("UL_PROBE_OUT") ?? Path.Combine(Path.GetTempPath(), "probe.txt"), sb.ToString());
     }
 
+    /// <summary>BO-A y BN-A por variante de datos, con lo que hacen los implicados durante cada caso.</summary>
+    [Fact]
+    public void StuckAndCrowdByVariant()
+    {
+        int matches = int.Parse(Environment.GetEnvironmentVariable("UL_PROBE_N") ?? "200", CultureInfo.InvariantCulture);
+        string variant = Environment.GetEnvironmentVariable("UL_PROBE_VARIANT") ?? "current";
+        var sb = new StringBuilder();
+        foreach (string kind in new[] { "ref", "run" })
+        {
+            var bo = new int[matches];
+            var bn = new int[matches];
+            var hist = new Dictionary<string, int>[matches];
+            Parallel.For(0, matches, new ParallelOptions { MaxDegreeOfParallelism = 3 }, i =>
+            {
+                ulong seed = 1 + (ulong)i;
+                var catalog = Variant(ThreadCatalogs.Current, variant);
+                var (setup, s, config) = Build(kind, seed, catalog);
+                var result = Simulator.Run(setup, s, catalog, config);
+                var t = DetectorTrace.From(result);
+                var h = new Dictionary<string, int>();
+                var stuck = SymptomDetectors.CarrierStuck(t);
+                bo[i] = stuck.Count;
+                foreach (var hit in stuck)
+                {
+                    int c = t.Owner[hit.Frame];
+                    int shieldFrames = 0;
+                    for (int f = hit.Frame; f < hit.Frame + hit.Length && f < t.Frames; f++)
+                    {
+                        shieldFrames += t.State[t.Slot(f, c)] == PlayerState.Shielding ? 1 : 0;
+                    }
+
+                    string kb = $"BO shield {shieldFrames / 10 * 10:00} len {hit.Length / 10 * 10:00}";
+                    h[kb] = h.GetValueOrDefault(kb) + 1;
+                    if (shieldFrames >= 40)
+                    {
+                        string ks = $"BO seed {seed}@{hit.Tick} shield {shieldFrames} len {hit.Length}";
+                        h[ks] = 1;
+                    }
+                    for (int f = hit.Frame; f < hit.Frame + hit.Length && f < t.Frames; f++)
+                    {
+                        int r = -1;
+                        float best = SymptomDetectors.StuckRadius;
+                        for (int p = 0; p < t.Players; p++)
+                        {
+                            if (t.Team[p] != t.Team[c] && t.On(f, p) && Vec2.Distance(t.Pos(f, p), t.Pos(f, c)) < best)
+                            {
+                                best = Vec2.Distance(t.Pos(f, p), t.Pos(f, c));
+                                r = p;
+                            }
+                        }
+
+                        string ra = r < 0 ? "-" : (t.Action[t.Slot(f, r)] < 0 ? "none" : ((PlayerAction)t.Action[t.Slot(f, r)]).ToString());
+                        string key1 = "BO rival " + (r < 0 ? "-" : t.Role[r] + "/" + t.State[t.Slot(f, r)] + "/" + ra);
+                        string key2 = "BO carrier " + t.Role[c] + "/" + t.State[t.Slot(f, c)];
+                        h[key1] = h.GetValueOrDefault(key1) + 1;
+                        h[key2] = h.GetValueOrDefault(key2) + 1;
+                    }
+                }
+
+                var crowd = SymptomDetectors.GoalkeeperCrowd(t);
+                bn[i] = crowd.Count;
+                foreach (var hit in crowd)
+                {
+                    string how = string.Join(",", result.Events.Where(e => e.Tick == hit.Tick && e.Type is EventType.Save or EventType.Recovery or EventType.PassCompleted).Select(e => e.Type + ":" + e.Detail));
+                    string k = "BN how " + (how.Length == 0 ? "?" : how);
+                    h[k] = h.GetValueOrDefault(k) + 1;
+                    int gk = t.Owner[hit.Frame];
+                    int f = hit.Frame + Math.Min(hit.Length - 1, 5);
+                    for (int p = 0; p < t.Players; p++)
+                    {
+                        if (p != gk && t.Team[p] == t.Team[gk] && t.On(f, p) && Vec2.Distance(t.Pos(f, p), t.Pos(f, gk)) < SymptomDetectors.GoalkeeperCrowdRadius)
+                        {
+                            string a = t.Action[t.Slot(f, p)] < 0 ? "none" : ((PlayerAction)t.Action[t.Slot(f, p)]).ToString();
+                            string k2 = "BN mate@+5 " + t.Role[p] + "/" + t.State[t.Slot(f, p)] + "/" + a;
+                            h[k2] = h.GetValueOrDefault(k2) + 1;
+                        }
+                    }
+
+                    string k3 = "BN length " + (hit.Length >= 20 ? ">=20" : "<20");
+                    h[k3] = h.GetValueOrDefault(k3) + 1;
+                }
+
+                hist[i] = h;
+            });
+            sb.AppendLine(CultureInfo.InvariantCulture, $"{variant} {kind}: BO-A {Rate(bo)}  BN-A {Rate(bn)}");
+            foreach (var g in hist.SelectMany(x => x).GroupBy(x => x.Key).Select(g => (g.Key, Sum: g.Sum(x => x.Value))).OrderBy(x => x.Key, StringComparer.Ordinal))
+            {
+                sb.AppendLine(CultureInfo.InvariantCulture, $"   {g.Key} = {g.Sum}");
+            }
+        }
+
+        _output.WriteLine(sb.ToString());
+        File.WriteAllText(Environment.GetEnvironmentVariable("UL_PROBE_OUT") ?? Path.Combine(Path.GetTempPath(), "probe.txt"), sb.ToString());
+    }
+
+    private static string Rate(int[] c)
+    {
+        double m = c.Average();
+        double se = Math.Sqrt(c.Sum(x => (x - m) * (x - m)) / (c.Length - 1) / c.Length);
+        return string.Create(CultureInfo.InvariantCulture, $"{m:0.000} ± {se:0.000}");
+    }
+
     internal static Catalog Variant(Catalog c, string variant) => variant switch
     {
         "noescape" => c with { Tuning = c.Tuning with { Tackle = c.Tuning.Tackle with { EscapeBeyondDecisionReach = false } } },
         "nohold" => Underleague.Sim.Tests.Engine.OscillationProbeTests.WithHold(c, 0),
+        "nobvb" => c with { Tuning = c.Tuning with { Tackle = c.Tuning.Tackle with { FollowVictimWhileTackling = false, WhistledFoulDownsVictim = false, EscapeBeyondDecisionReach = false } } },
+        "none" => Variant(Variant(c, "nohold"), "nobvb"),
         _ => c,
     };
 }
