@@ -145,6 +145,26 @@ public sealed class TeamState
         return result;
     }
 
+    /// <summary>
+    /// Estado frente al tope de prótesis (ADR 0187) del jugador de la run: cuántas lleva y si ya está lisiado.
+    /// (0, false) sin run detrás.
+    /// </summary>
+    public (int Count, bool Crippled) ProsthesisCapOf(int playerId)
+    {
+        if (_run?.State is { } state)
+        {
+            foreach (var slot in state.Roster)
+            {
+                if (slot.Id == playerId)
+                {
+                    return (slot.Prostheses.Count, slot.IsCrippled);
+                }
+            }
+        }
+
+        return (0, false);
+    }
+
     /// <summary>Jugador por id, o null si no está en la plantilla.</summary>
     public PlayerDefinition? Find(int id)
     {

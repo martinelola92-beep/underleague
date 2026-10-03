@@ -91,11 +91,14 @@ public partial class NodeScreen : Control
                     first, _run.Systems!.Prostheses.Find("iron_arm")!);
                 // Y el portero, que es quien la ficha de Equipo abre por defecto, ya con dos prótesis: la línea
                 // de la ficha se captura después de la clínica.
-                var keeper = Sim.Run.Systems.Medical.MedicalSystem.Install(
-                    Sim.Run.Systems.Medical.MedicalSystem.Install(
-                        seeded.Roster[0], _run.Systems!.Prostheses.Find("peg_leg")!),
-                    _run.Systems!.Prostheses.Find("iron_arm")!);
-                return seeded.WithPlayer(first2).WithPlayer(second).WithPlayer(keeper).WithGold(40);
+                // ADR 0187: el portero llega ya al tope (3/3, sano: la ficha y la clínica lo avisan) y un cuarto
+                // jugador está lisiado (tope y lesión grave: sin cura).
+                var medical = Sim.Run.Systems.Medical.MedicalSystem.Install;
+                var prostheses = _run.Systems!.Prostheses;
+                var keeper = medical(medical(medical(seeded.Roster[0], prostheses.Find("peg_leg")!), prostheses.Find("iron_arm")!), prostheses.Find("glass_eye")!);
+                var crippled = medical(medical(medical(seeded.Roster[3], prostheses.Find("peg_leg")!), prostheses.Find("iron_arm")!), prostheses.Find("glass_eye")!)
+                    with { PhysicalState = PhysicalState.SevereInjury };
+                return seeded.WithPlayer(first2).WithPlayer(second).WithPlayer(keeper).WithPlayer(crippled).WithGold(40);
             });
             _forgePlayer = _run.State!.Roster[1].Id;
             _forgeExtra = 2;
@@ -194,7 +197,7 @@ public partial class NodeScreen : Control
         if (patients.Count == 0)
         {
             Widgets.Body(this, UiText.Get("ui.node.clinicNone"), new Vector2(28f, y), 1220f);
-            return y + 24f;
+            return CapNotes(state, y + 24f);
         }
 
         bool affordable = state.Gold >= economy.ClinicCost;
@@ -271,6 +274,8 @@ public partial class NodeScreen : Control
             y += 34f;
         }
 
+        y = CapNotes(state, y);
+
         if (_forgePlayer >= 0)
         {
             var open = patients.Find(p => p.Id == _forgePlayer);
@@ -281,6 +286,39 @@ public partial class NodeScreen : Control
             else
             {
                 _forgePlayer = -1;
+            }
+        }
+
+        return y;
+    }
+
+    /// <summary>
+    /// Tope de prótesis (ADR 0187, RF-012d): los lisiados (sin cura, se dicen) y los que están a una lesión grave de
+    /// serlo. Sin esto el jugador descubriría el lisiado en el informe y no en la clínica donde lo puede evitar.
+    /// </summary>
+    private float CapNotes(RunState state, float y)
+    {
+        foreach (var player in state.Roster)
+        {
+            if (player.IsCrippled)
+            {
+                Widgets.Body(
+                    this,
+                    UiText.Get("ui.node.clinicCrippled", player.Name, player.Prostheses.Count, RunRules.MaxProstheses),
+                    new Vector2(28f, y),
+                    1220f,
+                    Style.Hole);
+                y += 22f;
+            }
+            else if (player.PhysicalState != PhysicalState.Dead && player.Prostheses.Count >= RunRules.MaxProstheses)
+            {
+                Widgets.Body(
+                    this,
+                    UiText.Get("ui.node.clinicCapWarning", player.Name, player.Prostheses.Count, RunRules.MaxProstheses),
+                    new Vector2(28f, y),
+                    1220f,
+                    Style.TextDim);
+                y += 22f;
             }
         }
 

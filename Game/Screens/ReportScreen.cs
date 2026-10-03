@@ -221,6 +221,11 @@ public partial class ReportScreen : Control
                     UiText.Get(casualty.Kind == CasualtyKind.SevereInjury ? "ui.state.SevereInjury" : "ui.state.MinorInjury"),
                     casualty.Minute);
 
+            if (casualty.Crippled)
+            {
+                text += "\n" + UiText.Get("ui.report.crippledRow", casualty.PlayerName);
+            }
+
             if (casualty.Cause.Length > 0)
             {
                 text += " · " + UiText.Get("ui.report.cause", casualty.Cause);

@@ -370,6 +370,14 @@ public partial class PlayerDossier : InkCanvas
             return;
         }
 
+        // ADR 0187 (RF-012d): el tope se ve antes de llegar a él y después de pasarse.
+        var (count, crippled) = _state.ProsthesisCapOf(player.Id);
+        if (count >= RunRules.MaxProstheses)
+        {
+            string cap = UiText.Get(crippled ? "ui.kn.crippled" : "ui.kn.prosthesisCap", count, RunRules.MaxProstheses);
+            Ink.Text(this, Ink.Heavy, new Vector2(Margin + 118f, top + 28f), cap, 13, crippled ? Ink.Red : Ink.Muted);
+        }
+
         var parts = new List<string>();
         foreach (var prosthesis in installed)
         {
