@@ -550,7 +550,7 @@ cambiado de palabra o se haya vuelto rentable más allá de Bonferroni: «que lo
 (etapa 1) y 2001, 3001, 4001, 5001 (etapa 2, ampliada porque en la etapa 1 las tres celdas pedidas ya no sobrestimaban y había que ver si era ruido):
 `dotnet run --project Balance -c Release --no-build -- --full-runs 600 --seed S --bet-doctrine blind --out <dir>`; lectura con
 `tools/bet-aciertos.py <dirs>` y `tools/bet-recalibrar.py <dirs> -- celda:dificultad ...` (nuevo: frecuencia medida, ET binomial, medido por semilla,
-cuota `round(85 / p)`). 6 × 600 runs de `Blind` (≈ 18.000 apuestas por condición más que la etapa 1; 44 celdas con ≥ 100 tomadas, Bonferroni |z| > 3,25).
+cuota `round(85 / p)`). 6 × 600 runs de `Blind` (44 celdas con ≥ 100 tomadas, Bonferroni |z| > 3,25).
 
 **Las tres celdas pedidas, con el censo nuevo (6 semillas):**
 
