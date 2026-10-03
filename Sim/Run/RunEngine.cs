@@ -27,6 +27,12 @@ public enum LineupWarningKind
     SevereInjuryDeathRisk,
 
     /// <summary>
+    /// Este titular lleva el tope de prótesis (3/3, ADR 0187): <b>una lesión grave lo deja lisiado</b>, sin cura ni
+    /// alineación. Es la previsión de riesgo de la alineación (RF-012d): el aviso está donde se decide quién juega.
+    /// </summary>
+    ProsthesisCapRisk,
+
+    /// <summary>
     /// Se juega en inferioridad numérica, con 5 o 6 (RF-002d): con 5 en campo, una sola baja termina la
     /// run (RF-002b).
     /// </summary>
@@ -328,7 +334,7 @@ public static class RunEngine
         for (int i = 0; i < slots.Count; i++)
         {
             var player = state.FindPlayer(slots[i].PlayerId);
-            if (player is { PhysicalState: PhysicalState.SevereInjury })
+            if (player is { PhysicalState: PhysicalState.SevereInjury, IsCrippled: false })
             {
                 ids.Add(player.Id);
             }
@@ -338,6 +344,24 @@ public static class RunEngine
         for (int i = 0; i < ids.Count; i++)
         {
             warnings.Add(new LineupWarning(LineupWarningKind.SevereInjuryDeathRisk, ids[i]));
+        }
+
+        // ADR 0187: un titular al tope de prótesis que aún está en pie corre el riesgo de quedar lisiado.
+        var capped = new List<int>();
+        for (int i = 0; i < slots.Count; i++)
+        {
+            var player = state.FindPlayer(slots[i].PlayerId);
+            if (player is not null && player.PhysicalState != PhysicalState.SevereInjury
+                && player.Prostheses.Count >= RunRules.MaxProstheses)
+            {
+                capped.Add(player.Id);
+            }
+        }
+
+        capped.Sort();
+        for (int i = 0; i < capped.Count; i++)
+        {
+            warnings.Add(new LineupWarning(LineupWarningKind.ProsthesisCapRisk, capped[i]));
         }
 
         return warnings;

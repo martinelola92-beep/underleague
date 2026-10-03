@@ -86,7 +86,8 @@ public static class EventView
             var option = card.Options[i];
             bool sacrifice = option.Effects.Any(e => e.Kind == EventEffectKind.Sacrifice);
             var primary = option.NeedsTarget
-                ? Rows(state, catalog, templates, language, EventSystem.EligibleTargets(state, catalog, option, forSecondTarget: false), sacrificeVictim: sacrifice)
+                ? Rows(state, catalog, templates, language, EventSystem.EligibleTargets(state, catalog, option, forSecondTarget: false), sacrificeVictim: sacrifice,
+                    severeInjury: option.Effects.Any(e => e.Kind == EventEffectKind.Injure && e.Value >= 2 && !e.UsesSecondTarget))
                 : Array.Empty<EventTargetRow>();
             var second = option.NeedsSecondTarget
                 ? SecondRows(state, catalog, templates, language, option, primary, sacrifice)
@@ -130,7 +131,8 @@ public static class EventView
     {
         if (!sacrifice)
         {
-            return Rows(state, catalog, templates, language, EventSystem.EligibleTargets(state, catalog, option, forSecondTarget: true), sacrificeVictim: false);
+            return Rows(state, catalog, templates, language, EventSystem.EligibleTargets(state, catalog, option, forSecondTarget: true), sacrificeVictim: false,
+                severeInjury: option.Effects.Any(e => e.Kind == EventEffectKind.Injure && e.Value >= 2 && e.UsesSecondTarget));
         }
 
         var rows = new List<EventTargetRow>();
@@ -152,7 +154,7 @@ public static class EventView
 
     private static IReadOnlyList<EventTargetRow> Rows(
         RunState state, Data.Catalog catalog, DescriptionTemplates templates, string language,
-        IReadOnlyList<RunPlayer> players, bool sacrificeVictim)
+        IReadOnlyList<RunPlayer> players, bool sacrificeVictim, bool severeInjury = false)
     {
         var rows = new List<EventTargetRow>(players.Count);
         for (int i = 0; i < players.Count; i++)
@@ -161,6 +163,12 @@ public static class EventView
             if (sacrificeVictim && EventSystem.SacrificePerk(state, catalog, players[i]) is { } perkId)
             {
                 detail += Format(templates.Find(Section, "sacrificePasses") ?? " {0}", PerkName(catalog, perkId, language));
+            }
+
+            // ADR 0187 (RF-012d): si la carta le deja una lesión grave y lleva el tope de prótesis, la fila lo dice.
+            if (severeInjury && players[i].Prostheses.Count >= RunRules.MaxProstheses && !players[i].IsCrippled)
+            {
+                detail += templates.Find(Section, "targetCrippled") ?? " · crippled";
             }
 
             rows.Add(new EventTargetRow(players[i].Id, players[i].Name, detail));

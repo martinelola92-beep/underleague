@@ -1,6 +1,9 @@
 using Underleague.Sim.Model;
 using Underleague.Sim.Run;
+using Underleague.Sim.Data;
 using Underleague.Sim.Run.Save;
+using Underleague.Sim.Run.Systems.Events;
+using Underleague.Sim.Run.View;
 using Underleague.Sim.Run.Systems.Medical;
 
 namespace Underleague.Sim.Tests.Run.Systems;
@@ -117,5 +120,71 @@ public sealed class CrippledTests
         var loaded = RunSave.Load(json);
         Assert.True(loaded.GetPlayer(patient.Id).IsCrippled);
         Assert.Equal(3, loaded.GetPlayer(patient.Id).Prostheses.Count);
+    }
+
+    [Fact]
+    public void HasFreeProsthesisSlotIsFalseAtThreeOutOfThreeEvenWithFreeSlots()
+    {
+        var prostheses = SystemsTestSupport.Systems.Prostheses;
+        var three = Clinic(3, PhysicalState.Healthy).Patient;
+        Assert.True(prostheses.Slots.Count > 3, "debe quedar ranura libre en el catálogo: el tope es el que lo impide");
+        Assert.False(MedicalSystem.HasFreeProsthesisSlot(three, prostheses));
+        Assert.True(MedicalSystem.HasFreeProsthesisSlot(WithProstheses(three with { Prostheses = Array.Empty<RunProsthesis>(), Tags = Array.Empty<string>() }, 2), prostheses));
+    }
+
+    [Fact]
+    public void ACrippledPlayerPlacedByHandInTheLineupIsReplacedAndDoesNotPlay()
+    {
+        var (state, crippled) = Clinic(3, PhysicalState.SevereInjury);
+        var hand = new Lineup(state.Lineup.Slots.Where(s => s.PlayerId != crippled.Id).Take(6)
+            .Append(new LineupSlot(crippled.Id, new Cell(5, 0))).ToList());
+        Assert.Contains(hand.Slots, s => s.PlayerId == crippled.Id);
+
+        var effective = RunLineup.Effective(state, hand);
+        Assert.DoesNotContain(effective.Lineup.Slots, s => s.PlayerId == crippled.Id);
+        Assert.Equal(RunRules.MaxStarters, effective.Lineup.Slots.Count);
+
+        var confirmed = RunEngine.Apply(state, new SetLineup(hand), SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+        Assert.DoesNotContain(RunLineup.Build(confirmed, null).Lineup.Slots, s => s.PlayerId == crippled.Id);
+        var warnings = RunEngine.LineupWarnings(state, hand);
+        Assert.DoesNotContain(warnings, w => w.PlayerId == crippled.Id && w.Kind == LineupWarningKind.SevereInjuryDeathRisk);
+    }
+
+    [Fact]
+    public void TheLineupWarnsAStarterAtThreeOutOfThree_AndNotOneWithTwo()
+    {
+        var (state, capped) = Clinic(3, PhysicalState.Healthy);
+        var lineup = state.Lineup.Slots.Any(s => s.PlayerId == capped.Id)
+            ? state.Lineup
+            : new Lineup(state.Lineup.Slots.Take(6).Append(new LineupSlot(capped.Id, new Cell(5, 0))).ToList());
+        Assert.Contains(RunEngine.LineupWarnings(state, lineup), w => w.Kind == LineupWarningKind.ProsthesisCapRisk && w.PlayerId == capped.Id);
+
+        var (state2, control) = Clinic(2, PhysicalState.Healthy);
+        var lineup2 = state2.Lineup.Slots.Any(s => s.PlayerId == control.Id)
+            ? state2.Lineup
+            : new Lineup(state2.Lineup.Slots.Take(6).Append(new LineupSlot(control.Id, new Cell(5, 0))).ToList());
+        Assert.DoesNotContain(RunEngine.LineupWarnings(state2, lineup2), w => w.Kind == LineupWarningKind.ProsthesisCapRisk);
+    }
+
+    private static EventScreenView EventView(RunState state, params EventEffect[] effects)
+    {
+        var option = new EventOption("o", new LocalizedName("o", "o"), effects, true, false);
+        var events = new EventCatalog(new[] { new EventCard("c", new LocalizedName("c", "c"), new LocalizedName("c", "c"), 1, 1, new[] { option }) });
+        return Underleague.Sim.Run.View.EventView.Build(
+            state, SystemsTestSupport.Catalog, events, SystemsTestSupport.Systems.Items, SystemsTestSupport.Systems.Consumables, "es")!;
+    }
+
+    [Fact]
+    public void ASevereInjuryEventWarnsTheTargetAtThreeOutOfThree_AndAMinorOneDoesNot()
+    {
+        var start = RunEngine.Start(SystemsTestSupport.Setup(), 7, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+        var capped = WithProstheses(start.Roster[1], 3);
+        var state = SystemsTestSupport.WithFakePendingNode(start.WithPlayer(capped), NodeKind.Event, 0);
+        var severe = EventView(state, new EventEffect(EventEffectKind.Injure, 2)).Options[0].Targets.Single(t => t.PlayerId == capped.Id);
+        Assert.Contains("lisiado", severe.Detail, StringComparison.Ordinal);
+        var other = EventView(state, new EventEffect(EventEffectKind.Injure, 2)).Options[0].Targets.First(t => t.PlayerId != capped.Id);
+        Assert.DoesNotContain("lisiado", other.Detail, StringComparison.Ordinal);
+        var minor = EventView(state, new EventEffect(EventEffectKind.Injure, 1)).Options[0].Targets.Single(t => t.PlayerId == capped.Id);
+        Assert.DoesNotContain("lisiado", minor.Detail, StringComparison.Ordinal);
     }
 }

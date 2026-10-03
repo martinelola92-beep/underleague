@@ -516,6 +516,7 @@
     "recruit": "a free youth prospect, with a roster slot",
     "sacrifice": "dies; one of his perks passes to the second player named (the perk is shown when you pick who)",
     "targetDetail": "{0} · level {1}",
+    "targetCrippled": " · 3/3 prostheses: the severe injury would cripple him for good",
     "sacrificePasses": " · bequeaths «{0}»",
     "sacrificeInherits": " · inherits «{0}»",
     "nothing": "no cost, no gain"

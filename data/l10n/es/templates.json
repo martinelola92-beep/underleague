@@ -516,6 +516,7 @@
     "recruit": "un canterano gratis, con hueco en la plantilla",
     "sacrifice": "muere; un perk suyo pasa al segundo señalado (el perk se ve al señalar a quién)",
     "targetDetail": "{0} · nivel {1}",
+    "targetCrippled": " · 3/3 prótesis: la lesión grave lo dejaría lisiado, sin cura",
     "sacrificePasses": " · lega «{0}»",
     "sacrificeInherits": " · hereda «{0}»",
     "nothing": "sin coste y sin ganancia"
