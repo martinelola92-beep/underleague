@@ -259,6 +259,41 @@ histéresis de `8d35b19`):
 Medido con 3 semillas (tramo largo, x1): *pie de apoyo / cuerpo* p50 0,32 · 0,23 · 0,26 → 0,33 · 0,23 · 0,25 (sin cambio:
 B1-B4 no lo tocan); giros de yaw > 30° 0,09 · 0,24 · 0,12 % → 0,09 · 0,24 · 0,14 %.
 
+## Cuarta pasada (3 oct 2026, tarde): IK del pie apoyado (B3)
+
+Commits `a8ee7bc`…`9134b4c`. `PlayerModel.UpdateFootLock`: un `TwoBoneIK3D` de Godot 4.6 por pierna (muslo-rodilla-tobillo,
+`mixamorig_*UpLeg/Leg/Foot`, sin tocar el esqueleto ni los nombres), con la rodilla hacia un polo delante de la pierna. **Cuándo
+pisa** sale de tablas medidas al cargar: para cada clip de marcha y cada pie, en qué fases de la zancada la puntera está a menos de
+3 cm (provisional) de lo más bajo que llega; parado, pisan los dos. Al pisar, el tobillo se clava en su sitio del mundo y se
+funde en 0,05 s; se suelta (0,08 s) al levantar el pie, si la pierna ya no llega (1,05 de su largo en reposo), si el cuerpo gira
+más de 50° desde que pisó (vuelve a dar el paso), y en golpeo, entrada, caída o salto de la reproducción. Todo provisional
+salvo las tablas.
+
+**El instrumento no veía el IK (Regla J, CONFIRMED)**: el primer «después» salió idéntico byte a byte al «antes». Desde Godot 4.3
+el esqueleto aplica los modificadores, pinta y devuelve la pose a la de la animación: `GetBoneGlobalPose` leído después no los
+ve. Ahora la pose se captura en la señal `skeleton_updated`. Eso afecta también a la mirada de la tercera pasada (B2): no había
+manera de medirla y sigue sin medirse más allá de las hojas.
+
+| Medida (tramo largo, x1; el mismo binario con `sinik` para el antes) | Sin IK | Con IK |
+|---|---|---|
+| Pie de apoyo / cuerpo en locomoción, p50 (p90) | 0,35 (1,09) · 0,21 (0,97) · 0,20 (1,11) | **0,23 (1,03) · 0,20 (0,81) · 0,22 (1,01)** |
+| Lo mismo **en giros** (> 90°/s), p50 | 0,51 · 0,45 · 0,47 | **0,34 · 0,27 · 0,31** |
+| Rodillas al revés (fotogramas-pierna, rodilla por detrás de la recta cadera-tobillo y < 170°) | 34 · 10 · 33 | 34 · 10 · 33 (las mismas: son de los clips, no del IK) |
+| Coste: proceso por fotograma, IK apagado/encendido a bloques de 1 s en el mismo proceso | 222,6 · 228,8 · 196,2 ms | 221,3 · 227,6 · 197,1 ms |
+
+Las semillas 2 y 3 parten de un «sin IK» más bajo que en la segunda pasada (0,21/0,20 frente a 0,23/0,25) porque `main` trae
+cambios de movimiento de `/Sim` (ADR 0185); por eso el antes es el mismo binario sin IK, no la cifra vieja.
+
+- **Lo que mejora es el giro** (un 35 % menos de patinaje del pie que pisa); en línea recta la zancada en fase ya lo dejaba casi
+  clavado y el IK apenas cambia la mediana.
+- **El coste no se resuelve con este instrumento**: el render por software tarda ~200 ms por fotograma y la diferencia con y sin
+  IK (−1,3 a +0,9 ms) está dentro del ruido. **LIKELY** despreciable (28 resoluciones analíticas de dos huesos por fotograma);
+  medirlo de verdad pide la máquina con GPU.
+- **Límite conocido**: con el alcance en 1,05 la pierna llega a estirarse del todo 2-3 fotogramas antes de soltar el pie al
+  despegar. Soltar antes (0,985 y sólo con el pie por detrás) empeoró el patinaje (0,23 → 0,30, semilla 20260905): se queda así.
+- **Hojas** `hoja-giro-ik-antes.png` / `-despues.png`: a la escala de la retransmisión la diferencia (centímetros) **no se
+  distingue a simple vista**; la mejora está en la medida, no en la hoja.
+
 ## Riesgos
 
 - Suavizar con look-ahead hace que el cuerpo dibujado vaya hasta ~1 tick por detrás o por delante de la traza: el balón
