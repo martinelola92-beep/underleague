@@ -118,6 +118,13 @@ Prioridad absoluta: IA y animaciones 3D para la build de la mañana del 3 oct (d
 s1 queda a mitad de camino: un solo valor no devuelve las tres cifras; si el revisor la quiere exacta, hace falta otra
 palanca.
 
+**Muertes en serie (BX-20, 3 oct):** HECHO, ADR 0190. Un portador letal se cobra una vida por partido
+(`killsPerCarrierPerMatch` 1; sigue tirando a 0) y `marrow_thirst` 900 → 1800 para seguir en la banda de la ADR 0170.
+El 37 % de las muertes eran la segunda o siguiente del mismo matador (Partecráneos: 1,75 por partido). Medido (2
+semillas × 300 runs): muertes por partido 0,154/0,132 → 0,128/0,108; runs con ≥ 4 muertes 14,3/11,7 % → 7,7/5,3 %, y
+para la política que no lee el ojeo 16,3/15,0 % → 7,3/3,7 %. Queda AY-A: el porcentaje del ojeo sigue por debajo
+(35 % enseñado contra 84 % de que muera alguien frente a Partecráneos). Ficha `docs/pendientes/BX-20.md`.
+
 **SIGUIENTE (3 oct):** la cola de la noche está vacía. Decisiones abiertas del revisor (antes de responderlas):
 - tope de seguridad del herrero sobre un titular (ADR 0164);
 - «nunca todos los sumideros» por acto (ADR 0182);

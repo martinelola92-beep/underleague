@@ -34,7 +34,7 @@ Capturas: `capturas/playtest-3oct-saque-portero.png` (saque de puerta al centro,
 - **BX-19** Al cambiar la táctica (defensa, neutro, ataque) hay un parón, porque se vuelve a simular. Hay que solucionarlo.
 
 ## Paquete 5 — Muertes
-- **BX-20** Contra unos orcos pegones, en un partido mataron a 2 jugadores y lesionaron gravemente a otros 2; en la run murieron 5. «Sed de médula igual es demasiado.» Esto va contra la condición «la muerte es rara» de la ADR 0048.
+- **BX-20** Contra unos orcos pegones, en un partido mataron a 2 jugadores y lesionaron gravemente a otros 2; en la run murieron 5. «Sed de médula igual es demasiado.» Esto va contra la condición «la muerte es rara» de la ADR 0048. **Ficha: [BX-20](BX-20.md). Cerrada por la [ADR 0190](../decisiones/0190-un-carnicero-se-cobra-una-vida-por-partido.md)**: el mismo portador letal mataba en serie (1,75 por partido el de Partecráneos); ahora una vida por portador y partido, y `marrow_thirst` 900 → 1800 para no salir de banda.
 
 ## Paquete 1 — estado tras la sesión del 3 oct (commits 413ee93..0209589)
 

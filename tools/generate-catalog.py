@@ -135,7 +135,8 @@ w("""## Perks letales ☠
 
 Los únicos perks que pueden matar (ADR 0046 vía 2, ADR 0048). Los cuatro cubren canales distintos, cada
 activación marca a **un solo rival** —el que peor lo tiene— y todos se cobran **en la jugada**, nunca en el
-saque (regla del cargador).
+saque (regla del cargador). Un mismo portador se cobra **como mucho una vida por partido**
+(`killsPerCarrierPerMatch`, ADR 0190): tras matar sigue tirando, a 0.
 
 `lethalChance` es la probabilidad **base** de la tirada, en base 10.000 (900 = 9 %). Sobre ella actúan
 multiplicativamente las tres cosas que el jugador decide antes de confirmar la alineación (RF-012c,

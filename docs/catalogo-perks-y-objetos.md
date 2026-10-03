@@ -181,7 +181,8 @@ No cuentan para ningún maestro ni cierran nada.
 
 Los únicos perks que pueden matar (ADR 0046 vía 2, ADR 0048). Los cuatro cubren canales distintos, cada
 activación marca a **un solo rival** —el que peor lo tiene— y todos se cobran **en la jugada**, nunca en el
-saque (regla del cargador).
+saque (regla del cargador). Un mismo portador se cobra **como mucho una vida por partido**
+(`killsPerCarrierPerMatch`, ADR 0190): tras matar sigue tirando, a 0.
 
 `lethalChance` es la probabilidad **base** de la tirada, en base 10.000 (900 = 9 %). Sobre ella actúan
 multiplicativamente las tres cosas que el jugador decide antes de confirmar la alineación (RF-012c,
@@ -198,8 +199,8 @@ porque exige una segunda lesión sobre el mismo jugador y el marcador tiene que 
 | Nombre | id | Rareza | Acto | Canal / disparador | `lethalChance` base | Qué hace |
 |---|---|---|---|---|---|---|
 | **La segunda herida** | `second_wound` | Raro | 3 | INJURY | 9000 (90,0 %) | En una lesión, el rival multiplica por 1,15 sus opciones de sufrir una lesión grave. |
+| **Sed de médula** | `marrow_thirst` | Raro | 3 | TACKLE | 1800 (18,0 %) | Al entrar, el portador multiplica por 3 sus opciones de lesionar y el equipo rival multiplica por 1,5 sus opciones de sufrir una lesión grave. |
 | **Partecráneos** | `skullsplitter` | Legendario | 3 | TACKLE | 1200 (12,0 %) | Al entrar, el equipo rival multiplica por 3 sus opciones de lesionarse. |
-| **Sed de médula** | `marrow_thirst` | Raro | 3 | TACKLE | 900 (9,0 %) | Al entrar, el portador multiplica por 3 sus opciones de lesionar y el equipo rival multiplica por 1,5 sus opciones de sufrir una lesión grave. |
 | **Tacos de hierro** | `iron_studs` | Raro | 3 | TACKLE | 760 (7,6 %) | Al entrar, el rival divide por 2 su resistencia a las entradas. |
 
 ## Objetos de equipamiento
