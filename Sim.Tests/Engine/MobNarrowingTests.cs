@@ -32,9 +32,13 @@ public sealed class MobNarrowingTests
     // antes, y la única diferencia de motor entre los dos es MatchEngine.ShieldCommitTicks: el cambio de huella es suyo.
     // Valores anteriores: 14554122096672490435 / 38 / 12655774248078806088 y, antes de la 0184, 1085505645508475356 / 44 /
     // 9633395058359667205.
-    private const ulong RegulationOnlyBefore = 8091454667448157658UL;
-    private const int RegulationOnlyMatches = 39;
-    private const ulong EveryMatchBefore = 17818592692118035983UL;
+    // Y otra vez por la ADR 0185 (arranque y frenada, tuning.movement.accelTicks 0 -> 3, y el sacador que espera a llegar):
+    // cambian todas las trayectorias. Con accelTicks a 0 y el resto de reglas nuevas apagadas, las de antes de la 0184 siguen
+    // saliendo (WithTheNewRulesOffEveryTraceIsTheOneBeforeAdr0184PlusBoA). Valores anteriores: 8091454667448157658 / 39 /
+    // 17818592692118035983.
+    private const ulong RegulationOnlyBefore = 12276541943884268967UL;
+    private const int RegulationOnlyMatches = 42;
+    private const ulong EveryMatchBefore = 4640042183434264896UL;
 
     // Las mismas tres huellas con las reglas de las ADR 0184/0186 apagadas (positioningHoldBonus = 0, BV-B apagada) y las
     // bases de lesión de antes: el motor de antes de la ADR 0184 más los arreglos sin dato posteriores (BO-A).
@@ -197,6 +201,7 @@ public sealed class MobNarrowingTests
             Tuning = held.Tuning with
             {
                 Tackle = held.Tuning.Tackle with { FollowVictimWhileTackling = false, WhistledFoulDownsVictim = false, EscapeBeyondDecisionReach = false },
+                Movement = held.Tuning.Movement with { AccelTicks = 0 },
             },
         };
     }

@@ -962,11 +962,12 @@ public static class DataLoader
 
     private static MovementTuning ParseMovement(Json node)
     {
-        node.EnsureKnownKeys("baseCellsPerTickMilli", "speedCellsPerTickMilliPer99", "dribbleSpeedPercent");
+        node.EnsureKnownKeys("baseCellsPerTickMilli", "speedCellsPerTickMilliPer99", "dribbleSpeedPercent", "accelTicks");
         return new MovementTuning(
             node.Prop("baseCellsPerTickMilli").AsInt(),
             node.Prop("speedCellsPerTickMilliPer99").AsInt(),
-            node.Prop("dribbleSpeedPercent").AsInt());
+            node.Prop("dribbleSpeedPercent").AsInt(),
+            node.Prop("accelTicks").AsInt());
     }
 
     private static BallTuning ParseBall(Json node)

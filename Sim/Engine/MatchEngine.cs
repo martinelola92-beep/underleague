@@ -1964,6 +1964,10 @@ internal sealed class MatchEngine : IPerkWorld
         Vec2 delta = target - player.Position;
         float distance = delta.Length;
         float step = SpeedPerTick(player, dribbling);
+        if (_tuning.Movement.AccelTicks > 0)
+        {
+            step = RampedStep(player, delta, distance, step);
+        }
 
         Vec2 next = distance <= step || distance <= 0f
             ? target
@@ -1984,6 +1988,62 @@ internal sealed class MatchEngine : IPerkWorld
 
         player.Velocity = next - player.Position;
         player.Position = next;
+    }
+
+    /// <summary>
+    /// ADR 0185 (BV-A H4): ARRANQUE, GIRO Y FRENADA. El paso de este tick ya no es siempre el techo
+    /// (<see cref="SpeedPerTick"/>, que sigue saliendo del atributo <c>Speed</c> cansado): parte de lo que el jugador
+    /// corrió el tick anterior (<see cref="MatchPlayer.Velocity"/>, su desplazamiento propio; cero si estaba parado,
+    /// derribado, sacando o protegiendo), lo recorta por el giro, lo sube como mucho un <c>accelTicks</c>-ésimo del
+    /// techo y lo limita a lo que le deja frenar antes del destino. Todo en milésimas de casilla por tick (RT-023:
+    /// enteros; los únicos <c>float</c> son las posiciones de las que se leen las distancias).
+    /// <list type="bullet">
+    /// <item><b>Giro:</b> la rapidez que se conserva es <c>(100 + cos θ·100) / 2</c> por ciento: recto, toda; a 90°, la
+    /// mitad; media vuelta, nada. (La ADR proponía <c>max(0, cos θ)</c>, que deja a cero cualquier giro de 90°: un
+    /// futbolista que abre a un lado no se para.)</item>
+    /// <item><b>Arranque:</b> <c>v = min(techo, v + techo / accelTicks)</c>. El que tiene más velocidad sube más por tick y
+    /// llega al mismo tiempo, a más punta: la velocidad de los atributos sigue importando, y ahora también en la salida.</item>
+    /// <item><b>Frenada:</b> <c>v ≤ isqrt(2·a·d + a²/4) − a/2</c> (la versión discreta de v² = 2·a·d) con <c>a</c> la misma aceleración y <c>d</c> la distancia al destino:
+    /// llega sin pasarse y, con un destino que avanza despacio, iguala su ritmo en vez de alcanzar y esperar.</item>
+    /// </list>
+    /// </summary>
+    private float RampedStep(MatchPlayer player, Vec2 delta, float distance, float ceilingCells)
+    {
+        int ceiling = (int)MathF.Round(ceilingCells * 1000f);
+        int accel = Math.Max(1, ceiling / _tuning.Movement.AccelTicks);
+        var previous = player.Velocity;
+        float previousLength = previous.Length;
+        int speed = (int)MathF.Round(previousLength * 1000f);
+        if (speed > 0 && distance > 0f)
+        {
+            int cosPercent = (int)MathF.Round(((previous.X * delta.X) + (previous.Y * delta.Y)) / (previousLength * distance) * 100f);
+            speed = speed * (100 + cosPercent) / 200;
+        }
+
+        speed = Math.Min(ceiling, speed + accel);
+        // Versión discreta de v² = 2·a·d: la mayor v desde la que, bajando a por tick, los pasos v, v − a, v − 2a… caben en d.
+        int brake = IntSqrt((2L * accel * (long)MathF.Round(distance * 1000f)) + ((long)accel * accel / 4)) - (accel / 2);
+        speed = Math.Min(speed, Math.Max(brake, accel));
+        return speed / 1000f;
+    }
+
+    /// <summary>Raíz cuadrada entera por defecto (Newton), para la frenada de la ADR 0185.</summary>
+    internal static int IntSqrt(long value)
+    {
+        if (value <= 0)
+        {
+            return 0;
+        }
+
+        long x = value;
+        long y = (x + 1) / 2;
+        while (y < x)
+        {
+            x = y;
+            y = (x + (value / x)) / 2;
+        }
+
+        return (int)x;
     }
 
     /// <summary>
@@ -2037,10 +2097,30 @@ internal sealed class MatchEngine : IPerkWorld
     /// puede andar y sólo haría que la espera llegara siempre al tope. El que celebra SÍ cuenta: es justo
     /// el que hay que esperar.</para>
     /// </summary>
+    /// <summary>
+    /// ADR 0185: cuánto le puede faltar al sacador para dar el saque por colocado. Lo que le falte se lo pone
+    /// <see cref="ResolveRestart"/> de golpe, así que no es balance: es que ese último ajuste, sumado a su paso de andar
+    /// (~0,15), no pase del medio casillero que <c>MobNarrowingTests</c> ya considera un salto.
+    /// </summary>
+    private const float TakerInPlaceCells = 0.25f;
+
     private bool EveryoneInPlace()
     {
         var restart = _tuning.Restart;
         float middle = Pitch.Columns / 2f;
+
+        // ADR 0185 (hermano encontrado midiendo): el sacador también tiene que haber llegado andando a su punto
+        // (`TakerInPlaceCells`), con el mismo tope de espera. Sin esto, uno que empezaba la recolocación lejos —medido: en la
+        // turba de la semilla 3, desde una esquina, a 8,6 casillas— se teletransportaba 3,2 casillas al resolverse el saque
+        // en cuanto los demás estaban colocados (RF-053: nadie se teletransporta). Sólo con el arranque de la ADR 0185
+        // llegó a darse en las semillas que miden los tests; el mecanismo es anterior.
+        if (_tuning.Movement.AccelTicks > 0 && _restartTaker is { OnPitch: true } taker
+            && taker.State is not (PlayerState.KnockedDown or PlayerState.Injured or PlayerState.SentOff)
+            && Vec2.Distance(taker.Position, _restartPoint) > TakerInPlaceCells)
+        {
+            return false;
+        }
+
         for (int i = 0; i < _players.Length; i++)
         {
             var player = _players[i];
@@ -3579,6 +3659,9 @@ internal sealed class MatchEngine : IPerkWorld
         tackler.EnterState(PlayerState.Tackling, 0);
         ResolveTackle(tackler);
     }
+
+    /// <summary>ADR 0185: un paso de movimiento normal de <paramref name="playerIndex"/> hacia su <c>TargetPoint</c>.</summary>
+    internal void MoveForTest(int playerIndex) => Move(_players[playerIndex], dribbling: false);
 
     /// <summary>ADR 0186: un tick de la entrada en curso de <paramref name="tacklerIndex"/> (sigue a la víctima si la regla está encendida).</summary>
     internal void TacklingStepForTest(int tacklerIndex, int victimIndex)

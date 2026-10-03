@@ -524,7 +524,7 @@ public sealed record BodiesTuning(
 public sealed record ResolutionTuning(int ProbabilityFloor, int ProbabilityCeiling);
 
 /// <summary>tuning.movement.</summary>
-public sealed record MovementTuning(int BaseCellsPerTickMilli, int SpeedCellsPerTickMilliPer99, int DribbleSpeedPercent);
+public sealed record MovementTuning(int BaseCellsPerTickMilli, int SpeedCellsPerTickMilliPer99, int DribbleSpeedPercent, int AccelTicks = 0);
 
 /// <summary>tuning.ball.</summary>
 public sealed record BallTuning(

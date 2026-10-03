@@ -204,12 +204,19 @@
         },
         "dribbleSpeedPercent": {
           "$ref": "#/$defs/percent"
+        },
+        "accelTicks": {
+          "description": "ADR 0185: ticks que tarda un jugador parado en llegar a su velocidad máxima (arranque), con la frenada simétrica al llegar y la rapidez recortada al girar. 0 = sin arranque ni frenada (el motor de antes, bit a bit).",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 30
         }
       },
       "required": [
         "baseCellsPerTickMilli",
         "speedCellsPerTickMilliPer99",
-        "dribbleSpeedPercent"
+        "dribbleSpeedPercent",
+        "accelTicks"
       ],
       "additionalProperties": false
     },
