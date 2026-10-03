@@ -457,8 +457,13 @@ public class RunEngineTests
         state = RunEngine.Apply(state, new SetLineup(new Lineup(slots)), Catalog);
         Assert.Equal(6, state.Lineup.Slots.Count);
 
+        // BX-1: una alineación guardada por debajo de 5 (podada por bajas) es editable; el partido la completa.
+        // Lo que sigue prohibido es una vacía o de más de 7.
+        var short4 = RunEngine.Apply(state, new SetLineup(new Lineup(slots.Take(4).ToList())), Catalog);
+        Assert.Equal(4, short4.Lineup.Slots.Count);
+        Assert.Equal(RunRules.MaxStarters, RunLineup.Build(short4, Catalog).Starters.Count);
         Assert.Throws<ArgumentException>(
-            () => RunEngine.Apply(state, new SetLineup(new Lineup(slots.Take(4).ToList())), Catalog));
+            () => RunEngine.Apply(state, new SetLineup(new Lineup(new List<LineupSlot>())), Catalog));
 
         var dead = state.Roster[^1] with { PhysicalState = PhysicalState.Dead };
         var withDead = state.WithPlayer(dead);

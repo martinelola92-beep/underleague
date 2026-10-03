@@ -237,7 +237,8 @@ public static class PlacementView
     /// <list type="bullet">
     /// <item>si el jugador ya estaba alineado y la casilla está ocupada, los dos <b>intercambian</b> casilla;</item>
     /// <item>si estaba alineado y la casilla está libre, se <b>mueve</b>;</item>
-    /// <item>si venía del banquillo, <b>sustituye</b> al ocupante (que pasa al banquillo) o entra en la casilla libre.</item>
+    /// <item>si venía del banquillo, <b>sustituye</b> al ocupante (que pasa al banquillo) o entra en la casilla libre
+    /// (si el once ya tiene <c>RunRules.MaxStarters</c>, no entra: BX-1).</item>
     /// </list>
     /// Devuelve la alineación sin tocar si el movimiento no es válido. Las casillas salen ordenadas por
     /// id de jugador ascendente, que es el orden que espera el motor (RT-041).
@@ -279,6 +280,14 @@ public static class PlacementView
         }
         else
         {
+            // BX-1: un octavo titular no existe (RF-059). Antes se devolvía una alineación de 8 que SetLineup
+            // rechazaba lanzando, y la pantalla de Equipo se quedaba muda; ahora el movimiento es inválido aquí,
+            // que es donde vive la regla de colocación, y la interfaz puede explicar por qué.
+            if (slots.Count >= Run.RunRules.MaxStarters)
+            {
+                return lineup;
+            }
+
             slots.Add(new LineupSlot(playerId, target));
         }
 

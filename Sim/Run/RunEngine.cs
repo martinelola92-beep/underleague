@@ -687,11 +687,16 @@ public static class RunEngine
     {
         ArgumentNullException.ThrowIfNull(decision.Lineup);
         var slots = decision.Lineup.Slots;
-        if (slots.Count < RunRules.MinimumAvailablePlayers || slots.Count > RunRules.MaxStarters)
+        // BX-1: el suelo de 5 titulares NO se exige a lo que el jugador pone a mano. La alineación guardada se
+        // poda tras cada partido (PruneLineup) y puede quedar con menos de 5 (bajas), y el partido la completa
+        // hasta el mínimo (Build, RF-002d); si aquí se exigiera 5, la pantalla de Equipo no podía ni mover una ficha
+        // de una alineación podada -SetLineup lanzaba- y el partido salía igualmente con 7. El mínimo del
+        // simulador lo garantiza Build, no esta puerta.
+        if (slots.Count < 1 || slots.Count > RunRules.MaxStarters)
         {
             throw new ArgumentException(
-                $"la alineación tiene {slots.Count} titulares; deben ser entre {RunRules.MinimumAvailablePlayers} "
-                    + $"y {RunRules.MaxStarters} (RF-002d, RF-059)",
+                $"la alineación tiene {slots.Count} titulares; deben ser entre 1 y {RunRules.MaxStarters} "
+                    + "(RF-002d, RF-059); el partido la completa hasta el mínimo",
                 nameof(decision));
         }
 
