@@ -6879,6 +6879,18 @@ internal sealed class MatchEngine : IPerkWorld
     /// <summary>A cuántos rivales marca cada activación de un perk letal (<c>tuning.injury.lethality</c>).</summary>
     internal int LethalVictimsPerActivation => _tuning.Injury.Lethality.VictimsPerActivation;
 
+    /// <summary>
+    /// ADR 0190: si ese portador ya se ha cobrado en este partido las vidas que permite
+    /// <c>tuning.injury.lethality.killsPerCarrierPerMatch</c> (0 = sin tope). Cuenta
+    /// <see cref="MatchPlayer.DeathsCaused"/>, que solo sube con una muerte efectiva de un rival: una
+    /// muerte anulada por un perk no gasta el tope.
+    /// </summary>
+    internal bool LethalQuotaSpent(MatchPlayer owner)
+    {
+        int cap = _tuning.Injury.Lethality.KillsPerCarrierPerMatch;
+        return cap > 0 && owner.DeathsCaused >= cap;
+    }
+
     /// <summary>La tirada en sí, con el flujo de dados del partido (RT-021, RT-022).</summary>
     internal bool LethalRoll(int chance) => _rng.Chance(chance);
 

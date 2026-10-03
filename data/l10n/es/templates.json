@@ -6,7 +6,7 @@
     "limitLine": "\nLímite: {limit}.",
     "riskLine": "\nRiesgo: {risk}.",
     "lethalRisk": "marca a un rival por activación, el que peor lo tiene, y puede matarlo aunque esté sano",
-    "lethalContactRisk": "puede matar al rival implicado en la jugada, aunque esté sano",
+    "lethalContactRisk": "puede matar al rival implicado en la jugada, aunque esté sano; una sola vida por partido",
     "effectSeparator": ", ",
     "effectFinalSeparator": " y ",
     "elsePrefix": "; si no, ",

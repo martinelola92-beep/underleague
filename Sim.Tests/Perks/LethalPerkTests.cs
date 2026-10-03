@@ -299,6 +299,74 @@ public sealed class LethalPerkTests
         }
     }
 
+    /// <summary>
+    /// ADR 0190 (BX-20): <b>un portador se cobra como mucho una vida por partido</b>. Caso de valor conocido:
+    /// un perk letal con probabilidad 10.000 entra cuarenta veces a cada uno de tres rivales distintos, todos
+    /// con una tirada de al menos 4.000 (0,6^40 ≈ 1e-9 de que alguno sobreviva sin tope). Con el dato del
+    /// catálogo (<c>killsPerCarrierPerMatch: 1</c>) muere exactamente uno; con el dato en su valor viejo
+    /// (0, sin tope) mueren los tres, que es el patrón del revisor: dos muertos del mismo orco en tres minutos.
+    /// </summary>
+    [Theory]
+    [InlineData(false, 1)]
+    [InlineData(true, 3)]
+    public void ALethalCarrierClaimsOneLifePerMatch(bool oldValue, int expectedDeaths)
+    {
+        const string SweepInjury =
+            """[{ "type": "modifyProbability", "target": "opposingTeam", "probability": "injury", "value": 30, "duration": "match" }]""";
+        string perkJson = TestPerks.Json("butcher", "TACKLE", SweepInjury, rarity: "legendary", kind: "ruleBreaker")
+            .Replace("\"lethal\": false", "\"lethal\": true, \"lethalChance\": 10000", StringComparison.Ordinal);
+        var catalog = oldValue
+            ? TestPerks.CatalogWithTuning("\"killsPerCarrierPerMatch\": 1", "\"killsPerCarrierPerMatch\": 0", ("butcher", perkJson))
+            : TestPerks.CatalogWith(("butcher", perkJson));
+        Assert.Equal(oldValue ? 0 : 1, catalog.Tuning.Injury.Lethality.KillsPerCarrierPerMatch);
+
+        var setup = TestPerks.Match(catalog, 1, (1, new[] { "butcher" }));
+        var engine = TestPerks.Engine(catalog, setup);
+        var owner = engine.PlayerById(1)!;
+        var lethality = catalog.Tuning.Injury.Lethality;
+
+        var targets = (owner.Team == 0 ? setup.Away : setup.Home).Lineup.Slots
+            .Select(slot => engine.PlayerById(slot.PlayerId)!)
+            .Where(p => Lethality.Chance(
+                lethality,
+                10000,
+                owner.Strength,
+                p.Stamina,
+                100,
+                Lethality.MatchupAbsolute(p.HomeCell, p.Team, owner.HomeCell, owner.Team)) >= 4000)
+            .OrderBy(p => p.Id)
+            .Take(3)
+            .ToList();
+        Assert.Equal(3, targets.Count);
+
+        foreach (var tackled in targets)
+        {
+            for (int i = 0; i < 40; i++)
+            {
+                engine.Effects!.Publish(new MatchEvent(
+                    EventType.Tackle, engine.Tick, owner.Team, owner.Id, -1, tackled.Id,
+                    owner.HomeCell, Zone.Own, MatchPhase.OpenPlay, engine.BiasFor(0), 0, "attempted"));
+            }
+        }
+
+        Assert.Equal(expectedDeaths, targets.Count(p => p.Dead));
+        Assert.Equal(expectedDeaths, owner.DeathsCaused);
+    }
+
+    /// <summary>
+    /// ADR 0190 y RT-035: el tope se lee en la ficha del perk. La plantilla es texto fijo, así que este test
+    /// ata el texto al dato: si alguien cambia <c>killsPerCarrierPerMatch</c>, tiene que cambiar también la
+    /// plantilla <c>lethalContactRisk</c>.
+    /// </summary>
+    [Fact]
+    public void TheLethalDescriptionStatesTheOneLifeCap()
+    {
+        Assert.Equal(1, Catalog.Tuning.Injury.Lethality.KillsPerCarrierPerMatch);
+        var perk = Catalog.Perks.Get("skullsplitter");
+        Assert.Contains("una sola vida por partido", DescriptionGenerator.Describe(perk, "es", Catalog), StringComparison.Ordinal);
+        Assert.Contains("one life per match", DescriptionGenerator.Describe(perk, "en", Catalog), StringComparison.Ordinal);
+    }
+
     /// <summary>Las dos etiquetas que exigen los letales del catálogo, para que el portador pueda llevarlos.</summary>
     private static PlayerDefinition WithTags(PlayerDefinition player)
     {

@@ -1194,7 +1194,7 @@ public static class DataLoader
         node.EnsureKnownKeys(
             "relativeFactor", "proximityBasePercent", "proximityStepPercent", "proximityMinPercent",
             "minorInjuryPercent", "severeInjuryPercent", "resistanceMinPercent", "resistanceMaxPercent",
-            "maxChance", "victimsPerActivation");
+            "maxChance", "victimsPerActivation", "killsPerCarrierPerMatch");
 
         int min = node.Prop("proximityMinPercent").AsInt();
         int lowerBound = node.Prop("proximityBasePercent").AsInt();
@@ -1214,7 +1214,8 @@ public static class DataLoader
             node.Prop("resistanceMinPercent").AsInt(),
             node.Prop("resistanceMaxPercent").AsInt(),
             node.Prop("maxChance").AsInt(),
-            node.Prop("victimsPerActivation").AsInt());
+            node.Prop("victimsPerActivation").AsInt(),
+            node.Prop("killsPerCarrierPerMatch").AsInt());
     }
 
     private static RefereeTuning ParseReferee(Json node)

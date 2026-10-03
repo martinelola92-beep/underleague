@@ -18,6 +18,11 @@ namespace Underleague.Sim.Perks;
 /// <see cref="Lethality.Matchup"/>, con suelo en <see cref="ProximityMinPercent"/>. Alejar a alguien de
 /// la banda del asesino baja su número sin sacarlo del once.</item>
 /// </list>
+/// <para><see cref="KillsPerCarrierPerMatch"/> (ADR 0190) no es un factor de la tirada sino su tope: un
+/// portador que ya se ha cobrado esa cantidad de vidas en el partido sigue tirando —el flujo de dados no
+/// cambia— pero con probabilidad 0. Es lo que hace que el indicador, que marca a
+/// <see cref="VictimsPerActivation"/> rivales por portador, cuente bien cuántos pueden morir. 0 = sin
+/// tope (el comportamiento anterior a la ADR 0190, que es el control de la medición).</para>
 /// </summary>
 public sealed record LethalityTuning(
     int RelativeFactor,
@@ -29,7 +34,8 @@ public sealed record LethalityTuning(
     int ResistanceMinPercent,
     int ResistanceMaxPercent,
     int MaxChance,
-    int VictimsPerActivation);
+    int VictimsPerActivation,
+    int KillsPerCarrierPerMatch);
 
 /// <summary>
 /// La tirada de muerte de un perk letal (RF-093 vía 2, ADR 0048), <b>pura y entera</b>: la usa el motor

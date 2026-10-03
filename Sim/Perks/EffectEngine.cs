@@ -982,6 +982,12 @@ internal sealed class EffectEngine : IPerkLinks
                     break;
                 }
 
+                // ADR 0190: un portador que ya se cobró sus vidas de este partido sigue tirando, pero a 0.
+                if (_engine.LethalQuotaSpent(subscription.Owner))
+                {
+                    best = 0;
+                }
+
                 // Se tira siempre, incluso con probabilidad 0: el flujo de dados depende de cuántos
                 // marca el perk y no de cuánto valga la tirada de cada uno (RT-021).
                 var marked = victims[pick];

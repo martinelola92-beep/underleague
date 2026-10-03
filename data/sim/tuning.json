@@ -159,7 +159,7 @@
     "actScalePercent": [120, 260, 420],
     "eliteScalePercent": 150,
     "lethality": {
-      "_doc": "ADR 0048: un jugador sano PUEDE morir, asi que alcanzar a una victima ya no la mata: la tira. victimsPerActivation es a cuantos rivales MARCA cada activacion, y marca al que peor lo tiene (mayor probabilidad de morir); concentrar el peligro en el eslabon mas debil es lo que permite que la alineacion lo reduzca -quitar ese eslabon baja el numero- en vez de repartir un impuesto que nadie puede esquivar. Los tres factores de la tirada son las tres cosas que el jugador decide antes de confirmar (RF-012c): en que estado alinea (minorInjuryPercent, severeInjuryPercent, lo que queda de la regla vieja de RF-093 convertida de puerta en multiplicador), a quien alinea (relativeFactor sobre fuerza del portador menos aguante de la victima, multiplicativo: sumando no cambiaba nada, medido) y donde lo coloca (proximity*, sobre la distancia de emparejamiento de Sim.Perks.Lethality). maxChance acota la tirada: al tope, un tocado marcado no vuelve.",
+      "_doc": "ADR 0048: un jugador sano PUEDE morir, asi que alcanzar a una victima ya no la mata: la tira. victimsPerActivation es a cuantos rivales MARCA cada activacion, y marca al que peor lo tiene (mayor probabilidad de morir); concentrar el peligro en el eslabon mas debil es lo que permite que la alineacion lo reduzca -quitar ese eslabon baja el numero- en vez de repartir un impuesto que nadie puede esquivar. Los tres factores de la tirada son las tres cosas que el jugador decide antes de confirmar (RF-012c): en que estado alinea (minorInjuryPercent, severeInjuryPercent, lo que queda de la regla vieja de RF-093 convertida de puerta en multiplicador), a quien alinea (relativeFactor sobre fuerza del portador menos aguante de la victima, multiplicativo: sumando no cambiaba nada, medido) y donde lo coloca (proximity*, sobre la distancia de emparejamiento de Sim.Perks.Lethality). maxChance acota la tirada: al tope, un tocado marcado no vuelve. ADR 0190: killsPerCarrierPerMatch es cuantas vidas puede cobrarse un mismo portador en un partido; alcanzado el tope sigue tirando con probabilidad 0. Con 0 (sin tope) un Partecraneos de acto 3 mataba 1,75 por partido (dos o mas en el 57 % de los partidos) y el ojeo solo avisaba de una.",
       "relativeFactor": 6,
       "proximityBasePercent": 100,
       "proximityStepPercent": 25,
@@ -169,7 +169,8 @@
       "resistanceMinPercent": 20,
       "resistanceMaxPercent": 500,
       "maxChance": 8000,
-      "victimsPerActivation": 1
+      "victimsPerActivation": 1,
+      "killsPerCarrierPerMatch": 1
     }
   },
   "referee": {

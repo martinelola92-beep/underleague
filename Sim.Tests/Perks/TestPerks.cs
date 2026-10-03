@@ -44,6 +44,33 @@ internal static class TestPerks
         return DataLoader.FromJson(files);
     }
 
+    /// <summary>
+    /// <see cref="CatalogWith"/> con un reemplazo de texto sobre <c>sim/tuning.json</c>: para los controles que
+    /// miden el mismo perk con el dato en su valor viejo (ADR 0190). Falla si el texto a reemplazar no está.
+    /// </summary>
+    public static Catalog CatalogWithTuning(string from, string to, params (string Id, string Json)[] perks)
+    {
+        var files = TestData.LoadAllFiles();
+        foreach (var path in files.Keys.Where(IsDiscardedPerk).ToList())
+        {
+            files.Remove(path);
+        }
+
+        foreach (var (id, json) in perks)
+        {
+            files["perks/" + id + ".json"] = json;
+        }
+
+        string tuning = files["sim/tuning.json"];
+        if (!tuning.Contains(from, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException($"sim/tuning.json no contiene '{from}'");
+        }
+
+        files["sim/tuning.json"] = tuning.Replace(from, to, StringComparison.Ordinal);
+        return DataLoader.FromJson(files);
+    }
+
     private static bool IsDiscardedPerk(string path) =>
         path.StartsWith("perks/", StringComparison.Ordinal)
         && !RacialAbilities.Any(id => path == "perks/" + id + ".json");

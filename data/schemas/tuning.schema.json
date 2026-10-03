@@ -930,6 +930,12 @@
               "type": "integer",
               "minimum": 1,
               "maximum": 7
+            },
+            "killsPerCarrierPerMatch": {
+              "description": "ADR 0190: vidas que un mismo portador de perk letal puede cobrarse en un partido. Alcanzado el tope sigue tirando con probabilidad 0 (el flujo de dados no cambia). 0 = sin tope.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 7
             }
           },
           "required": [
@@ -942,7 +948,8 @@
             "resistanceMinPercent",
             "resistanceMaxPercent",
             "maxChance",
-            "victimsPerActivation"
+            "victimsPerActivation",
+            "killsPerCarrierPerMatch"
           ],
           "additionalProperties": false
         }

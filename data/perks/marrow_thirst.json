@@ -1,5 +1,5 @@
 {
-  "_doc": "ADR 0046, RF-093 vía 2; disparador movido por el paquete AY (docs/plan-perks-positivos.md paso 1). Perk LETAL de CONTACTO con la misma forma que skullsplitter —se cobra en cada entrada del portador y solo puede matar al rival al que entra— y dos gatillos que lo estrechan: solo muerde si el portador empieza en el tercio rival, y solo lo puede llevar un Agresivo. Segundo y tercer canal de los cuatro letales: injure para el portador y severeInjury para el rival, los dos durante la JUGADA de la entrada (antes duraban el partido desde el saque; ver el _doc de skullsplitter para por qué la duración baja a jugada).",
+  "_doc": "ADR 0046, RF-093 vía 2; disparador movido por el paquete AY (docs/plan-perks-positivos.md paso 1). Perk LETAL de CONTACTO con la misma forma que skullsplitter —se cobra en cada entrada del portador y solo puede matar al rival al que entra— y dos gatillos que lo estrechan: solo muerde si el portador empieza en el tercio rival, y solo lo puede llevar un Agresivo. Segundo y tercer canal de los cuatro letales: injure para el portador y severeInjury para el rival, los dos durante la JUGADA de la entrada (antes duraban el partido desde el saque; ver el _doc de skullsplitter para por qué la duración baja a jugada). ADR 0190 (BX-20): lethalChance 900 -> 1800. Un portador ya solo se cobra una vida por partido (tuning.injury.lethality.killsPerCarrierPerMatch) y eso dejaba deathsPerMatch en 0,095 / 0,101, bajo la banda 0,11-0,22 de la ADR 0170; con 1800, 0,128 / 0,108 (media 0,118, 2 semillas x 300 runs). Se compensa aquí porque es el letal que reparte de uno en uno.",
   "id": "marrow_thirst",
   "name": {
     "es": "Sed de médula",
@@ -36,7 +36,7 @@
   "limit": null,
   "accumulatesAcrossMatches": false,
   "lethal": true,
-  "lethalChance": 900,
+  "lethalChance": 1800,
   "positionOnly": null,
   "tagsRequired": [
     "Aggressive"
