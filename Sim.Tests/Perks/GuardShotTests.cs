@@ -14,13 +14,58 @@ namespace Underleague.Sim.Tests.Perks;
 /// un % fijo se queda con el balón. El disparador es el tiro que ya se sabe que va a puerta
 /// (<c>SHOT_ON_TARGET</c>), así que el uso no se gasta en tiros que van fuera.
 /// </summary>
-public sealed class GuardShotTests
+public sealed class GuardShotTests : IClassFixture<GuardShotTests.LastManMatches>
 {
     private static readonly Catalog Catalog = TestData.LoadCatalog();
     private static readonly RefereeSetup Referee = new("Referee", RefereeTrait.Neutral, 0);
     private readonly ITestOutputHelper _output;
 
-    public GuardShotTests(ITestOutputHelper output) => _output = output;
+    private readonly LastManMatches _matches;
+
+    public GuardShotTests(ITestOutputHelper output, LastManMatches matches)
+    {
+        _output = output;
+        _matches = matches;
+    }
+
+    /// <summary>
+    /// Los 750 partidos reales con <c>last_man</c> (el 1.º, 2.º y 3.º defensa × 250 semillas) que recorren dos
+    /// pruebas distintas —el ritmo de paradas y el bloqueo genérico tras la tirada fallida—: se juegan una
+    /// vez (técnica «compartir lo que se repite»). La semilla es función pura de (defensa, índice); xUnit corre
+    /// las pruebas de la clase una detrás de otra y el fixture se suelta al acabar.
+    /// </summary>
+    public sealed class LastManMatches
+    {
+        private readonly Dictionary<(int Nth, int Index), (MatchResult Result, int Owner)> _played = new();
+
+        public (MatchResult Result, int Owner) Get(int nth, int index)
+        {
+            lock (_played)
+            {
+                if (!_played.TryGetValue((nth, index), out var played))
+                {
+                    played = Play(nth, index);
+                    _played[(nth, index)] = played;
+                }
+
+                return played;
+            }
+        }
+
+        private static (MatchResult Result, int Owner) Play(int nth, int i)
+        {
+            var homeRng = RngStreams.Generation(1, i);
+            var awayRng = RngStreams.Generation(1, 10_000 + i);
+            var home = TeamGenerator.Generate(ref homeRng, Catalog, "home", Race.Human, 50, 1, 4);
+            var away = TeamGenerator.Generate(ref awayRng, Catalog, "away", Race.Human, 50, 100001, 4);
+            var players = home.Players.ToList();
+            int slot = Enumerable.Range(0, players.Count).Where(k => players[k].Position == Position.Defender).ElementAt(nth);
+            players[slot] = players[slot] with { Perks = new[] { "last_man" } };
+            var setup = new MatchSetup(home with { Players = players }, away, Referee);
+            var result = Simulator.Run(setup, RngStreams.MatchSeed(1, i), Catalog, new SimConfig(CollectLog: false));
+            return (result, players[slot].Id);
+        }
+    }
 
     private static string Guard(int value) => $$"""[{ "type": "guardShot", "target": "owner", "value": {{value}} }]""";
 
@@ -113,16 +158,7 @@ public sealed class GuardShotTests
         {
             for (int i = 0; i < 250; i++)
             {
-                var homeRng = RngStreams.Generation(1, i);
-                var awayRng = RngStreams.Generation(1, 10_000 + i);
-                var home = TeamGenerator.Generate(ref homeRng, Catalog, "home", Race.Human, 50, 1, 4);
-                var away = TeamGenerator.Generate(ref awayRng, Catalog, "away", Race.Human, 50, 100001, 4);
-                var players = home.Players.ToList();
-                int slot = Enumerable.Range(0, players.Count).Where(k => players[k].Position == Position.Defender).ElementAt(nth);
-                players[slot] = players[slot] with { Perks = new[] { "last_man" } };
-                var setup = new MatchSetup(home with { Players = players }, away, Referee);
-                var result = Simulator.Run(setup, RngStreams.MatchSeed(1, i), Catalog, new SimConfig(CollectLog: false));
-                int owner = players[slot].Id;
+                var (result, owner) = _matches.Get(nth, i);
 
                 int perMatch = 0;
                 foreach (var e in result.Events.Where(e => e.Type == EventType.PerkTriggered && e.Detail == "last_man"))
@@ -250,16 +286,7 @@ public sealed class GuardShotTests
         {
             for (int i = 0; i < 250; i++)
             {
-                var homeRng = RngStreams.Generation(1, i);
-                var awayRng = RngStreams.Generation(1, 10_000 + i);
-                var home = TeamGenerator.Generate(ref homeRng, Catalog, "home", Race.Human, 50, 1, 4);
-                var away = TeamGenerator.Generate(ref awayRng, Catalog, "away", Race.Human, 50, 100001, 4);
-                var players = home.Players.ToList();
-                int slot = Enumerable.Range(0, players.Count).Where(k => players[k].Position == Position.Defender).ElementAt(nth);
-                players[slot] = players[slot] with { Perks = new[] { "last_man" } };
-                var setup = new MatchSetup(home with { Players = players }, away, Referee);
-                var result = Simulator.Run(setup, RngStreams.MatchSeed(1, i), Catalog, new SimConfig(CollectLog: false));
-                int owner = players[slot].Id;
+                var (result, owner) = _matches.Get(nth, i);
 
                 foreach (var e in result.Events.Where(e => e.Type == EventType.PerkTriggered && e.Detail == "last_man"))
                 {
