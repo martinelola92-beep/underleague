@@ -228,6 +228,11 @@ public sealed partial class PlayerModel : Node3D
     /// <summary>Coseno del ángulo entre la marcha y el balón por debajo del cual el paso es lateral (70°–110°): ahí no hay clip creíble y mira a donde va. Provisional.</summary>
     private const float LateralCos = 0.34f;
 
+    /// <summary>Salida de la marcha lateral (histéresis de <see cref="LateralCos"/>): ~63°/117°. Provisional.</summary>
+    private const float LateralExitCos = 0.45f;
+
+    private bool _lateral;
+
     /// <summary>A menos de esto (casillas) el balón está encima y su dirección no dice nada. Provisional.</summary>
     private const float BallLookMinCells = 0.3f;
 
@@ -583,7 +588,16 @@ public sealed partial class PlayerModel : Node3D
         float idleRate = 1f + (IdleRateSpread * ((Mathf.PosMod(Variant * 0.381966f, 1f) * 2f) - 1f));
         _tree.Set("parameters/idle_scale/scale", rate * idleRate);
         Lean(down, simDelta);
-        _tree.Set("parameters/gesture_scale/scale", rate * _gestureSpeed);
+        // El gesto se COLOCA cada fotograma en su reloj (BV-A, tercera pasada). Medido con la cadera dibujada: la búsqueda
+        // pedida al lanzar el gesto se perdía, porque la transición reinicia su entrada a 0 después de buscar; la plancha
+        // arrancaba en su segundo 0 y no en el 0,83 pedido, y el instrumento (que leía este reloj) no lo veía (Regla J).
+        // Colocándolo siempre, el reloj de aquí y el clip que se ve son el mismo.
+        _tree.Set("parameters/gesture_scale/scale", 0f);
+        if (_gesture.Length > 0)
+        {
+            float clipTime = _gestureLength == float.MaxValue ? Mathf.PosMod(_gestureTime, ClipLength(_gesture)) : _gestureTime;
+            _tree.Set("parameters/gesture_seek/seek_request", Mathf.Max(0f, clipTime));
+        }
 
         float weightTarget = _gesture.Length > 0 ? 1f : 0f;
         float fade = weightTarget > _gestureWeight ? _gestureFade : _outFade;
@@ -617,7 +631,11 @@ public sealed partial class PlayerModel : Node3D
             return facing;
         }
 
-        if (speed > StandStillCellsPerSecond && Mathf.Abs(velocity.Normalized().Dot(toBall.Normalized())) < LateralCos)
+        // De lado, con histéresis: sin ella el muñeco saltaba entre mirar al balón y a la marcha en fotogramas alternos
+        // (medido: ±24° cada fotograma, segunda pasada). Entra por debajo de LateralCos y sale por encima de LateralExitCos.
+        float cos = speed > StandStillCellsPerSecond ? Mathf.Abs(velocity.Normalized().Dot(toBall.Normalized())) : 1f;
+        _lateral = _lateral ? cos < LateralExitCos : cos < LateralCos;
+        if (_lateral)
         {
             return facing;
         }
