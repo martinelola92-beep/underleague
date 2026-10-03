@@ -68,3 +68,11 @@ mismo problema un puesto más atrás y se cerró con la ADR 0133)
 - **Arreglo:** `base.Forward.MarkOpponent` 120 → 210 (margen de 104 sobre la entrada, el del centrocampista).
   Abierto a +1: 0,22 entradas de delanteros por partido en el test permanente (0,15 en la sonda de 600 partidos); el ajuste es un dial (+40: 0,35; +100: 1,03; +150: 1,53 por partido).
 - **Sangre:** la sonda no muestra coste con el puesto cerrado. Abrirlo es decisión del revisor.
+
+## Barrido de detectores (3 oct 2026)
+
+**(a) REJECTED, (b) LIKELY.** (a) Ningún delantero provoca un `Tackle offBall*` en 2.000 partidos (el puesto está cerrado,
+ADR 0133; el detector da 0 también en las builds viejas, así que no discrimina). (b) La **elección** de `Block`/`Tackle` por un
+delantero sin rival con balón persiste: 1,9 episodios y 11,9 ticks por partido (`ref`; pre-ADR 0179: 14,5), pero **el
+instrumento no separa antes/después con claridad** (otra build vieja da 9,8), así que no se puede decir que el arreglo no
+funcionara ni que sí. Peores: `run` semilla 794 tick 405 (31 ticks seguidos, delantero 6). Informe: [barrido-detectores-2026-10-03](../analisis/barrido-detectores-2026-10-03.md).

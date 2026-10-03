@@ -63,3 +63,9 @@ rachas cortas de silencio, y el test no puede confundirlas con un congelamiento.
 - [BB-O](./BB-O.md) — el caso que destapó la clase, ya cerrado por su propio camino.
 - [BB-G](./BB-G.md) y [BC-G](./BC-G.md) — "el balón se queda parado / suelto y nadie lo coge": la otra
   familia de partidos que no progresan, ahí por falta de velocidad del balón y no por un estado atascado.
+
+## Barrido de detectores (3 oct 2026)
+
+**REJECTED en la build actual** (0/2.000 partidos con ≥ 150 ticks sin evento ni balón en movimiento, ni con el dueño del balón
+fuera del campo). El detector sí lo ve en las builds viejas (semillas 40@618 con 628 ticks, 224@623, 389@882). La primitiva
+sigue sin existir (el motor no tiene temporizador de inactividad); esto sólo dice que hoy no se dispara. Informe: [barrido-detectores-2026-10-03](../analisis/barrido-detectores-2026-10-03.md).

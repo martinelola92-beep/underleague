@@ -157,3 +157,12 @@ su propio baseline y sus 43 puertas. Es un hito aparte.
   **una sola plantilla por pareja** (la semilla genera los equipos): pendiente de la segunda semilla, ver ADR 0176/informe.
 - **Hermano nuevo (LIKELY):** los 63 episodios que quedan en 150 partidos son `FindSpace` con dos compañeros al mismo
   hueco (la penalización de apiñamiento mira posiciones, no destinos). No se toca.
+
+## Barrido de detectores (3 oct 2026)
+
+**CONFIRMED, residual.** Detector validado contra la build anterior al arreglo (18,6 ± 0,6 episodios/partido, 99,5 % de partidos) y
+contra casos sintéticos. En la build actual: **0,94 ± 0,05 por partido** (`ref`, 46 % de partidos) y 0,79 ± 0,04 (`run`), 1.000
+partidos cada una. De los 1.700 episodios, 838 son `CoverSpace` y **747 `FindSpace`**: lo que quedaba (ver arriba) ya pesa como
+el original. Peores: **run semilla 775, tick 1821** (jugadores 4 y 1, ambos `FindSpace`, 54 inversiones seguidas, ~3,6 s) y
+`ref` semilla 487 tick 1181 (52). Reproducible en Godot: `-- movimiento <dir> 775 ventana BB-K 1800 1860 4,1`; hoja en
+`Game/screenshots/detectores/hojas/`. Informe: [barrido-detectores-2026-10-03](../analisis/barrido-detectores-2026-10-03.md).

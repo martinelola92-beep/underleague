@@ -153,3 +153,9 @@ Tres salidas, sin elegir ninguna:
 El commit `9f4d25b` (BB-J) se llevó `Sim/Engine/MatchEngine.cs` sin `Sim/Engine/Utility.cs` ni el test:
 `main` quedó publicado y roto (`CS1061`) hasta el commit `96234de`. Corregido y verificado desde un clon
 limpio antes de seguir.
+
+## Barrido de detectores (3 oct 2026)
+
+**REJECTED** en 2.000 partidos: ningún saque (centro incluido) tiene dueño rival ni entrada contra el sacador con la ventana
+ya abierta (cota 95 % < 0,15 % por partido). Detector validado sólo con casos sintéticos: el arreglo es anterior a las builds
+viejas reconstruibles. Informe: [barrido-detectores-2026-10-03](../analisis/barrido-detectores-2026-10-03.md).

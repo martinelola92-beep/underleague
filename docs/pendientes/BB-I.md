@@ -28,3 +28,11 @@ guardados/replays/logs de partida (ninguno commiteado).
 semilla, o hasta que aparezca evidencia nueva. La sospecha original —un tiro bloqueado al instante no se
 lee como tiro en pantalla— sigue siendo la hipótesis más plausible por descarte de datos, pero no pasa a
 CONFIRMED sin poder reproducirla.
+
+## Barrido de detectores (3 oct 2026)
+
+**REJECTED en la traza.** Con `box_predator` en todos los jugadores de campo (1.000 partidos, 2.648 activaciones por 1.000
+partidos): **0** sin un `SHOT` del mismo actor en el mismo tick y **0** con `SHOT_BLOCKED` en ese tick o el siguiente. La hipótesis
+de la ficha («tiro bloqueado al instante») no se sostiene. Queda **LIKELY** una causa de presentación (el pergamino dura 1 s,
+`MatchFlashView.DurationFrames`, mientras el tirador ya hace otra cosa) que la traza no ve; sigue haciendo falta la semilla del
+revisor. Informe: [barrido-detectores-2026-10-03](../analisis/barrido-detectores-2026-10-03.md).

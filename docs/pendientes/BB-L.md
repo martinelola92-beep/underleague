@@ -25,3 +25,8 @@ la verificación visual) y `docs/pendientes/BB-A.md` para el caso hermano (saque
 ## Hermanos
 
 Mismo hilo de causa (el reposicionamiento se resuelve por teletransporte en vez de por transición): [BB-A](./BB-A.md), [BB-C](./BB-C.md), [BB-D](./BB-D.md), [BB-M](./BB-M.md).
+
+## Barrido de detectores (3 oct 2026)
+
+**REJECTED en la traza** (0/2.000: ningún jugador salta antes de abandonar el campo). Lo que se veía era del render
+(BA-K) y no se midió con el registro por fotograma. Informe: [barrido-detectores-2026-10-03](../analisis/barrido-detectores-2026-10-03.md).

@@ -201,7 +201,8 @@ public sealed class SymptomSweepTests
         var main = isArmed ? armed : reference;
         string label = isArmed ? key + " [armado]" : key;
         report.AppendLine($"| {label} | {Cell(key, main, false)} | {Cell(key, main, true)} | {(isArmed ? "—" : Cell(key, runs, false))} | {(isArmed ? "—" : Cell(key, runs, true))} | {(top.Length == 0 ? "—" : top)} |");
-        foreach (var x in all)
+        // Los 200 peores por detector: el resto no cambia el diagnóstico y el fichero crecía a casi 1 MB.
+        foreach (var x in all.Take(200))
         {
             cases.AppendLine(string.Create(CultureInfo.InvariantCulture, $"{key}\t{x.Kind}\t{x.Seed}\t{x.Hit.Tick}\t{x.Hit.Length}\t{x.Hit.Magnitude:0.###}\t{x.Hit.Note}"));
         }

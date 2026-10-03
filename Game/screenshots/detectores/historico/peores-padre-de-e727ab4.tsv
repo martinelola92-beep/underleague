@@ -1,0 +1,30 @@
+detector	kind	seed	tick	length	magnitude	note
+BA-E gol sin ángulo	ref	22	126	1	1	gol de 6 desde (16.0,5.4), apertura 0.00
+BA-E gol sin ángulo	ref	25	218	1	1	gol de 6 desde (16.0,1.6), apertura 0.00
+BA-E gol sin ángulo	ref	35	186	1	1	gol de 6 desde (16.0,1.6), apertura 0.00
+BA-J sin repliegue tras parada	ref	3	150	5	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	7	543	5	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	7	643	5	5	parada del 0, 5 sin replegar
+BB-A/L salto inexplicado	ref	47	201	1	1.048	jugador 2 salta 1.05 casillas (Positioning)
+BB-A/L salto inexplicado	run	47	201	1	1.048	jugador 2 salta 1.05 casillas (Positioning)
+BB-A/L salto inexplicado	ref	207	1105	1	0.716	jugador 3 salta 0.72 casillas (Positioning)
+BB-K baile	ref	255	738	113	113	jugador 102, acción CoverSpace
+BB-K baile	run	255	738	113	113	jugador 102, acción CoverSpace
+BB-K baile	ref	387	639	108	108	jugador 102, acción CoverSpace
+BC-G balón suelto quieto >=15 ticks	ref	256	1041	100	100	balón en (1.0,0.0)
+BC-G balón suelto quieto >=15 ticks	run	256	1041	100	100	balón en (1.0,0.0)
+BC-G balón suelto quieto >=15 ticks	ref	121	747	85	85	balón en (12.4,6.1)
+BC-G balón suelto quieto >=60 ticks	ref	256	1041	100	100	balón en (1.0,0.0)
+BC-G balón suelto quieto >=60 ticks	run	256	1041	100	100	balón en (1.0,0.0)
+BC-G balón suelto quieto >=60 ticks	ref	121	747	85	85	balón en (12.4,6.1)
+BF-C delantero elige pegar sin portador a su alcance	ref	62	286	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	72	896	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	93	474	22	22	delantero 6 elige pegar sin portador a su alcance
+BH-A congelación	ref	40	618	628	628	628 ticks sin evento ni balón en movimiento
+BH-A congelación	run	40	618	628	628	628 ticks sin evento ni balón en movimiento
+BN-A amontonamiento sobre el portero	ref	12	139	5	5	portero 100, 5 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	31	1964	5	5	portero 100, 5 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	49	270	5	5	portero 0, 5 compañeros a <2 (juego abierto)
+BO-A portador y rival atascados >3 s	ref	40	614	632	632	portador 1 y rival 103
+BO-A portador y rival atascados >3 s	run	40	614	632	632	portador 1 y rival 103
+BO-A portador y rival atascados >3 s	ref	92	284	217	217	portador 101 y rival 6

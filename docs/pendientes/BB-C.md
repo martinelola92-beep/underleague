@@ -116,3 +116,8 @@ Mismo hilo de causa (el reposicionamiento se resuelve por teletransporte en vez 
 - **`KnockedDown` en `ResetPositions`** (sacado de este arreglo, ver arriba): el mismo salto de posición
   que tenía el goleador celebrando, pero para un jugador derribado en la jugada del gol, con interacción
   sin medir con "olfato de sangre".
+
+## Barrido de detectores (3 oct 2026)
+
+**REJECTED** en 2.000 partidos: ningún goleador salta de posición celebrando ni celebra en su campo (cota 95 % < 0,15 %).
+Validado sólo con casos sintéticos. Informe: [barrido-detectores-2026-10-03](../analisis/barrido-detectores-2026-10-03.md).

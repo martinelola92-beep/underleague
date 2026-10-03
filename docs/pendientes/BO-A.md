@@ -56,3 +56,11 @@ Corregido. Queda abierta la causa de fondo (por qué se vuelve a elegir proteger
 ## Hermanos
 
 [BJ-A](./BJ-A.md) y [BI-D](./BI-D.md) (proteger dura cuatro veces su contador).
+
+## Barrido de detectores (3 oct 2026)
+
+**CONFIRMED, residual raro.** Detector validado con el caso exacto de la ficha: en la build anterior al arreglo da **semilla 40,
+tick 614, 632 ticks** (y semilla 92 tick 284, 217). Build actual: 0,024 tramos > 3 s por partido (2,4 %, `ref`) y 0,036 (3,4 %,
+`run`), frente al 9 % de antes. El peor: **run semilla 743, tick 1127, 173 ticks (11,5 s)**, portador 6 contra el rival 2000003; la
+hoja (`hojas/hoja-BO-A.png`, MP4 `BO-A.mp4`) muestra un grupo de rojos alrededor del portador azul con el balón a los pies, no
+un duelo de dos. Los demás `ref` son 53 ticks (justo sobre el umbral de 45). Informe: [barrido-detectores-2026-10-03](../analisis/barrido-detectores-2026-10-03.md).

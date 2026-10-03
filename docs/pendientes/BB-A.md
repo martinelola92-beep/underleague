@@ -29,3 +29,10 @@ intermedio deslizante.
 
 Mismo hilo de causa (el reposicionamiento se resuelve por teletransporte en vez de por transición):
 [BA-K](./BA-K.md), [BB-C](./BB-C.md), [BB-D](./BB-D.md), [BB-L](./BB-L.md).
+
+## Barrido de detectores (3 oct 2026)
+
+**Residual raro, sólo del portero (CONFIRMED); causa LIKELY.** Salto > 0,6 casillas en un tick fuera de reposiciones y saques:
+5 casos en 2.000 partidos (0,25 %), **los cinco del portero** (`run` semilla 57 tick 1377, 1,11 casillas, `Chasing`;
+`ref` semillas 74 tick 955, 343 tick 394, 229 tick 1531; `run` 720 tick 829). Lo más probable es su salida/estirada, no aislado.
+BB-L en la traza: 0/2.000 (REJECTED). El deslizamiento dibujado (BA-K) no se barrió. Informe: [barrido-detectores-2026-10-03](../analisis/barrido-detectores-2026-10-03.md).

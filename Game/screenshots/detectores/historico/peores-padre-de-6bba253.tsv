@@ -1,0 +1,33 @@
+detector	kind	seed	tick	length	magnitude	note
+BA-E gol sin ángulo	ref	7	1038	1	1	gol de 106 desde (0.0,5.4), apertura 0.00
+BA-E gol sin ángulo	ref	12	1230	1	1	gol de 106 desde (0.0,1.5), apertura 0.00
+BA-E gol sin ángulo	ref	33	1249	1	1	gol de 106 desde (0.0,5.4), apertura 0.00
+BA-J sin repliegue tras parada	ref	1	825	5	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	3	201	5	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	3	645	5	5	parada del 0, 5 sin replegar
+BB-A/L salto inexplicado	ref	110	1060	1	0.814	jugador 100 salta 0.81 casillas (Positioning)
+BB-A/L salto inexplicado	run	110	1060	1	0.814	jugador 100 salta 0.81 casillas (Positioning)
+BB-G2 portero perseguidor (abrazo mortal)	ref	389	877	483	483	portero 100 cercano, nadie del equipo persigue
+BB-G2 portero perseguidor (abrazo mortal)	run	389	877	483	483	portero 100 cercano, nadie del equipo persigue
+BB-G2 portero perseguidor (abrazo mortal)	ref	239	259	31	31	portero 100 cercano, nadie del equipo persigue
+BB-K baile	ref	61	475	42	42	jugador 106, acción FindSpace
+BB-K baile	run	61	475	42	42	jugador 106, acción FindSpace
+BB-K baile	ref	61	476	40	40	jugador 105, acción FindSpace
+BC-G balón suelto quieto >=15 ticks	ref	224	624	656	656	balón en (0.7,7.0)
+BC-G balón suelto quieto >=15 ticks	run	224	624	656	656	balón en (0.7,7.0)
+BC-G balón suelto quieto >=15 ticks	ref	389	877	483	483	balón en (13.6,5.3)
+BC-G balón suelto quieto >=60 ticks	ref	224	624	656	656	balón en (0.7,7.0)
+BC-G balón suelto quieto >=60 ticks	run	224	624	656	656	balón en (0.7,7.0)
+BC-G balón suelto quieto >=60 ticks	ref	389	877	483	483	balón en (13.6,5.3)
+BF-C delantero elige pegar sin portador a su alcance	ref	28	950	22	22	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	38	1040	22	22	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	53	616	22	22	delantero 6 elige pegar sin portador a su alcance
+BH-A congelación	ref	224	623	657	657	657 ticks sin evento ni balón en movimiento
+BH-A congelación	run	224	623	657	657	657 ticks sin evento ni balón en movimiento
+BH-A congelación	ref	389	882	478	478	478 ticks sin evento ni balón en movimiento
+BN-A amontonamiento sobre el portero	ref	19	278	5	5	portero 0, 5 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	131	674	5	5	portero 0, 5 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	305	987	5	5	portero 100, 5 compañeros a <2 (juego abierto)
+BO-A portador y rival atascados >3 s	ref	14	490	53	53	portador 6 y rival 101
+BO-A portador y rival atascados >3 s	ref	90	899	53	53	portador 5 y rival 103
+BO-A portador y rival atascados >3 s	ref	117	1134	53	53	portador 2 y rival 105

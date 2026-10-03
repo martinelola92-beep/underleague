@@ -93,3 +93,11 @@ solo cabecea (a veces dos o tres) → el portero lo coge».
 
 [BI-F](./BI-F.md) (el saque de puerta saca del área a los rivales, de golpe), ADR 0143 (el penalti), la
 barrera de BB-B.
+
+## Barrido de detectores (3 oct 2026)
+
+**CONFIRMED, residual.** Detector validado contra la build anterior al arreglo (3,02 episodios/partido, 89,8 % de partidos) y
+sintéticos. Build actual: **0,60 ± 0,02 por partido** (`ref`, 46 %) y 0,52 (`run`, 42 %): la ADR 0152 lo bajó unas cinco veces
+pero no lo cerró. **Ninguno es un saque de puerta**: los 1.113 episodios ocurren en juego abierto, con el portero reteniendo 20
+ticks y 5 compañeros a menos de 2 casillas. Peores: `ref` semillas 205 (tick 1669), 411 (tick 405), 466 (tick 1163) y
+`run` semilla 61 tick 1509. Posible conexión con la pausa del portero de la ADR 0178 (BA-J): LIKELY, sin aislar. Informe: [barrido-detectores-2026-10-03](../analisis/barrido-detectores-2026-10-03.md).

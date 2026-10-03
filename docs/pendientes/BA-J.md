@@ -25,3 +25,10 @@ _(por enlazar donde se detecten; ver `README.md` del directorio)_
 - **Arreglo:** `save.holdTicks` 15 (estado propio `Holding`) y `save.retreatTicks` 20 (no baja al delantero ni pisa la orden ofensiva). Un primer intento reutilizando la orden defensiva rompió
   `ShoutTests`/`MobTests`: la orden efectiva la reconstruye la vista de gritos de los eventos.
 - **Coste:** medido sólo en el lote de todo el paquete (entradas 7,90 → 7,12, lesiones 0,70 → 0,66, goles 2,35 → 2,47); la atribución a la pausa es LIKELY (ver ADR 0178).
+
+## Barrido de detectores (3 oct 2026)
+
+**LIKELY.** Tras `SAVE held`, al soltar el portero quedan de media **2,1-2,2 jugadores de campo no delanteros del que tiró en
+campo contrario** (antes de la ADR 0178: 3,5-3,6) y el 84 % de los partidos tiene al menos una parada con más de 1 rezagado. El
+umbral «> 1» es **provisional, sin medir**: no hay una cifra de «bien», así que sólo se afirma la reducción. Peores: `ref` semillas
+22 (tick 769), 77 (1555), 84 (1670), `run` semilla 7 tick 1835 (5 sin replegar). Informe: [barrido-detectores-2026-10-03](../analisis/barrido-detectores-2026-10-03.md).

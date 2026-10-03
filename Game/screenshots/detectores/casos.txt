@@ -1,0 +1,1265 @@
+BA-E gol sin ángulo	ref	32	165	1	1	gol de 6 desde (16.0,1.5), apertura 0.00
+BA-E gol sin ángulo	ref	35	126	1	1	gol de 6 desde (16.0,1.4), apertura 0.00
+BA-E gol sin ángulo	ref	39	130	1	1	gol de 106 desde (0.0,5.5), apertura 0.00
+BA-E gol sin ángulo	ref	63	221	1	1	gol de 6 desde (16.0,1.6), apertura 0.00
+BA-E gol sin ángulo	ref	83	119	1	1	gol de 6 desde (16.0,2.6), apertura 0.00
+BA-E gol sin ángulo	ref	122	1313	1	1	gol de 106 desde (0.0,1.6), apertura 0.00
+BA-E gol sin ángulo	ref	152	139	1	1	gol de 6 desde (16.0,5.4), apertura 0.00
+BA-E gol sin ángulo	ref	175	1137	1	1	gol de 106 desde (0.0,5.4), apertura 0.00
+BA-E gol sin ángulo	ref	199	490	1	1	gol de 6 desde (16.0,5.4), apertura 0.00
+BA-E gol sin ángulo	ref	203	280	1	1	gol de 6 desde (16.0,1.6), apertura 0.00
+BA-E gol sin ángulo	ref	249	376	1	1	gol de 6 desde (16.0,1.6), apertura 0.00
+BA-E gol sin ángulo	ref	254	348	1	1	gol de 106 desde (0.0,1.6), apertura 0.00
+BA-E gol sin ángulo	ref	304	773	1	1	gol de 106 desde (0.0,1.6), apertura 0.00
+BA-E gol sin ángulo	ref	318	357	1	1	gol de 6 desde (16.0,1.5), apertura 0.00
+BA-E gol sin ángulo	ref	327	386	1	1	gol de 6 desde (16.0,0.5), apertura 0.00
+BA-E gol sin ángulo	ref	335	694	1	1	gol de 106 desde (0.0,5.4), apertura 0.00
+BA-E gol sin ángulo	ref	341	355	1	1	gol de 106 desde (0.0,5.4), apertura 0.00
+BA-E gol sin ángulo	ref	341	714	1	1	gol de 106 desde (0.0,1.6), apertura 0.00
+BA-E gol sin ángulo	ref	421	178	1	1	gol de 6 desde (16.0,2.3), apertura 0.00
+BA-E gol sin ángulo	ref	435	1443	1	1	gol de 6 desde (16.0,5.4), apertura 0.00
+BA-E gol sin ángulo	ref	461	908	1	1	gol de 106 desde (0.0,5.4), apertura 0.00
+BA-E gol sin ángulo	ref	471	979	1	1	gol de 6 desde (16.0,1.7), apertura 0.00
+BA-E gol sin ángulo	ref	483	961	1	1	gol de 106 desde (0.0,5.5), apertura 0.00
+BA-E gol sin ángulo	ref	499	1164	1	1	gol de 106 desde (0.0,2.1), apertura 0.00
+BA-E gol sin ángulo	ref	541	175	1	1	gol de 6 desde (16.0,2.3), apertura 0.00
+BA-E gol sin ángulo	ref	651	1440	1	1	gol de 106 desde (0.0,1.5), apertura 0.00
+BA-E gol sin ángulo	ref	652	131	1	1	gol de 6 desde (16.0,0.8), apertura 0.00
+BA-E gol sin ángulo	ref	656	112	1	1	gol de 6 desde (16.0,1.6), apertura 0.00
+BA-E gol sin ángulo	ref	725	599	1	1	gol de 106 desde (0.0,1.7), apertura 0.00
+BA-E gol sin ángulo	ref	818	967	1	1	gol de 106 desde (0.0,1.6), apertura 0.00
+BA-E gol sin ángulo	ref	862	176	1	1	gol de 6 desde (16.0,2.2), apertura 0.00
+BA-E gol sin ángulo	ref	993	858	1	1	gol de 106 desde (0.0,1.6), apertura 0.00
+BA-E gol sin ángulo	run	35	1231	1	1	gol de 6 desde (16.0,1.5), apertura 0.00
+BA-E gol sin ángulo	run	105	472	1	1	gol de 6 desde (16.0,1.5), apertura 0.00
+BA-E gol sin ángulo	run	237	230	1	1	gol de 6 desde (16.0,1.6), apertura 0.00
+BA-E gol sin ángulo	run	262	144	1	1	gol de 6 desde (16.0,1.5), apertura 0.00
+BA-E gol sin ángulo	run	326	978	1	1	gol de 6 desde (16.0,5.4), apertura 0.00
+BA-E gol sin ángulo	run	326	1473	1	1	gol de 6 desde (16.0,1.6), apertura 0.00
+BA-E gol sin ángulo	run	687	97	1	1	gol de 6 desde (16.0,1.5), apertura 0.00
+BA-E gol sin ángulo	run	818	1129	1	1	gol de 6 desde (16.0,1.6), apertura 0.00
+BA-E gol sin ángulo	run	909	1473	1	1	gol de 6 desde (16.0,1.6), apertura 0.00
+BA-E gol sin ángulo	run	946	813	1	1	gol de 6 desde (16.0,1.5), apertura 0.00
+BA-E gol sin ángulo	run	974	1128	1	1	gol de 6 desde (16.0,1.9), apertura 0.00
+BA-E gol sin ángulo	ref	675	126	1	0.994	gol de 6 desde (16.0,1.6), apertura 0.01
+BA-E gol sin ángulo	run	84	127	1	0.994	gol de 6 desde (16.0,1.6), apertura 0.01
+BA-E gol sin ángulo	ref	297	1358	1	0.991	gol de 106 desde (0.0,5.4), apertura 0.01
+BA-E gol sin ángulo	run	954	134	1	0.975	gol de 6 desde (16.0,1.7), apertura 0.02
+BA-E gol sin ángulo	ref	494	121	1	0.967	gol de 6 desde (15.9,1.4), apertura 0.03
+BA-E gol sin ángulo	run	372	310	1	0.964	gol de 6 desde (15.9,5.5), apertura 0.04
+BA-E gol sin ángulo	ref	137	1024	1	0.953	gol de 106 desde (0.1,5.4), apertura 0.05
+BA-E gol sin ángulo	run	926	1094	1	0.947	gol de 2000006 desde (0.1,5.5), apertura 0.05
+BA-E gol sin ángulo	ref	213	419	1	0.94	gol de 106 desde (0.1,5.1), apertura 0.06
+BA-E gol sin ángulo	ref	5	111	1	0.937	gol de 6 desde (15.9,5.5), apertura 0.06
+BA-E gol sin ángulo	ref	481	699	1	0.928	gol de 6 desde (15.9,1.5), apertura 0.07
+BA-E gol sin ángulo	ref	90	1417	1	0.923	gol de 6 desde (15.9,4.6), apertura 0.08
+BA-E gol sin ángulo	ref	77	805	1	0.892	gol de 106 desde (0.2,5.5), apertura 0.11
+BA-E gol sin ángulo	ref	618	157	1	0.889	gol de 106 desde (0.2,1.5), apertura 0.11
+BA-E gol sin ángulo	run	508	1180	1	0.889	gol de 6 desde (15.8,5.4), apertura 0.11
+BA-E gol sin ángulo	run	124	130	1	0.882	gol de 6 desde (15.8,1.6), apertura 0.12
+BA-E gol sin ángulo	run	147	245	1	0.88	gol de 6 desde (15.8,1.6), apertura 0.12
+BA-E gol sin ángulo	run	508	612	1	0.879	gol de 6 desde (15.8,1.6), apertura 0.12
+BA-E gol sin ángulo	run	256	1071	1	0.875	gol de 6 desde (15.8,1.5), apertura 0.13
+BA-E gol sin ángulo	ref	860	133	1	0.874	gol de 6 desde (15.8,1.6), apertura 0.13
+BA-E gol sin ángulo	run	83	673	1	0.873	gol de 6 desde (15.9,2.4), apertura 0.13
+BA-E gol sin ángulo	ref	48	1598	1	0.87	gol de 106 desde (0.2,1.8), apertura 0.13
+BA-E gol sin ángulo	run	68	678	1	0.868	gol de 6 desde (15.7,5.4), apertura 0.13
+BA-E gol sin ángulo	run	902	927	1	0.863	gol de 6 desde (15.7,1.6), apertura 0.14
+BA-E gol sin ángulo	ref	745	722	1	0.859	gol de 106 desde (0.3,5.5), apertura 0.14
+BA-E gol sin ángulo	run	323	121	1	0.848	gol de 6 desde (15.7,1.5), apertura 0.15
+BA-E gol sin ángulo	run	517	388	1	0.848	gol de 6 desde (15.7,1.6), apertura 0.15
+BA-E gol sin ángulo	ref	186	301	1	0.846	gol de 106 desde (0.5,0.2), apertura 0.15
+BA-E gol sin ángulo	run	458	266	1	0.843	gol de 6 desde (15.7,1.6), apertura 0.16
+BA-E gol sin ángulo	ref	812	1348	1	0.839	gol de 106 desde (0.3,1.6), apertura 0.16
+BA-E gol sin ángulo	ref	700	1576	1	0.839	gol de 6 desde (15.7,1.6), apertura 0.16
+BA-E gol sin ángulo	ref	947	884	1	0.839	gol de 6 desde (15.7,1.6), apertura 0.16
+BA-E gol sin ángulo	ref	806	611	1	0.836	gol de 6 desde (15.7,5.5), apertura 0.16
+BA-E gol sin ángulo	run	244	1095	1	0.834	gol de 6 desde (15.7,1.6), apertura 0.17
+BA-E gol sin ángulo	ref	271	291	1	0.823	gol de 106 desde (0.3,5.4), apertura 0.18
+BA-E gol sin ángulo	run	85	888	1	0.822	gol de 6 desde (15.6,1.6), apertura 0.18
+BA-E gol sin ángulo	run	135	106	1	0.821	gol de 6 desde (15.7,1.6), apertura 0.18
+BA-E gol sin ángulo	run	401	134	1	0.819	gol de 6 desde (15.6,1.6), apertura 0.18
+BA-E gol sin ángulo	run	154	725	1	0.817	gol de 6 desde (15.6,5.4), apertura 0.18
+BA-E gol sin ángulo	run	55	222	1	0.807	gol de 6 desde (15.6,1.5), apertura 0.19
+BA-E gol sin ángulo	ref	654	195	1	0.803	gol de 6 desde (15.6,1.6), apertura 0.20
+BA-E gol sin ángulo	run	547	172	1	0.803	gol de 6 desde (15.6,1.6), apertura 0.20
+BA-E gol sin ángulo	run	303	1081	1	0.801	gol de 6 desde (15.6,1.6), apertura 0.20
+BA-E gol sin ángulo	ref	193	232	1	0.801	gol de 106 desde (0.4,1.5), apertura 0.20
+BA-E gol sin ángulo	ref	678	460	1	0.799	gol de 6 desde (15.6,1.6), apertura 0.20
+BA-E gol sin ángulo	run	150	1018	1	0.797	gol de 2000006 desde (0.4,5.5), apertura 0.20
+BA-E gol sin ángulo	ref	84	371	1	0.787	gol de 106 desde (0.4,1.6), apertura 0.21
+BA-E gol sin ángulo	ref	308	157	1	0.783	gol de 6 desde (15.6,1.6), apertura 0.22
+BA-E gol sin ángulo	run	122	871	1	0.782	gol de 2000006 desde (0.2,2.4), apertura 0.22
+BA-E gol sin ángulo	ref	123	1070	1	0.782	gol de 6 desde (15.6,1.5), apertura 0.22
+BA-E gol sin ángulo	run	23	2090	1	0.78	gol de 2000004 desde (0.6,1.0), apertura 0.22
+BA-E gol sin ángulo	ref	775	413	1	0.779	gol de 106 desde (0.4,5.3), apertura 0.22
+BA-E gol sin ángulo	ref	875	1005	1	0.779	gol de 106 desde (0.4,1.5), apertura 0.22
+BA-E gol sin ángulo	ref	970	297	1	0.777	gol de 6 desde (15.6,5.5), apertura 0.22
+BA-E gol sin ángulo	ref	869	489	1	0.774	gol de 106 desde (0.4,1.6), apertura 0.23
+BA-E gol sin ángulo	ref	523	792	1	0.773	gol de 6 desde (15.6,1.6), apertura 0.23
+BA-E gol sin ángulo	run	881	335	1	0.771	gol de 6 desde (15.5,1.5), apertura 0.23
+BA-E gol sin ángulo	run	256	663	1	0.769	gol de 6 desde (15.5,1.6), apertura 0.23
+BA-E gol sin ángulo	run	31	420	1	0.766	gol de 6 desde (15.5,5.5), apertura 0.23
+BA-E gol sin ángulo	run	104	128	1	0.764	gol de 6 desde (15.5,1.6), apertura 0.24
+BA-E gol sin ángulo	run	410	587	1	0.764	gol de 6 desde (15.5,5.5), apertura 0.24
+BA-E gol sin ángulo	run	368	1234	1	0.762	gol de 6 desde (15.5,5.5), apertura 0.24
+BA-E gol sin ángulo	ref	755	570	1	0.755	gol de 106 desde (0.5,5.5), apertura 0.24
+BA-E gol sin ángulo	run	118	317	1	0.754	gol de 6 desde (15.5,1.6), apertura 0.25
+BA-E gol sin ángulo	run	843	283	1	0.752	gol de 6 desde (15.5,1.6), apertura 0.25
+BA-E gol sin ángulo	ref	671	773	1	0.751	gol de 6 desde (15.5,5.4), apertura 0.25
+BA-E gol sin ángulo	ref	217	1092	1	0.75	gol de 6 desde (15.5,1.5), apertura 0.25
+BA-E gol sin ángulo	run	757	1518	1	0.748	gol de 6 desde (15.5,5.4), apertura 0.25
+BA-E gol sin ángulo	ref	253	1187	1	0.748	gol de 6 desde (15.5,1.5), apertura 0.25
+BA-E gol sin ángulo	run	849	473	1	0.747	gol de 2000006 desde (0.5,5.5), apertura 0.25
+BA-E gol sin ángulo	ref	314	135	1	0.744	gol de 6 desde (15.5,1.6), apertura 0.26
+BA-E gol sin ángulo	run	24	1232	1	0.742	gol de 6 desde (15.5,1.5), apertura 0.26
+BA-E gol sin ángulo	ref	770	1775	1	0.742	gol de 106 desde (0.5,5.4), apertura 0.26
+BA-E gol sin ángulo	ref	729	711	1	0.742	gol de 106 desde (0.5,1.6), apertura 0.26
+BA-E gol sin ángulo	run	637	2094	1	0.741	gol de 6 desde (15.5,5.3), apertura 0.26
+BA-E gol sin ángulo	ref	788	757	1	0.739	gol de 106 desde (0.5,1.6), apertura 0.26
+BA-E gol sin ángulo	run	145	806	1	0.731	gol de 2000006 desde (0.5,5.3), apertura 0.27
+BA-E gol sin ángulo	ref	10	134	1	0.73	gol de 6 desde (15.5,1.6), apertura 0.27
+BA-E gol sin ángulo	ref	490	1066	1	0.725	gol de 6 desde (15.4,5.5), apertura 0.28
+BA-E gol sin ángulo	run	59	606	1	0.724	gol de 6 desde (15.4,1.6), apertura 0.28
+BA-E gol sin ángulo	run	925	517	1	0.724	gol de 2000006 desde (0.6,5.5), apertura 0.28
+BA-E gol sin ángulo	ref	208	1543	1	0.724	gol de 6 desde (15.4,1.6), apertura 0.28
+BA-E gol sin ángulo	ref	595	267	1	0.723	gol de 6 desde (15.4,1.6), apertura 0.28
+BA-E gol sin ángulo	ref	270	955	1	0.723	gol de 6 desde (15.4,5.4), apertura 0.28
+BA-E gol sin ángulo	ref	335	133	1	0.721	gol de 6 desde (15.4,1.5), apertura 0.28
+BA-E gol sin ángulo	run	898	424	1	0.72	gol de 6 desde (15.4,1.6), apertura 0.28
+BA-E gol sin ángulo	run	496	835	1	0.718	gol de 6 desde (15.4,5.4), apertura 0.28
+BA-E gol sin ángulo	ref	627	799	1	0.717	gol de 106 desde (0.6,1.6), apertura 0.28
+BA-E gol sin ángulo	ref	790	1630	1	0.717	gol de 6 desde (15.4,5.4), apertura 0.28
+BA-E gol sin ángulo	ref	228	987	1	0.715	gol de 6 desde (15.4,1.5), apertura 0.29
+BA-E gol sin ángulo	run	120	681	1	0.714	gol de 6 desde (15.4,1.5), apertura 0.29
+BA-E gol sin ángulo	ref	73	138	1	0.714	gol de 6 desde (15.4,5.4), apertura 0.29
+BA-E gol sin ángulo	run	953	134	1	0.712	gol de 6 desde (15.4,1.6), apertura 0.29
+BA-E gol sin ángulo	ref	158	386	1	0.712	gol de 6 desde (15.4,1.6), apertura 0.29
+BA-E gol sin ángulo	ref	426	630	1	0.711	gol de 6 desde (15.4,1.6), apertura 0.29
+BA-E gol sin ángulo	ref	795	827	1	0.707	gol de 6 desde (15.4,5.4), apertura 0.29
+BA-E gol sin ángulo	ref	599	1403	1	0.707	gol de 106 desde (0.6,5.4), apertura 0.29
+BA-E gol sin ángulo	ref	508	1560	1	0.706	gol de 106 desde (0.6,1.6), apertura 0.29
+BA-E gol sin ángulo	run	776	131	1	0.706	gol de 6 desde (15.4,1.6), apertura 0.29
+BA-E gol sin ángulo	ref	206	313	1	0.706	gol de 6 desde (15.4,1.6), apertura 0.29
+BA-E gol sin ángulo	ref	314	528	1	0.705	gol de 6 desde (15.4,5.4), apertura 0.29
+BA-E gol sin ángulo	ref	909	546	1	0.702	gol de 106 desde (0.6,1.5), apertura 0.30
+BA-E gol sin ángulo	ref	513	353	1	0.701	gol de 6 desde (15.4,1.6), apertura 0.30
+BA-E gol sin ángulo	ref	864	1333	1	0.701	gol de 6 desde (15.4,5.5), apertura 0.30
+BA-E gol sin ángulo	ref	222	734	1	0.698	gol de 106 desde (0.6,5.5), apertura 0.30
+BA-E gol sin ángulo	run	456	594	1	0.697	gol de 2000006 desde (0.6,5.5), apertura 0.30
+BA-E gol sin ángulo	ref	599	1559	1	0.696	gol de 6 desde (15.4,1.6), apertura 0.30
+BA-E gol sin ángulo	run	38	165	1	0.695	gol de 6 desde (15.4,5.4), apertura 0.30
+BA-E gol sin ángulo	ref	194	1276	1	0.695	gol de 106 desde (0.6,1.6), apertura 0.31
+BA-E gol sin ángulo	run	136	134	1	0.694	gol de 6 desde (15.4,1.5), apertura 0.31
+BA-E gol sin ángulo	run	885	1763	1	0.692	gol de 6 desde (15.3,1.5), apertura 0.31
+BA-E gol sin ángulo	ref	270	789	1	0.69	gol de 6 desde (15.4,1.6), apertura 0.31
+BA-E gol sin ángulo	ref	228	1434	1	0.689	gol de 106 desde (0.6,1.5), apertura 0.31
+BA-E gol sin ángulo	ref	90	638	1	0.688	gol de 6 desde (15.4,5.4), apertura 0.31
+BA-E gol sin ángulo	ref	900	338	1	0.687	gol de 106 desde (0.7,1.4), apertura 0.31
+BA-E gol sin ángulo	ref	950	967	1	0.686	gol de 6 desde (15.4,5.2), apertura 0.31
+BA-E gol sin ángulo	run	168	542	1	0.685	gol de 6 desde (15.4,5.4), apertura 0.31
+BA-E gol sin ángulo	ref	125	1326	1	0.685	gol de 6 desde (15.4,1.6), apertura 0.31
+BA-E gol sin ángulo	run	306	392	1	0.685	gol de 6 desde (15.4,1.6), apertura 0.32
+BA-E gol sin ángulo	ref	434	434	1	0.684	gol de 106 desde (0.7,5.5), apertura 0.32
+BA-E gol sin ángulo	ref	129	709	1	0.684	gol de 6 desde (15.4,5.4), apertura 0.32
+BA-E gol sin ángulo	ref	136	599	1	0.683	gol de 6 desde (15.4,5.4), apertura 0.32
+BA-E gol sin ángulo	run	901	1547	1	0.683	gol de 6 desde (15.3,5.5), apertura 0.32
+BA-E gol sin ángulo	run	628	1161	1	0.683	gol de 6 desde (15.4,5.4), apertura 0.32
+BA-E gol sin ángulo	ref	585	1280	1	0.682	gol de 6 desde (15.4,1.6), apertura 0.32
+BA-E gol sin ángulo	run	114	891	1	0.682	gol de 6 desde (15.3,5.5), apertura 0.32
+BA-E gol sin ángulo	run	481	483	1	0.681	gol de 6 desde (15.3,5.6), apertura 0.32
+BA-E gol sin ángulo	ref	474	1698	1	0.681	gol de 106 desde (0.7,5.5), apertura 0.32
+BA-E gol sin ángulo	run	984	136	1	0.681	gol de 6 desde (15.3,5.4), apertura 0.32
+BA-E gol sin ángulo	ref	924	1058	1	0.68	gol de 106 desde (0.6,1.6), apertura 0.32
+BA-E gol sin ángulo	run	533	278	1	0.68	gol de 6 desde (15.4,1.6), apertura 0.32
+BA-E gol sin ángulo	run	598	155	1	0.679	gol de 6 desde (15.4,1.7), apertura 0.32
+BA-E gol sin ángulo	ref	767	726	1	0.678	gol de 6 desde (15.3,1.6), apertura 0.32
+BA-E gol sin ángulo	run	935	1170	1	0.678	gol de 6 desde (15.3,1.6), apertura 0.32
+BA-E gol sin ángulo	ref	989	560	1	0.678	gol de 6 desde (15.3,1.6), apertura 0.32
+BA-E gol sin ángulo	run	515	132	1	0.676	gol de 6 desde (15.3,1.6), apertura 0.32
+BA-E gol sin ángulo	ref	802	922	1	0.676	gol de 106 desde (0.7,5.4), apertura 0.32
+BA-E gol sin ángulo	run	667	107	1	0.676	gol de 6 desde (15.3,1.5), apertura 0.32
+BA-E gol sin ángulo	run	785	133	1	0.675	gol de 6 desde (15.3,1.5), apertura 0.32
+BA-E gol sin ángulo	ref	772	225	1	0.675	gol de 6 desde (15.3,1.6), apertura 0.32
+BA-E gol sin ángulo	run	432	327	1	0.675	gol de 6 desde (15.3,5.5), apertura 0.32
+BA-E gol sin ángulo	ref	507	1194	1	0.675	gol de 6 desde (15.3,5.4), apertura 0.33
+BA-E gol sin ángulo	run	805	193	1	0.675	gol de 2000006 desde (0.6,1.6), apertura 0.33
+BA-E gol sin ángulo	run	699	523	1	0.674	gol de 6 desde (15.7,2.6), apertura 0.33
+BA-E gol sin ángulo	run	973	1894	1	0.673	gol de 2000006 desde (0.7,1.6), apertura 0.33
+BA-E gol sin ángulo	run	832	109	1	0.673	gol de 6 desde (15.3,1.6), apertura 0.33
+BA-E gol sin ángulo	run	127	1206	1	0.672	gol de 6 desde (15.6,2.3), apertura 0.33
+BA-E gol sin ángulo	ref	978	838	1	0.672	gol de 6 desde (15.3,1.6), apertura 0.33
+BA-E gol sin ángulo	ref	744	786	1	0.672	gol de 6 desde (15.3,1.5), apertura 0.33
+BA-E gol sin ángulo	run	431	1266	1	0.669	gol de 2000006 desde (0.5,1.9), apertura 0.33
+BA-E gol sin ángulo	run	666	2105	1	0.669	gol de 6 desde (15.3,1.6), apertura 0.33
+BA-E gol sin ángulo	run	86	932	1	0.669	gol de 6 desde (15.3,1.5), apertura 0.33
+BA-E gol sin ángulo	ref	69	119	1	0.669	gol de 6 desde (15.3,5.5), apertura 0.33
+BA-E gol sin ángulo	run	116	751	1	0.667	gol de 6 desde (15.3,1.6), apertura 0.33
+BA-E gol sin ángulo	ref	845	144	1	0.667	gol de 6 desde (15.3,5.4), apertura 0.33
+BA-E gol sin ángulo	run	556	756	1	0.664	gol de 6 desde (15.3,1.6), apertura 0.34
+BA-E gol sin ángulo	run	800	921	1	0.663	gol de 2000006 desde (0.7,5.4), apertura 0.34
+BA-J sin repliegue tras parada	ref	22	769	12	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	77	1555	8	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	84	1670	0	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	98	690	8	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	107	802	1	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	116	881	5	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	131	1260	4	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	137	411	5	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	145	733	4	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	148	1057	5	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	165	730	15	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	227	1715	2	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	238	492	4	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	257	163	2	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	379	626	1	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	395	671	1	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	417	1258	11	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	426	1331	6	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	437	108	2	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	455	154	4	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	458	1469	4	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	479	977	2	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	511	206	7	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	555	281	11	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	562	1212	5	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	639	1495	1	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	651	308	1	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	659	193	16	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	725	1585	6	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	730	137	5	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	753	111	4	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	761	1430	5	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	764	1575	4	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	765	441	7	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	773	1273	3	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	774	1715	0	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	778	1041	4	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	793	187	17	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	846	2703	2	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	861	1325	6	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	893	1470	4	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	944	694	1	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	978	181	7	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	7	1835	21	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	23	1871	21	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	27	1340	14	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	33	624	8	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	37	731	4	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	42	1455	4	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	50	1660	12	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	107	926	4	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	120	1515	11	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	121	1237	20	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	123	1779	21	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	125	170	10	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	134	1791	21	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	134	1853	20	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	148	1655	8	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	154	1709	21	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	154	1773	21	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	155	1430	3	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	196	1395	21	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	207	1320	5	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	232	189	20	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	243	819	2	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	247	130	7	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	278	1468	4	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	283	2345	21	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	285	1490	5	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	326	1665	11	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	344	1619	21	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	370	1505	21	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	462	1549	20	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	462	1819	21	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	469	317	4	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	483	1729	20	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	507	1320	13	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	528	167	10	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	595	1390	4	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	607	730	10	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	644	1471	21	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	661	248	15	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	679	1405	2	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	688	117	5	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	699	517	4	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	699	1405	7	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	713	1491	20	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	713	1553	20	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	713	1751	20	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	729	1681	21	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	747	2373	20	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	814	2469	8	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	839	577	20	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	853	1280	5	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	860	1373	7	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	883	1450	5	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	920	107	1	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	run	966	2019	21	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	run	971	105	12	5	parada del 2000000, 5 sin replegar
+BA-J sin repliegue tras parada	ref	2	935	21	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	3	119	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	26	137	21	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	26	1446	6	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	27	353	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	29	1460	2	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	40	655	21	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	43	1421	2	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	59	443	21	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	59	1053	21	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	65	773	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	66	487	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	77	435	21	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	83	863	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	84	129	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	88	1451	21	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	91	135	21	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	93	1121	4	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	95	229	21	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	101	1143	21	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	102	351	21	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	104	1365	16	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	121	1205	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	124	131	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	124	559	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	128	537	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	136	981	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	137	199	21	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	141	387	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	141	627	21	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	149	1145	21	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	173	1389	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	180	523	21	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	184	145	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	189	477	21	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	201	375	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	203	613	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	209	913	21	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	210	629	21	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	215	115	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	219	159	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	219	413	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	219	629	21	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	223	261	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	223	703	21	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	230	1613	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	234	301	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	234	401	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	237	643	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	242	543	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	243	851	21	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	245	213	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	245	711	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	247	1320	17	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	248	1585	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	250	1709	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	253	331	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	256	233	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	258	321	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	258	1251	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	267	329	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	274	159	21	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	276	645	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	293	149	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	296	559	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	297	639	21	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	297	1247	21	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	304	1311	4	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	305	1227	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	306	363	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	306	1535	16	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	312	811	21	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	314	791	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	314	1027	21	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	316	213	21	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	319	635	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	324	747	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	335	1317	21	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	336	637	21	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	336	1715	17	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	341	885	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	343	217	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	344	391	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	350	700	9	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	355	773	21	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	370	1137	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	373	369	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	375	457	21	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	375	871	21	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	377	929	21	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	384	755	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	386	501	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	389	513	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	392	835	21	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	402	181	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	403	777	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	412	237	5	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	418	817	20	4	parada del 0, 4 sin replegar
+BA-J sin repliegue tras parada	ref	439	323	21	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	439	1237	20	4	parada del 100, 4 sin replegar
+BA-J sin repliegue tras parada	ref	443	921	20	4	parada del 100, 4 sin replegar
+BB-A/L salto inexplicado	run	57	1377	1	1.113	jugador 0 salta 1.11 casillas (Chasing)
+BB-A/L salto inexplicado	ref	74	955	1	0.931	jugador 0 salta 0.93 casillas (Chasing)
+BB-A/L salto inexplicado	ref	343	394	1	0.92	jugador 0 salta 0.92 casillas (Positioning)
+BB-A/L salto inexplicado	run	720	829	1	0.843	jugador 0 salta 0.84 casillas (Chasing)
+BB-A/L salto inexplicado	ref	229	1531	1	0.739	jugador 0 salta 0.74 casillas (Chasing)
+BB-K baile	run	775	1821	54	54	jugador 4, acción FindSpace
+BB-K baile	run	775	1822	53	53	jugador 1, acción FindSpace
+BB-K baile	ref	487	1181	52	52	jugador 6, acción FindSpace
+BB-K baile	run	899	1928	52	52	jugador 3, acción FindSpace
+BB-K baile	run	899	1928	52	52	jugador 4, acción FindSpace
+BB-K baile	ref	487	1186	48	48	jugador 5, acción FindSpace
+BB-K baile	run	941	860	46	46	jugador 2000005, acción FindSpace
+BB-K baile	ref	786	432	45	45	jugador 5, acción FindSpace
+BB-K baile	run	941	863	45	45	jugador 2000006, acción FindSpace
+BB-K baile	ref	158	1516	44	44	jugador 3, acción FindSpace
+BB-K baile	ref	158	1517	43	43	jugador 4, acción FindSpace
+BB-K baile	ref	786	435	42	42	jugador 6, acción FindSpace
+BB-K baile	run	662	1927	40	40	jugador 4, acción FindSpace
+BB-K baile	run	960	2071	40	40	jugador 2000004, acción FindSpace
+BB-K baile	run	960	2072	40	40	jugador 2000003, acción FindSpace
+BB-K baile	run	662	1928	39	39	jugador 3, acción FindSpace
+BB-K baile	ref	292	1794	37	37	jugador 5, acción FindSpace
+BB-K baile	ref	292	1794	37	37	jugador 6, acción FindSpace
+BB-K baile	run	576	1420	37	37	jugador 5, acción FindSpace
+BB-K baile	ref	114	875	36	36	jugador 106, acción FindSpace
+BB-K baile	ref	357	297	36	36	jugador 106, acción FindSpace
+BB-K baile	ref	818	2017	36	36	jugador 104, acción FindSpace
+BB-K baile	ref	818	2018	36	36	jugador 103, acción FindSpace
+BB-K baile	run	171	1757	36	36	jugador 4, acción FindSpace
+BB-K baile	run	391	1412	36	36	jugador 2000005, acción FindSpace
+BB-K baile	ref	715	1216	35	35	jugador 106, acción FindSpace
+BB-K baile	run	7	1906	35	35	jugador 3, acción FindSpace
+BB-K baile	run	353	538	35	35	jugador 5, acción FindSpace
+BB-K baile	run	353	538	35	35	jugador 6, acción FindSpace
+BB-K baile	ref	637	1427	34	34	jugador 6, acción FindSpace
+BB-K baile	ref	715	1216	34	34	jugador 105, acción FindSpace
+BB-K baile	ref	942	1372	34	34	jugador 5, acción FindSpace
+BB-K baile	ref	942	1372	34	34	jugador 6, acción FindSpace
+BB-K baile	run	7	1907	34	34	jugador 4, acción FindSpace
+BB-K baile	run	171	1758	34	34	jugador 3, acción FindSpace
+BB-K baile	run	576	1423	34	34	jugador 6, acción FindSpace
+BB-K baile	run	783	1169	34	34	jugador 2000006, acción FindSpace
+BB-K baile	run	952	1617	34	34	jugador 6, acción FindSpace
+BB-K baile	ref	45	1554	33	33	jugador 5, acción FindSpace
+BB-K baile	ref	114	878	33	33	jugador 105, acción FindSpace
+BB-K baile	run	39	136	33	33	jugador 5, acción FindSpace
+BB-K baile	run	39	136	33	33	jugador 6, acción FindSpace
+BB-K baile	run	391	1415	33	33	jugador 2000006, acción FindSpace
+BB-K baile	run	515	1086	33	33	jugador 2000006, acción FindSpace
+BB-K baile	run	575	244	33	33	jugador 5, acción FindSpace
+BB-K baile	run	575	244	33	33	jugador 6, acción FindSpace
+BB-K baile	run	327	1549	32	32	jugador 2000006, acción FindSpace
+BB-K baile	ref	354	2360	31	31	jugador 103, acción FindSpace
+BB-K baile	ref	914	1824	31	31	jugador 105, acción FindSpace
+BB-K baile	ref	914	1824	31	31	jugador 106, acción FindSpace
+BB-K baile	run	304	1563	31	31	jugador 2000004, acción FindSpace
+BB-K baile	run	330	1552	31	31	jugador 2000003, acción FindSpace
+BB-K baile	run	952	1620	31	31	jugador 5, acción FindSpace
+BB-K baile	ref	45	1557	30	30	jugador 6, acción FindSpace
+BB-K baile	ref	354	2361	30	30	jugador 104, acción FindSpace
+BB-K baile	ref	496	1454	30	30	jugador 103, acción FindSpace
+BB-K baile	run	35	1609	30	30	jugador 4, acción FindSpace
+BB-K baile	run	304	1564	30	30	jugador 2000003, acción FindSpace
+BB-K baile	run	330	1553	30	30	jugador 2000004, acción FindSpace
+BB-K baile	ref	496	1455	29	29	jugador 104, acción FindSpace
+BB-K baile	ref	637	1432	29	29	jugador 5, acción FindSpace
+BB-K baile	ref	744	1714	29	29	jugador 103, acción FindSpace
+BB-K baile	run	35	1610	29	29	jugador 3, acción FindSpace
+BB-K baile	run	334	2104	29	29	jugador 5, acción FindSpace
+BB-K baile	run	348	728	29	29	jugador 5, acción FindSpace
+BB-K baile	run	996	1312	29	29	jugador 5, acción FindSpace
+BB-K baile	ref	328	956	28	28	jugador 5, acción FindSpace
+BB-K baile	ref	328	957	28	28	jugador 6, acción FindSpace
+BB-K baile	ref	442	1787	28	28	jugador 6, acción FindSpace
+BB-K baile	ref	444	1814	28	28	jugador 3, acción FindSpace
+BB-K baile	ref	444	1815	28	28	jugador 4, acción FindSpace
+BB-K baile	ref	744	1715	28	28	jugador 104, acción FindSpace
+BB-K baile	ref	770	1609	28	28	jugador 104, acción FindSpace
+BB-K baile	ref	770	1610	28	28	jugador 103, acción FindSpace
+BB-K baile	run	152	1790	28	28	jugador 2000003, acción FindSpace
+BB-K baile	run	334	2105	28	28	jugador 6, acción FindSpace
+BB-K baile	run	428	1879	28	28	jugador 2000004, acción FindSpace
+BB-K baile	run	428	1880	28	28	jugador 2000003, acción FindSpace
+BB-K baile	run	454	2299	28	28	jugador 4, acción FindSpace
+BB-K baile	run	467	215	28	28	jugador 6, acción FindSpace
+BB-K baile	run	483	1611	28	28	jugador 2000004, acción FindSpace
+BB-K baile	run	483	1612	28	28	jugador 2000003, acción FindSpace
+BB-K baile	run	487	257	28	28	jugador 2000006, acción FindSpace
+BB-K baile	run	721	1296	28	28	jugador 5, acción FindSpace
+BB-K baile	run	996	1313	28	28	jugador 6, acción FindSpace
+BB-K baile	run	9	790	27	27	jugador 2000006, acción FindSpace
+BB-K baile	run	152	1790	27	27	jugador 2000004, acción FindSpace
+BB-K baile	run	454	2300	27	27	jugador 3, acción FindSpace
+BB-K baile	run	721	1296	27	27	jugador 6, acción FindSpace
+BB-K baile	run	999	1020	27	27	jugador 5, acción FindSpace
+BB-K baile	ref	391	220	26	26	jugador 105, acción FindSpace
+BB-K baile	ref	990	662	26	26	jugador 105, acción FindSpace
+BB-K baile	run	106	1255	26	26	jugador 2000006, acción FindSpace
+BB-K baile	run	348	731	26	26	jugador 6, acción FindSpace
+BB-K baile	run	712	357	26	26	jugador 2000006, acción FindSpace
+BB-K baile	run	718	201	26	26	jugador 2000006, acción FindSpace
+BB-K baile	ref	390	651	25	25	jugador 106, acción FindSpace
+BB-K baile	ref	442	1790	25	25	jugador 5, acción FindSpace
+BB-K baile	run	467	218	25	25	jugador 5, acción FindSpace
+BB-K baile	run	889	668	25	25	jugador 5, acción FindSpace
+BB-K baile	ref	294	806	24	24	jugador 105, acción FindSpace
+BB-K baile	ref	391	225	24	24	jugador 106, acción FindSpace
+BB-K baile	ref	420	357	24	24	jugador 106, acción FindSpace
+BB-K baile	ref	675	1979	24	24	jugador 104, acción FindSpace
+BB-K baile	ref	675	1980	24	24	jugador 103, acción FindSpace
+BB-K baile	ref	786	560	24	24	jugador 5, acción FindSpace
+BB-K baile	run	106	1256	24	24	jugador 2000005, acción FindSpace
+BB-K baile	run	287	1797	24	24	jugador 4, acción FindSpace
+BB-K baile	run	404	623	24	24	jugador 2000006, acción FindSpace
+BB-K baile	run	698	271	24	24	jugador 2000006, acción FindSpace
+BB-K baile	run	889	669	24	24	jugador 6, acción FindSpace
+BB-K baile	run	999	1023	24	24	jugador 6, acción FindSpace
+BB-K baile	ref	158	1664	23	23	jugador 3, acción FindSpace
+BB-K baile	ref	357	309	23	23	jugador 105, acción FindSpace
+BB-K baile	ref	486	730	23	23	jugador 5, acción FindSpace
+BB-K baile	ref	786	561	23	23	jugador 6, acción FindSpace
+BB-K baile	run	287	1798	23	23	jugador 3, acción FindSpace
+BB-K baile	run	327	983	23	23	jugador 2000005, acción FindSpace
+BB-K baile	run	327	983	23	23	jugador 2000006, acción FindSpace
+BB-K baile	run	565	639	23	23	jugador 2000006, acción FindSpace
+BB-K baile	run	578	929	23	23	jugador 6, acción FindSpace
+BB-K baile	ref	156	2179	22	22	jugador 4, acción FindSpace
+BB-K baile	ref	158	1665	22	22	jugador 4, acción FindSpace
+BB-K baile	ref	173	648	22	22	jugador 105, acción FindSpace
+BB-K baile	ref	225	373	22	22	jugador 6, acción FindSpace
+BB-K baile	ref	420	360	22	22	jugador 105, acción FindSpace
+BB-K baile	ref	486	731	22	22	jugador 6, acción FindSpace
+BB-K baile	ref	526	363	22	22	jugador 6, acción FindSpace
+BB-K baile	ref	721	215	22	22	jugador 106, acción FindSpace
+BB-K baile	ref	739	1931	22	22	jugador 104, acción FindSpace
+BB-K baile	ref	739	1932	22	22	jugador 103, acción FindSpace
+BB-K baile	ref	899	1308	22	22	jugador 105, acción FindSpace
+BB-K baile	ref	899	1308	22	22	jugador 106, acción FindSpace
+BB-K baile	ref	990	667	22	22	jugador 106, acción FindSpace
+BB-K baile	run	331	2060	22	22	jugador 2000005, acción FindSpace
+BB-K baile	run	421	1837	22	22	jugador 6, acción FindSpace
+BB-K baile	run	565	199	22	22	jugador 2000006, acción FindSpace
+BB-K baile	ref	156	2180	21	21	jugador 3, acción FindSpace
+BB-K baile	ref	294	809	21	21	jugador 106, acción FindSpace
+BB-K baile	ref	422	2149	21	21	jugador 4, acción FindSpace
+BB-K baile	ref	721	216	21	21	jugador 105, acción FindSpace
+BB-K baile	run	67	1950	21	21	jugador 3, acción FindSpace
+BB-K baile	run	331	2061	21	21	jugador 2000008, acción FindSpace
+BB-K baile	ref	125	570	20	20	jugador 105, acción FindSpace
+BB-K baile	ref	258	1806	20	20	jugador 3, acción FindSpace
+BB-K baile	ref	422	2150	20	20	jugador 3, acción FindSpace
+BB-K baile	run	41	1691	20	20	jugador 2000003, acción FindSpace
+BB-K baile	run	41	1691	20	20	jugador 2000004, acción FindSpace
+BB-K baile	run	67	1951	20	20	jugador 4, acción FindSpace
+BB-K baile	run	421	1842	20	20	jugador 5, acción FindSpace
+BB-K baile	run	613	1947	20	20	jugador 4, acción FindSpace
+BB-K baile	run	662	2015	20	20	jugador 4, acción FindSpace
+BB-K baile	run	698	274	20	20	jugador 2000005, acción FindSpace
+BB-K baile	run	822	1801	20	20	jugador 4, acción FindSpace
+BB-K baile	run	960	839	20	20	jugador 5, acción FindSpace
+BB-K baile	run	960	839	20	20	jugador 6, acción FindSpace
+BB-K baile	run	988	1785	20	20	jugador 2, acción FindSpace
+BB-K baile	ref	173	651	19	19	jugador 106, acción FindSpace
+BB-K baile	ref	225	376	19	19	jugador 5, acción FindSpace
+BB-K baile	ref	258	1807	19	19	jugador 4, acción FindSpace
+BB-K baile	ref	526	366	19	19	jugador 5, acción FindSpace
+BB-K baile	ref	616	2341	19	19	jugador 4, acción FindSpace
+BB-K baile	run	63	1491	19	19	jugador 2000006, acción FindSpace
+BB-K baile	run	604	1058	19	19	jugador 1, acción OfferSupport
+BB-K baile	run	613	1948	19	19	jugador 3, acción FindSpace
+BB-K baile	run	662	2016	19	19	jugador 3, acción FindSpace
+BB-K baile	run	822	1802	19	19	jugador 3, acción FindSpace
+BB-K baile	run	988	1784	19	19	jugador 5, acción FindSpace
+BB-K baile	ref	52	899	18	18	jugador 106, acción FindSpace
+BB-K baile	ref	614	2499	18	18	jugador 4, acción FindSpace
+BB-K baile	ref	616	2342	18	18	jugador 3, acción FindSpace
+BB-K baile	run	39	116	18	18	jugador 5, acción FindSpace
+BB-K baile	run	406	1989	18	18	jugador 2000004, acción FindSpace
+BB-K baile	run	463	1573	18	18	jugador 2000004, acción FindSpace
+BB-K baile	run	578	934	18	18	jugador 5, acción FindSpace
+BB-K baile	run	604	1059	18	18	jugador 2000006, acción MarkOpponent
+BB-K baile	run	633	683	18	18	jugador 6, acción FindSpace
+BB-K baile	run	666	189	18	18	jugador 2000006, acción FindSpace
+BB-K baile	run	729	1925	18	18	jugador 2000004, acción FindSpace
+BB-K baile	run	729	1926	18	18	jugador 2000003, acción FindSpace
+BB-K baile	run	783	1170	18	18	jugador 2000005, acción FindSpace
+BB-K baile	run	819	659	18	18	jugador 6, acción FindSpace
+BB-K baile	ref	167	784	17	17	jugador 5, acción FindSpace
+BB-K baile	ref	502	253	17	17	jugador 105, acción FindSpace
+BB-K baile	ref	502	253	17	17	jugador 106, acción FindSpace
+BB-K baile	ref	614	2500	17	17	jugador 3, acción FindSpace
+BB-K baile	ref	845	1377	17	17	jugador 105, acción FindSpace
+BB-K baile	ref	845	1377	17	17	jugador 106, acción FindSpace
+BB-K baile	ref	845	1453	17	17	jugador 106, acción FindSpace
+BB-K baile	run	391	1339	17	17	jugador 2000005, acción FindSpace
+BB-K baile	run	406	1990	17	17	jugador 2000003, acción FindSpace
+BB-K baile	run	463	1574	17	17	jugador 2000003, acción FindSpace
+BB-K baile	run	576	1118	17	17	jugador 5, acción FindSpace
+BB-K baile	run	947	1587	17	17	jugador 2000006, acción FindSpace
+BB-K baile	ref	136	176	16	16	jugador 105, acción FindSpace
+BB-K baile	ref	156	1969	16	16	jugador 4, acción FindSpace
+BB-K baile	ref	167	785	16	16	jugador 6, acción FindSpace
+BB-K baile	ref	306	700	16	16	jugador 5, acción FindSpace
+BB-K baile	ref	354	2467	16	16	jugador 104, acción FindSpace
+BB-K baile	ref	355	2393	16	16	jugador 4, acción FindSpace
+BC-G balón suelto quieto >=15 ticks	ref	232	875	26	26	balón en (0.8,1.3)
+BC-G balón suelto quieto >=15 ticks	ref	335	1375	25	25	balón en (13.7,1.2)
+BC-G balón suelto quieto >=15 ticks	run	640	1177	25	25	balón en (13.8,1.7)
+BC-G balón suelto quieto >=15 ticks	run	703	731	25	25	balón en (13.8,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	232	444	21	21	balón en (2.2,2.6)
+BC-G balón suelto quieto >=15 ticks	run	450	899	21	21	balón en (13.8,1.7)
+BC-G balón suelto quieto >=15 ticks	run	598	424	21	21	balón en (13.8,1.7)
+BC-G balón suelto quieto >=15 ticks	run	675	588	21	21	balón en (13.9,1.7)
+BC-G balón suelto quieto >=15 ticks	run	691	746	21	21	balón en (13.7,5.6)
+BC-G balón suelto quieto >=15 ticks	ref	208	414	20	20	balón en (2.3,5.3)
+BC-G balón suelto quieto >=15 ticks	ref	515	908	20	20	balón en (13.4,5.3)
+BC-G balón suelto quieto >=15 ticks	ref	520	783	20	20	balón en (13.7,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	670	798	20	20	balón en (13.9,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	795	360	20	20	balón en (14.4,1.5)
+BC-G balón suelto quieto >=15 ticks	ref	844	245	20	20	balón en (13.7,5.3)
+BC-G balón suelto quieto >=15 ticks	run	378	511	20	20	balón en (13.7,5.3)
+BC-G balón suelto quieto >=15 ticks	run	468	243	20	20	balón en (13.8,4.4)
+BC-G balón suelto quieto >=15 ticks	run	479	234	20	20	balón en (13.9,1.7)
+BC-G balón suelto quieto >=15 ticks	run	565	258	20	20	balón en (13.9,1.7)
+BC-G balón suelto quieto >=15 ticks	run	717	664	20	20	balón en (13.5,1.6)
+BC-G balón suelto quieto >=15 ticks	run	893	1337	20	20	balón en (13.9,5.3)
+BC-G balón suelto quieto >=15 ticks	run	983	545	20	20	balón en (13.6,5.2)
+BC-G balón suelto quieto >=15 ticks	ref	130	297	19	19	balón en (13.4,5.4)
+BC-G balón suelto quieto >=15 ticks	ref	260	1043	19	19	balón en (2.2,5.3)
+BC-G balón suelto quieto >=15 ticks	ref	292	158	19	19	balón en (2.2,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	348	677	19	19	balón en (2.3,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	377	335	19	19	balón en (2.4,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	379	986	19	19	balón en (13.6,5.3)
+BC-G balón suelto quieto >=15 ticks	ref	406	768	19	19	balón en (13.4,1.4)
+BC-G balón suelto quieto >=15 ticks	ref	481	345	19	19	balón en (13.8,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	928	665	19	19	balón en (2.5,1.7)
+BC-G balón suelto quieto >=15 ticks	run	187	1248	19	19	balón en (9.4,1.6)
+BC-G balón suelto quieto >=15 ticks	run	235	1456	19	19	balón en (13.7,3.5)
+BC-G balón suelto quieto >=15 ticks	run	528	1294	19	19	balón en (2.1,5.3)
+BC-G balón suelto quieto >=15 ticks	run	670	1327	19	19	balón en (13.5,1.6)
+BC-G balón suelto quieto >=15 ticks	run	675	247	19	19	balón en (13.9,5.3)
+BC-G balón suelto quieto >=15 ticks	run	702	289	19	19	balón en (13.9,5.3)
+BC-G balón suelto quieto >=15 ticks	run	965	1139	19	19	balón en (16.0,6.9)
+BC-G balón suelto quieto >=15 ticks	ref	6	590	18	18	balón en (13.8,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	60	400	18	18	balón en (13.7,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	124	1233	18	18	balón en (13.9,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	208	617	18	18	balón en (2.3,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	222	1224	18	18	balón en (13.7,5.4)
+BC-G balón suelto quieto >=15 ticks	ref	301	1130	18	18	balón en (2.3,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	340	373	18	18	balón en (13.5,1.6)
+BC-G balón suelto quieto >=15 ticks	ref	345	639	18	18	balón en (13.6,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	354	1450	18	18	balón en (13.6,4.4)
+BC-G balón suelto quieto >=15 ticks	ref	357	851	18	18	balón en (13.9,1.8)
+BC-G balón suelto quieto >=15 ticks	ref	368	1084	18	18	balón en (2.3,5.3)
+BC-G balón suelto quieto >=15 ticks	ref	393	1162	18	18	balón en (13.8,5.3)
+BC-G balón suelto quieto >=15 ticks	ref	527	489	18	18	balón en (13.9,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	626	377	18	18	balón en (13.6,3.5)
+BC-G balón suelto quieto >=15 ticks	ref	784	696	18	18	balón en (13.7,5.3)
+BC-G balón suelto quieto >=15 ticks	ref	799	562	18	18	balón en (13.7,1.7)
+BC-G balón suelto quieto >=15 ticks	run	54	228	18	18	balón en (13.7,1.7)
+BC-G balón suelto quieto >=15 ticks	run	134	790	18	18	balón en (13.9,1.7)
+BC-G balón suelto quieto >=15 ticks	run	187	320	18	18	balón en (9.4,5.5)
+BC-G balón suelto quieto >=15 ticks	run	193	1094	18	18	balón en (9.4,5.5)
+BC-G balón suelto quieto >=15 ticks	run	217	850	18	18	balón en (13.7,1.7)
+BC-G balón suelto quieto >=15 ticks	run	356	753	18	18	balón en (13.8,2.6)
+BC-G balón suelto quieto >=15 ticks	run	443	325	18	18	balón en (13.5,1.7)
+BC-G balón suelto quieto >=15 ticks	run	443	697	18	18	balón en (13.7,5.3)
+BC-G balón suelto quieto >=15 ticks	run	479	969	18	18	balón en (13.9,5.3)
+BC-G balón suelto quieto >=15 ticks	run	494	842	18	18	balón en (13.7,1.7)
+BC-G balón suelto quieto >=15 ticks	run	523	379	18	18	balón en (13.6,4.4)
+BC-G balón suelto quieto >=15 ticks	run	526	271	18	18	balón en (13.7,1.7)
+BC-G balón suelto quieto >=15 ticks	run	578	1607	18	18	balón en (13.8,4.4)
+BC-G balón suelto quieto >=15 ticks	run	647	302	18	18	balón en (13.7,1.7)
+BC-G balón suelto quieto >=15 ticks	run	666	666	18	18	balón en (13.7,1.6)
+BC-G balón suelto quieto >=15 ticks	run	674	238	18	18	balón en (13.7,5.3)
+BC-G balón suelto quieto >=15 ticks	run	675	792	18	18	balón en (13.7,1.7)
+BC-G balón suelto quieto >=15 ticks	run	768	316	18	18	balón en (9.5,5.5)
+BC-G balón suelto quieto >=15 ticks	run	788	626	18	18	balón en (13.7,1.7)
+BC-G balón suelto quieto >=15 ticks	run	794	382	18	18	balón en (13.7,1.7)
+BC-G balón suelto quieto >=15 ticks	run	796	774	18	18	balón en (13.8,1.7)
+BC-G balón suelto quieto >=15 ticks	run	817	968	18	18	balón en (13.9,5.3)
+BC-G balón suelto quieto >=15 ticks	run	866	752	18	18	balón en (13.9,5.3)
+BC-G balón suelto quieto >=15 ticks	run	873	586	18	18	balón en (13.9,1.7)
+BC-G balón suelto quieto >=15 ticks	run	902	441	18	18	balón en (13.9,2.6)
+BC-G balón suelto quieto >=15 ticks	run	919	897	18	18	balón en (2.4,1.7)
+BC-G balón suelto quieto >=15 ticks	run	922	370	18	18	balón en (15.0,1.3)
+BC-G balón suelto quieto >=15 ticks	run	934	1019	18	18	balón en (13.9,5.2)
+BC-G balón suelto quieto >=15 ticks	ref	3	288	17	17	balón en (13.5,1.6)
+BC-G balón suelto quieto >=15 ticks	ref	24	235	17	17	balón en (16.0,7.0)
+BC-G balón suelto quieto >=15 ticks	ref	39	741	17	17	balón en (2.1,5.3)
+BC-G balón suelto quieto >=15 ticks	ref	47	333	17	17	balón en (0.0,7.0)
+BC-G balón suelto quieto >=15 ticks	ref	201	564	17	17	balón en (13.5,1.6)
+BC-G balón suelto quieto >=15 ticks	ref	526	1103	17	17	balón en (13.7,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	646	275	17	17	balón en (13.9,5.3)
+BC-G balón suelto quieto >=15 ticks	ref	706	1109	17	17	balón en (13.8,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	746	1304	17	17	balón en (13.8,5.3)
+BC-G balón suelto quieto >=15 ticks	ref	815	645	17	17	balón en (2.4,5.3)
+BC-G balón suelto quieto >=15 ticks	ref	840	400	17	17	balón en (2.2,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	899	391	17	17	balón en (2.1,1.6)
+BC-G balón suelto quieto >=15 ticks	ref	915	718	17	17	balón en (2.2,2.1)
+BC-G balón suelto quieto >=15 ticks	ref	935	826	17	17	balón en (2.2,5.3)
+BC-G balón suelto quieto >=15 ticks	run	84	800	17	17	balón en (13.7,4.4)
+BC-G balón suelto quieto >=15 ticks	run	118	1053	17	17	balón en (13.5,1.6)
+BC-G balón suelto quieto >=15 ticks	run	193	939	17	17	balón en (13.7,2.6)
+BC-G balón suelto quieto >=15 ticks	run	235	681	17	17	balón en (13.7,1.7)
+BC-G balón suelto quieto >=15 ticks	run	303	232	17	17	balón en (2.2,4.4)
+BC-G balón suelto quieto >=15 ticks	run	319	308	17	17	balón en (13.9,1.7)
+BC-G balón suelto quieto >=15 ticks	run	520	862	17	17	balón en (2.1,1.7)
+BC-G balón suelto quieto >=15 ticks	run	526	970	17	17	balón en (13.5,2.6)
+BC-G balón suelto quieto >=15 ticks	run	526	1141	17	17	balón en (13.7,1.7)
+BC-G balón suelto quieto >=15 ticks	run	541	388	17	17	balón en (13.9,5.3)
+BC-G balón suelto quieto >=15 ticks	run	655	542	17	17	balón en (13.7,5.3)
+BC-G balón suelto quieto >=15 ticks	run	663	594	17	17	balón en (13.8,5.3)
+BC-G balón suelto quieto >=15 ticks	run	666	243	17	17	balón en (13.9,1.7)
+BC-G balón suelto quieto >=15 ticks	run	681	329	17	17	balón en (13.8,1.7)
+BC-G balón suelto quieto >=15 ticks	run	684	869	17	17	balón en (0.0,7.0)
+BC-G balón suelto quieto >=15 ticks	run	691	1078	17	17	balón en (13.7,5.5)
+BC-G balón suelto quieto >=15 ticks	run	765	903	17	17	balón en (13.9,4.0)
+BC-G balón suelto quieto >=15 ticks	run	772	339	17	17	balón en (13.9,2.6)
+BC-G balón suelto quieto >=15 ticks	run	832	1175	17	17	balón en (13.7,4.0)
+BC-G balón suelto quieto >=15 ticks	run	889	348	17	17	balón en (2.4,1.7)
+BC-G balón suelto quieto >=15 ticks	run	912	440	17	17	balón en (13.7,5.5)
+BC-G balón suelto quieto >=15 ticks	run	938	459	17	17	balón en (13.5,5.4)
+BC-G balón suelto quieto >=15 ticks	run	976	222	17	17	balón en (13.8,5.3)
+BC-G balón suelto quieto >=15 ticks	ref	63	543	16	16	balón en (2.3,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	70	626	16	16	balón en (13.8,5.3)
+BC-G balón suelto quieto >=15 ticks	ref	118	1313	16	16	balón en (13.5,1.6)
+BC-G balón suelto quieto >=15 ticks	ref	119	1207	16	16	balón en (2.3,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	224	1442	16	16	balón en (2.1,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	230	193	16	16	balón en (2.4,4.4)
+BC-G balón suelto quieto >=15 ticks	ref	331	535	16	16	balón en (2.3,2.6)
+BC-G balón suelto quieto >=15 ticks	ref	347	917	16	16	balón en (13.6,1.4)
+BC-G balón suelto quieto >=15 ticks	ref	522	705	16	16	balón en (2.3,5.3)
+BC-G balón suelto quieto >=15 ticks	ref	579	651	16	16	balón en (2.1,4.1)
+BC-G balón suelto quieto >=15 ticks	ref	617	1250	16	16	balón en (16.0,7.0)
+BC-G balón suelto quieto >=15 ticks	ref	659	353	16	16	balón en (2.6,5.4)
+BC-G balón suelto quieto >=15 ticks	ref	715	1284	16	16	balón en (13.9,4.4)
+BC-G balón suelto quieto >=15 ticks	ref	743	1305	16	16	balón en (2.1,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	745	363	16	16	balón en (2.5,1.6)
+BC-G balón suelto quieto >=15 ticks	ref	817	591	16	16	balón en (2.4,5.3)
+BC-G balón suelto quieto >=15 ticks	ref	942	727	16	16	balón en (13.7,2.6)
+BC-G balón suelto quieto >=15 ticks	run	2	1275	16	16	balón en (13.9,1.7)
+BC-G balón suelto quieto >=15 ticks	run	55	697	16	16	balón en (13.5,5.4)
+BC-G balón suelto quieto >=15 ticks	run	85	1411	16	16	balón en (16.0,0.0)
+BC-G balón suelto quieto >=15 ticks	run	97	915	16	16	balón en (13.5,1.1)
+BC-G balón suelto quieto >=15 ticks	run	126	1077	16	16	balón en (16.0,0.0)
+BC-G balón suelto quieto >=15 ticks	run	143	450	16	16	balón en (13.9,4.4)
+BC-G balón suelto quieto >=15 ticks	run	222	864	16	16	balón en (13.9,1.7)
+BC-G balón suelto quieto >=15 ticks	run	353	293	16	16	balón en (13.5,5.4)
+BC-G balón suelto quieto >=15 ticks	run	372	606	16	16	balón en (13.9,5.3)
+BC-G balón suelto quieto >=15 ticks	run	421	307	16	16	balón en (2.3,5.3)
+BC-G balón suelto quieto >=15 ticks	run	449	294	16	16	balón en (2.4,5.3)
+BC-G balón suelto quieto >=15 ticks	run	451	286	16	16	balón en (13.8,5.3)
+BC-G balón suelto quieto >=15 ticks	run	629	1344	16	16	balón en (13.9,4.4)
+BC-G balón suelto quieto >=15 ticks	run	680	852	16	16	balón en (2.2,1.7)
+BC-G balón suelto quieto >=15 ticks	run	700	898	16	16	balón en (13.9,5.3)
+BC-G balón suelto quieto >=15 ticks	run	817	406	16	16	balón en (13.9,4.4)
+BC-G balón suelto quieto >=15 ticks	run	825	1268	16	16	balón en (13.9,2.6)
+BC-G balón suelto quieto >=15 ticks	run	886	290	16	16	balón en (13.4,1.3)
+BC-G balón suelto quieto >=15 ticks	ref	12	631	15	15	balón en (2.5,1.6)
+BC-G balón suelto quieto >=15 ticks	ref	16	645	15	15	balón en (13.9,4.4)
+BC-G balón suelto quieto >=15 ticks	ref	22	1126	15	15	balón en (2.1,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	83	570	15	15	balón en (0.0,0.0)
+BC-G balón suelto quieto >=15 ticks	ref	100	753	15	15	balón en (0.0,0.0)
+BC-G balón suelto quieto >=15 ticks	ref	136	237	15	15	balón en (13.8,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	249	979	15	15	balón en (2.3,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	286	633	15	15	balón en (13.4,2.9)
+BC-G balón suelto quieto >=15 ticks	ref	301	710	15	15	balón en (2.1,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	310	1351	15	15	balón en (2.2,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	327	715	15	15	balón en (13.7,5.3)
+BC-G balón suelto quieto >=15 ticks	ref	372	176	15	15	balón en (2.5,4.1)
+BC-G balón suelto quieto >=15 ticks	ref	424	336	15	15	balón en (16.0,0.0)
+BC-G balón suelto quieto >=15 ticks	ref	545	640	15	15	balón en (13.4,1.4)
+BC-G balón suelto quieto >=15 ticks	ref	545	1151	15	15	balón en (13.7,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	557	1019	15	15	balón en (13.6,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	617	931	15	15	balón en (2.3,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	627	324	15	15	balón en (13.6,2.6)
+BC-G balón suelto quieto >=15 ticks	ref	715	461	15	15	balón en (2.1,4.4)
+BC-G balón suelto quieto >=15 ticks	ref	745	496	15	15	balón en (2.4,4.4)
+BC-G balón suelto quieto >=15 ticks	ref	837	869	15	15	balón en (13.8,2.8)
+BC-G balón suelto quieto >=15 ticks	ref	847	1522	15	15	balón en (13.6,1.5)
+BC-G balón suelto quieto >=15 ticks	ref	855	216	15	15	balón en (13.9,5.3)
+BC-G balón suelto quieto >=15 ticks	ref	857	1080	15	15	balón en (2.2,2.0)
+BC-G balón suelto quieto >=15 ticks	ref	874	1019	15	15	balón en (13.4,1.5)
+BC-G balón suelto quieto >=15 ticks	ref	887	840	15	15	balón en (2.3,1.7)
+BC-G balón suelto quieto >=15 ticks	ref	930	796	15	15	balón en (2.3,2.6)
+BC-G balón suelto quieto >=15 ticks	ref	957	353	15	15	balón en (2.5,1.6)
+BC-G balón suelto quieto >=15 ticks	run	23	524	15	15	balón en (13.8,1.3)
+BC-G balón suelto quieto >=15 ticks	run	25	432	15	15	balón en (16.0,7.0)
+BC-G balón suelto quieto >=15 ticks	run	79	221	15	15	balón en (0.0,0.0)
+BC-G balón suelto quieto >=15 ticks	run	94	325	15	15	balón en (13.9,5.3)
+BC-G balón suelto quieto >=15 ticks	run	142	880	15	15	balón en (14.5,1.4)
+BC-G balón suelto quieto >=15 ticks	run	166	733	15	15	balón en (1.4,5.5)
+BC-G balón suelto quieto >=15 ticks	run	229	450	15	15	balón en (13.9,1.7)
+BC-G balón suelto quieto >=15 ticks	run	263	461	15	15	balón en (2.3,5.3)
+BC-G balón suelto quieto >=15 ticks	run	266	1312	15	15	balón en (2.2,1.7)
+BC-G balón suelto quieto >=15 ticks	run	282	1305	15	15	balón en (2.3,4.4)
+BC-G balón suelto quieto >=15 ticks	run	305	535	15	15	balón en (14.8,1.4)
+BC-G balón suelto quieto >=15 ticks	run	323	1316	15	15	balón en (13.6,4.4)
+BC-G balón suelto quieto >=15 ticks	run	339	1459	15	15	balón en (13.7,1.7)
+BC-G balón suelto quieto >=15 ticks	run	379	599	15	15	balón en (13.6,5.2)
+BC-G balón suelto quieto >=15 ticks	run	379	954	15	15	balón en (13.5,5.4)
+BC-G balón suelto quieto >=15 ticks	run	386	902	15	15	balón en (7.2,6.4)
+BC-G balón suelto quieto >=15 ticks	run	394	754	15	15	balón en (13.6,4.1)
+BC-G balón suelto quieto >=15 ticks	run	405	298	15	15	balón en (16.0,7.0)
+BF-C delantero elige pegar sin portador a su alcance	run	794	405	31	31	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	283	406	25	25	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	8	100	22	22	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	20	1116	22	22	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	24	1220	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	25	228	22	22	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	39	816	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	59	468	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	89	218	22	22	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	91	1160	22	22	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	139	26	22	22	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	150	26	22	22	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	169	340	22	22	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	170	662	22	22	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	202	230	22	22	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	212	32	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	251	30	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	283	1092	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	377	30	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	471	28	22	22	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	477	686	22	22	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	483	374	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	556	706	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	565	492	22	22	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	598	84	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	745	32	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	847	26	22	22	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	890	30	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	910	1222	22	22	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	996	546	22	22	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	60	166	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	99	84	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	132	610	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	161	840	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	239	230	22	22	delantero 2000006 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	249	30	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	460	32	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	510	1270	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	609	206	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	638	32	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	644	32	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	711	32	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	776	260	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	840	30	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	908	234	22	22	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	754	393	21	21	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	996	50	21	21	delantero 2000006 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	86	1332	20	20	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	154	968	20	20	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	186	685	19	19	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	39	1267	19	19	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	605	30	18	18	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	793	1240	18	18	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	892	1154	18	18	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	372	120	18	18	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	672	483	17	17	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	772	114	17	17	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	167	1389	16	16	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	393	511	15	15	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	461	180	14	14	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	30	273	14	14	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	320	716	14	14	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	466	503	13	13	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	791	84	13	13	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	14	262	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	48	790	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	69	362	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	147	1162	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	164	1068	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	223	420	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	241	1378	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	379	348	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	386	392	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	389	262	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	401	486	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	514	528	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	538	118	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	550	1172	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	570	1636	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	573	320	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	619	142	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	673	250	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	677	148	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	700	136	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	721	700	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	748	486	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	823	338	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	856	706	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	895	288	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	931	1066	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	947	1008	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	998	1072	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	64	350	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	93	888	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	152	1318	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	204	92	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	217	958	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	224	786	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	321	1407	12	12	delantero 2000009 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	336	322	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	387	516	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	391	552	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	399	968	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	483	314	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	520	186	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	525	362	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	644	976	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	663	429	12	12	delantero 2000006 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	711	1230	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	752	618	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	804	866	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	847	118	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	878	468	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	878	483	12	12	delantero 2000009 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	878	577	12	12	delantero 2000009 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	886	986	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	886	1586	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	943	272	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	997	826	12	12	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	39	243	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	45	1325	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	69	203	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	83	51	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	85	371	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	144	1291	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	147	501	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	148	303	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	190	237	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	197	549	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	200	413	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	202	614	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	207	703	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	207	1469	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	217	1171	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	245	1409	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	252	499	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	254	581	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	269	643	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	297	233	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	297	1029	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	302	669	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	330	205	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	331	925	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	335	217	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	346	857	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	346	951	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	358	541	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	368	497	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	368	1463	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	370	877	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	375	931	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	375	1149	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	378	1431	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	384	625	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	392	367	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	401	989	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	402	1297	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	409	373	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	433	267	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	438	197	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	443	223	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	453	265	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	453	893	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	464	243	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	490	341	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	510	898	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	555	51	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	575	855	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	582	167	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	586	1369	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	634	1009	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	661	181	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	678	233	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	687	1125	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	691	327	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	716	1379	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	762	255	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	766	301	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	767	963	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	793	691	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	795	87	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	795	179	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	812	613	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	919	303	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	942	557	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	944	727	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	951	812	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	953	1371	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	977	369	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	996	641	11	11	delantero 106 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	997	213	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	28	597	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	32	49	11	11	delantero 2000006 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	41	666	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	51	229	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	53	908	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	87	53	11	11	delantero 2000006 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	101	127	11	11	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	112	657	11	11	delantero 2000006 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	115	183	11	11	delantero 6 elige pegar sin portador a su alcance
+BN-A amontonamiento sobre el portero	ref	205	1669	20	5	portero 0, 5 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	411	405	20	5	portero 0, 5 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	466	1163	20	5	portero 100, 5 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	909	1116	21	5	portero 0, 5 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	976	250	21	5	portero 100, 5 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	61	1509	20	5	portero 0, 5 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	134	2189	5	5	portero 0, 5 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	233	1212	21	5	portero 0, 5 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	283	1913	5	5	portero 0, 5 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	318	273	20	5	portero 0, 5 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	462	1529	20	5	portero 0, 5 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	986	155	5	5	portero 2000000, 5 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	5	883	20	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	34	511	20	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	46	133	20	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	52	2087	20	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	77	1054	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	97	1695	20	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	104	1349	16	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	118	485	20	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	201	1276	21	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	202	700	21	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	222	1091	20	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	236	1440	21	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	239	956	21	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	310	293	5	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	313	139	5	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	317	1448	21	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	325	1622	5	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	342	320	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	384	1060	21	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	423	1008	21	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	426	963	5	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	427	1085	20	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	432	354	21	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	458	1120	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	466	872	21	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	470	530	21	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	470	788	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	480	928	21	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	488	1273	5	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	492	205	20	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	506	1471	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	517	1612	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	531	167	20	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	534	130	5	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	541	424	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	575	979	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	591	891	5	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	617	585	20	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	631	378	5	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	652	1461	20	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	672	1511	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	678	1193	20	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	693	152	21	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	700	807	20	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	749	1236	21	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	751	2326	5	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	757	947	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	762	1699	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	763	929	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	765	434	7	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	766	811	5	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	866	656	21	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	883	1453	20	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	894	1268	21	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	906	628	21	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	908	187	20	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	934	705	20	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	947	637	20	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	967	1546	21	4	portero 100, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	985	541	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	991	181	20	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	30	673	20	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	122	1203	20	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	123	1758	21	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	187	413	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	187	1036	21	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	194	696	21	4	portero 2000000, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	211	419	5	4	portero 2000000, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	291	278	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	307	136	21	4	portero 2000000, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	315	1104	21	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	336	872	21	4	portero 2000000, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	353	1162	21	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	418	1171	20	4	portero 2000000, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	426	322	21	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	443	1194	21	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	519	498	21	4	portero 2000000, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	551	2181	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	569	451	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	592	333	20	4	portero 2000000, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	596	600	21	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	622	787	5	4	portero 2000000, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	628	303	20	4	portero 2000000, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	653	851	20	4	portero 2000000, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	670	138	5	4	portero 2000000, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	713	1273	5	4	portero 2000000, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	720	144	5	4	portero 2000000, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	729	1660	21	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	811	869	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	812	189	4	4	portero 2000000, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	842	453	20	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	850	1774	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	926	302	21	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	936	488	5	4	portero 0, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	run	951	542	21	4	portero 2000000, 4 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	2	720	21	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	5	505	20	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	5	1022	21	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	9	887	5	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	22	140	21	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	26	1440	6	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	30	324	5	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	41	1138	5	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	44	290	21	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	50	467	20	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	50	1200	21	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	62	138	5	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	69	441	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	72	2091	20	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	74	1154	21	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	81	463	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	86	1489	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	88	1430	21	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	96	256	21	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	100	581	5	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	105	1443	5	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	113	610	21	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	128	517	20	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	131	730	5	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	141	606	21	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	169	785	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	170	1208	21	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	176	299	20	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	203	593	20	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	204	652	21	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	237	623	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	244	1044	5	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	245	193	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	247	1303	17	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	251	1157	5	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	260	568	5	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	273	1025	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	274	138	21	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	280	518	5	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	280	1096	21	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	283	831	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	287	261	20	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	292	2114	21	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	293	129	20	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	298	960	21	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	311	760	5	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	319	387	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	322	1365	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	337	574	5	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	342	1775	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	344	371	20	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	347	1274	5	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	356	282	21	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	357	1245	5	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	360	281	5	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	366	117	20	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	373	349	20	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	378	602	21	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	386	481	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	388	562	21	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	393	355	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	393	1730	21	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	399	857	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	409	1056	21	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	416	284	5	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	416	1252	21	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	423	1401	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	426	1325	6	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	434	650	3	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	436	167	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	443	901	20	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	448	150	21	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	450	2411	5	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	451	1217	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	452	789	5	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	453	2355	5	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	455	150	4	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	467	1506	21	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	468	886	21	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	472	585	20	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	478	459	20	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	482	1247	5	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	486	347	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	490	472	21	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	497	127	20	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	503	393	20	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	506	837	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	508	153	20	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	519	1448	5	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	521	1284	21	3	portero 0, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	525	1076	21	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	528	899	20	3	portero 100, 3 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	531	817	5	3	portero 0, 3 compañeros a <2 (juego abierto)
+BO-A portador y rival atascados >3 s	run	743	1127	173	173	portador 6 y rival 2000003
+BO-A portador y rival atascados >3 s	ref	59	252	53	53	portador 102 y rival 5
+BO-A portador y rival atascados >3 s	ref	97	368	53	53	portador 102 y rival 5
+BO-A portador y rival atascados >3 s	ref	109	685	53	53	portador 101 y rival 4
+BO-A portador y rival atascados >3 s	ref	118	124	53	53	portador 2 y rival 103
+BO-A portador y rival atascados >3 s	ref	341	102	53	53	portador 2 y rival 105
+BO-A portador y rival atascados >3 s	ref	356	802	53	53	portador 106 y rival 2
+BO-A portador y rival atascados >3 s	ref	367	868	53	53	portador 106 y rival 2
+BO-A portador y rival atascados >3 s	ref	406	930	53	53	portador 6 y rival 101
+BO-A portador y rival atascados >3 s	ref	594	184	53	53	portador 102 y rival 5
+BO-A portador y rival atascados >3 s	ref	620	1384	53	53	portador 106 y rival 1
+BO-A portador y rival atascados >3 s	ref	627	1205	53	53	portador 1 y rival 104
+BO-A portador y rival atascados >3 s	ref	630	674	53	53	portador 102 y rival 5
+BO-A portador y rival atascados >3 s	ref	686	884	53	53	portador 104 y rival 4
+BO-A portador y rival atascados >3 s	ref	788	881	53	53	portador 101 y rival 4
+BO-A portador y rival atascados >3 s	ref	897	736	53	53	portador 2 y rival 105
+BO-A portador y rival atascados >3 s	ref	910	594	53	53	portador 6 y rival 101
+BO-A portador y rival atascados >3 s	run	11	414	53	53	portador 2000006 y rival 1
+BO-A portador y rival atascados >3 s	run	16	400	53	53	portador 2000006 y rival 1
+BO-A portador y rival atascados >3 s	run	31	814	53	53	portador 2000006 y rival 1
+BO-A portador y rival atascados >3 s	run	81	1112	53	53	portador 2000006 y rival 1
+BO-A portador y rival atascados >3 s	run	214	778	53	53	portador 2 y rival 2000005
+BO-A portador y rival atascados >3 s	run	234	236	53	53	portador 2000006 y rival 1
+BO-A portador y rival atascados >3 s	run	253	1244	53	53	portador 2000004 y rival 4
+BO-A portador y rival atascados >3 s	run	315	1008	53	53	portador 2000006 y rival 2
+BO-A portador y rival atascados >3 s	run	375	1262	53	53	portador 6 y rival 2000001
+BO-A portador y rival atascados >3 s	run	437	996	53	53	portador 2 y rival 2000005
+BO-A portador y rival atascados >3 s	run	446	1037	53	53	portador 1 y rival 2000004
+BO-A portador y rival atascados >3 s	run	560	526	53	53	portador 2000006 y rival 2
+BO-A portador y rival atascados >3 s	run	576	504	53	53	portador 2000006 y rival 1
+BO-A portador y rival atascados >3 s	run	586	326	53	53	portador 6 y rival 2000001
+BO-A portador y rival atascados >3 s	run	636	774	53	53	portador 2 y rival 2000005
+BO-A portador y rival atascados >3 s	run	644	552	53	53	portador 2000006 y rival 1
+BO-A portador y rival atascados >3 s	run	677	1044	53	53	portador 2000004 y rival 4
+BO-A portador y rival atascados >3 s	run	748	1160	53	53	portador 2000006 y rival 1
+BO-A portador y rival atascados >3 s	run	771	1108	53	53	portador 2 y rival 2000006
+BO-A portador y rival atascados >3 s	run	811	677	53	53	portador 1 y rival 2000004
+BO-A portador y rival atascados >3 s	run	938	726	53	53	portador 2000006 y rival 1
+BO-A portador y rival atascados >3 s	run	944	768	53	53	portador 2000002 y rival 3
+BO-A portador y rival atascados >3 s	run	963	533	53	53	portador 2000005 y rival 2
+BO-A portador y rival atascados >3 s	run	985	704	53	53	portador 2000006 y rival 1
+BO-A portador y rival atascados >3 s	ref	371	541	52	52	portador 1 y rival 104
+BO-A portador y rival atascados >3 s	ref	957	112	52	52	portador 106 y rival 1
+BO-A portador y rival atascados >3 s	run	593	1237	52	52	portador 6 y rival 2000001
+BO-A portador y rival atascados >3 s	run	869	827	50	50	portador 2000002 y rival 3
+BO-A portador y rival atascados >3 s	run	233	739	49	49	portador 2000003 y rival 3
+BO-A portador y rival atascados >3 s	run	748	1223	49	49	portador 2000005 y rival 1
+BO-A portador y rival atascados >3 s	run	972	748	49	49	portador 6 y rival 2000001
+BO-A portador y rival atascados >3 s	ref	221	633	48	48	portador 2 y rival 103
+BO-A portador y rival atascados >3 s	ref	715	1032	48	48	portador 1 y rival 106
+BO-A portador y rival atascados >3 s	run	537	1362	48	48	portador 6 y rival 2000001
+BO-A portador y rival atascados >3 s	run	846	71	48	48	portador 2000006 y rival 1
+BO-A portador y rival atascados >3 s	ref	544	405	47	47	portador 1 y rival 104
+BO-A portador y rival atascados >3 s	ref	934	1070	47	47	portador 6 y rival 101
+BO-A portador y rival atascados >3 s	ref	988	599	47	47	portador 101 y rival 4
+BO-A portador y rival atascados >3 s	run	553	1289	47	47	portador 2000001 y rival 6
+BO-A portador y rival atascados >3 s	run	963	480	47	47	portador 2000006 y rival 1
+BO-A portador y rival atascados >3 s	ref	734	73	46	46	portador 106 y rival 1
+BO-A portador y rival atascados >3 s	run	282	1327	46	46	portador 2000006 y rival 1
+BO-A portador y rival atascados >3 s	run	683	453	46	46	portador 2000002 y rival 3

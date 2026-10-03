@@ -69,3 +69,10 @@ Toca la palanca de la ADR 0117 y de `ChaseBall pen = 50`: vigilar juntas las mé
   alcance. El designado pasa a ser el más cercano de los que pueden llegar: 4 episodios en 150 partidos, el más largo 16.
 - **Sin tocar (LIKELY):** el balón nunca sale por el fondo (0 córneres, BB-N) y los pases recortados dejan el balón en la
   línea; opción 4 de arriba, despertaría BB-N.
+
+## Barrido de detectores (3 oct 2026)
+
+**Bloqueo largo: REJECTED bajo la ADR 0177; episodio corto: CONFIRMED.** Detector validado con la build anterior al arreglo
+(3,0 % de partidos con un balón quieto ≥ 60 ticks, máx. 656 en la semilla 224 tick 624; 0,21 episodios ≥ 15 ticks/partido).
+Build actual, 2.000 partidos: **0 con ≥ 60 ticks** (cota 95 % < 0,15 % por partido) y 0,09-0,13 episodios cortos por partido
+(≥ 15 ticks, máx. 26 ≈ 1,7 s; `ref` semilla 232 tick 875 con el balón en (0,8; 1,3); `run` semilla 640 tick 1177). Informe: [barrido-detectores-2026-10-03](../analisis/barrido-detectores-2026-10-03.md).

@@ -91,3 +91,11 @@ atacarlo —**local al delantero en zona de remate**, no global—. La vía (B) 
   esta ficha rompía porque le quitaba el tiro al delantero sin darle nada a cambio; con el centro, la
   jugada no se muere, se transforma.
 - [BF-C](./BF-C.md) — el delantero fuera de posesión, la otra mitad de sus malas alternativas.
+
+## Barrido de detectores (3 oct 2026)
+
+**CONFIRMED (persiste).** Detector contrastado con `MatchReport.LowApertureShots` (±10 % en 150 partidos). Build actual, 1.000
+partidos: **0,234 ± 0,015 goles sin ángulo por partido** (21 % de partidos; ≈ 12 % de los goles) y 9,4 % de los tiros con
+apertura < 0,5 (la ficha midió 25-29 %). Los peores son literales: goles tirados **desde la propia línea de gol, apertura 0,00**:
+`ref` semilla 32 tick 165 (jugador 6 en (16,0; 1,5)), semilla 35 tick 126, semilla 39 tick 130 (jugador 106 en (0,0; 5,5)),
+`run` semilla 35 tick 1231. Informe: [barrido-detectores-2026-10-03](../analisis/barrido-detectores-2026-10-03.md).

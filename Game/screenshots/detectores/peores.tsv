@@ -1,0 +1,25 @@
+detector	kind	seed	tick	length	magnitude	note
+BA-E gol sin ángulo	ref	32	165	1	1	gol de 6 desde (16.0,1.5), apertura 0.00
+BA-E gol sin ángulo	ref	35	126	1	1	gol de 6 desde (16.0,1.4), apertura 0.00
+BA-E gol sin ángulo	ref	39	130	1	1	gol de 106 desde (0.0,5.5), apertura 0.00
+BA-J sin repliegue tras parada	ref	22	769	12	5	parada del 100, 5 sin replegar
+BA-J sin repliegue tras parada	ref	77	1555	8	5	parada del 0, 5 sin replegar
+BA-J sin repliegue tras parada	ref	84	1670	0	5	parada del 0, 5 sin replegar
+BB-A/L salto inexplicado	run	57	1377	1	1.113	jugador 0 salta 1.11 casillas (Chasing)
+BB-A/L salto inexplicado	ref	74	955	1	0.931	jugador 0 salta 0.93 casillas (Chasing)
+BB-A/L salto inexplicado	ref	343	394	1	0.92	jugador 0 salta 0.92 casillas (Positioning)
+BB-K baile	run	775	1821	54	54	jugador 4, acción FindSpace
+BB-K baile	run	775	1822	53	53	jugador 1, acción FindSpace
+BB-K baile	ref	487	1181	52	52	jugador 6, acción FindSpace
+BC-G balón suelto quieto >=15 ticks	ref	232	875	26	26	balón en (0.8,1.3)
+BC-G balón suelto quieto >=15 ticks	ref	335	1375	25	25	balón en (13.7,1.2)
+BC-G balón suelto quieto >=15 ticks	run	640	1177	25	25	balón en (13.8,1.7)
+BF-C delantero elige pegar sin portador a su alcance	run	794	405	31	31	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	run	283	406	25	25	delantero 6 elige pegar sin portador a su alcance
+BF-C delantero elige pegar sin portador a su alcance	ref	8	100	22	22	delantero 106 elige pegar sin portador a su alcance
+BN-A amontonamiento sobre el portero	ref	205	1669	20	5	portero 0, 5 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	411	405	20	5	portero 0, 5 compañeros a <2 (juego abierto)
+BN-A amontonamiento sobre el portero	ref	466	1163	20	5	portero 100, 5 compañeros a <2 (juego abierto)
+BO-A portador y rival atascados >3 s	run	743	1127	173	173	portador 6 y rival 2000003
+BO-A portador y rival atascados >3 s	ref	59	252	53	53	portador 102 y rival 5
+BO-A portador y rival atascados >3 s	ref	97	368	53	53	portador 102 y rival 5
