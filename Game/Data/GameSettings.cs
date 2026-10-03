@@ -3,8 +3,8 @@ using Godot;
 namespace Underleague.Game.Data;
 
 /// <summary>
-/// Ajustes del jugador que sobreviven a la run y al cierre del juego: volumen de música y de efectos y,
-/// solo en modo desarrollo, qué pantalla de partido se abre. Viven en <c>user://settings.cfg</c>, aparte
+/// Ajustes del jugador que sobreviven a la run y al cierre del juego: volumen de música y de efectos, si F3
+/// abre la vista 2D del partido y, solo en modo desarrollo, qué pantalla de partido se abre. Viven en <c>user://settings.cfg</c>, aparte
 /// del guardado ironman (<c>user://run.json</c>, RT-061): borrar o perder la run no toca los ajustes.
 ///
 /// <para><b>El volumen se aplica sobre la mezcla de partida, no en su lugar.</b> Los buses traen su propio
@@ -21,6 +21,7 @@ public static class GameSettings
 
     private const string AudioSection = "audio";
     private const string DevSection = "dev";
+    private const string ViewSection = "view";
 
     private static readonly string[] MusicBuses = { "Music" };
     private static readonly string[] EffectBuses = { "SFX", "Ambience" };
@@ -54,6 +55,13 @@ public static class GameSettings
 
     private static bool _debugMatchView;
 
+    /// <summary>
+    /// Deja que F3 abra la vista 2D del partido (tick a tick, con el log) desde la retransmisión. Opción del
+    /// jugador, <b>apagada por defecto</b>: con ella apagada, F3 no hace nada en la retransmisión. Distinta de
+    /// <see cref="DebugMatchView"/>, que es de desarrollo y cambia qué pantalla se abre al empezar el partido.
+    /// </summary>
+    public static bool Match2DKey { get; private set; }
+
     /// <summary>Lee el fichero (una sola vez) y aplica el volumen. Sin fichero, valores por defecto.</summary>
     public static void Load()
     {
@@ -69,6 +77,7 @@ public static class GameSettings
             MusicVolume = Mathf.Clamp((float)config.GetValue(AudioSection, "music", 1f), 0f, 1f);
             EffectsVolume = Mathf.Clamp((float)config.GetValue(AudioSection, "effects", 1f), 0f, 1f);
             DebugMatchView = (bool)config.GetValue(DevSection, "debugMatchView", false);
+            Match2DKey = (bool)config.GetValue(ViewSection, "match2dKey", false);
         }
 
         ApplyAudio();
@@ -94,12 +103,19 @@ public static class GameSettings
         Save();
     }
 
+    public static void SetMatch2DKey(bool value)
+    {
+        Match2DKey = value;
+        Save();
+    }
+
     private static void Save()
     {
         var config = new ConfigFile();
         config.SetValue(AudioSection, "music", MusicVolume);
         config.SetValue(AudioSection, "effects", EffectsVolume);
         config.SetValue(DevSection, "debugMatchView", _debugMatchView);
+        config.SetValue(ViewSection, "match2dKey", Match2DKey);
         if (config.Save(SettingsPath) != Error.Ok)
         {
             GD.PushError($"no se pudieron guardar los ajustes en {SettingsPath}");

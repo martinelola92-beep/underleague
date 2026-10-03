@@ -21,7 +21,7 @@ namespace Underleague.Game.Screens;
 /// Pantalla de <b>Partido</b> definitiva (ADR 0119/0120, RF-050/115/116): la retransmisión con voz de
 /// pregón — campo 3D a campo entero, tablero de madera, tiras de papel y presentaciones de momento
 /// conducidas por <see cref="Match.PresentationDirector"/>. <see cref="MatchScreen"/> pasa a ser el modo
-/// de depuración (vista 2D, tick a tick, log): la tecla <b>F3</b> alterna entre las dos sobre la misma
+/// de depuración (vista 2D, tick a tick, log): la tecla <b>F3</b> (opción de Ajustes, apagada por defecto) alterna entre las dos sobre la misma
 /// <see cref="RunController.Playback"/> (ADR 0119 «En <c>/Game</c>»).
 /// <para>
 /// <b>No calcula nada del partido</b> (RT-014): el director agrupa momentos ya clasificados por
@@ -308,7 +308,7 @@ public partial class BroadcastScreen : Control
 
     public override void _UnhandledInput(InputEvent @event)
     {
-        if (@event is InputEventKey { Pressed: true, Keycode: Key.F3 })
+        if (@event is InputEventKey { Pressed: true, Keycode: Key.F3 } && GameSettings.Match2DKey)
         {
             Nav.Go(this, Nav.MatchDebug);
             return;

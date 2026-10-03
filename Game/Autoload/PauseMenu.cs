@@ -40,6 +40,7 @@ public sealed partial class PauseMenu : CanvasLayer
     private HSlider _effects = null!;
     private Label _effectsValue = null!;
     private CheckButton? _debugView;
+    private CheckButton _match2DKey = null!;
 
     public static PauseMenu? Instance { get; private set; }
 
@@ -136,6 +137,7 @@ public sealed partial class PauseMenu : CanvasLayer
         _settings.Visible = true;
         _music.SetValueNoSignal(GameSettings.MusicVolume * 100f);
         _effects.SetValueNoSignal(GameSettings.EffectsVolume * 100f);
+        _match2DKey.SetPressedNoSignal(GameSettings.Match2DKey);
         _debugView?.SetPressedNoSignal(GameSettings.DebugMatchView);
         RefreshVolumeLabels();
         _music.GrabFocus();
@@ -253,7 +255,7 @@ public sealed partial class PauseMenu : CanvasLayer
     private Control BuildSettings()
     {
         bool dev = GameSettings.DevMode;
-        float height = dev ? 346f : 240f;
+        float height = dev ? 408f : 302f;
         var box = Box(height);
         Widgets.Panel(box, new Rect2(0f, 0f, BoxWidth, height));
         Widgets.Title(box, UiText.Get("ui.pause.settings"), new Vector2(24f, 16f), BoxWidth - 48f);
@@ -275,6 +277,19 @@ public sealed partial class PauseMenu : CanvasLayer
         };
         y += 60f;
 
+        _match2DKey = new CheckButton
+        {
+            Text = UiText.Get("ui.settings.match2dKey"),
+            Position = new Vector2(20f, y),
+            Size = new Vector2(BoxWidth - 40f, 30f),
+        };
+        StyleCheck(_match2DKey);
+        _match2DKey.Toggled += GameSettings.SetMatch2DKey;
+        box.AddChild(_match2DKey);
+        y += 32f;
+        Widgets.Body(box, UiText.Get("ui.settings.match2dKeyHint"), new Vector2(24f, y), BoxWidth - 48f, Style.TextDim);
+        y += 30f;
+
         if (dev)
         {
             Widgets.Section(box, UiText.Get("ui.settings.dev"), new Vector2(24f, y), BoxWidth - 48f);
@@ -285,11 +300,7 @@ public sealed partial class PauseMenu : CanvasLayer
                 Position = new Vector2(20f, y),
                 Size = new Vector2(BoxWidth - 40f, 30f),
             };
-            _debugView.AddThemeFontSizeOverride("font_size", Style.TextSmall);
-            _debugView.AddThemeColorOverride("font_color", Style.Text);
-            _debugView.AddThemeColorOverride("font_pressed_color", Style.Text);
-            _debugView.AddThemeColorOverride("font_hover_color", Style.Text);
-            _debugView.AddThemeColorOverride("font_focus_color", Style.Text);
+            StyleCheck(_debugView);
             _debugView.Toggled += GameSettings.SetDebugMatchView;
             box.AddChild(_debugView);
             y += 32f;
@@ -301,6 +312,15 @@ public sealed partial class PauseMenu : CanvasLayer
         back.Pressed += ShowMain;
 
         return box;
+    }
+
+    private static void StyleCheck(CheckButton check)
+    {
+        check.AddThemeFontSizeOverride("font_size", Style.TextSmall);
+        check.AddThemeColorOverride("font_color", Style.Text);
+        check.AddThemeColorOverride("font_pressed_color", Style.Text);
+        check.AddThemeColorOverride("font_hover_color", Style.Text);
+        check.AddThemeColorOverride("font_focus_color", Style.Text);
     }
 
     private static (HSlider Slider, Label Value) VolumeRow(Control box, string label, float y)
