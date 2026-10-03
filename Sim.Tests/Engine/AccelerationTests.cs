@@ -188,6 +188,14 @@ public sealed class AccelerationTests
 
     private static int Milli(float cells) => (int)MathF.Round(cells * 1000f);
 
-    private static Catalog WithAccel(int ticks) =>
-        Catalog with { Tuning = Catalog.Tuning with { Movement = Catalog.Tuning.Movement with { AccelTicks = ticks } } };
+    private static Catalog WithAccel(int ticks) => WithAccel(Catalog, ticks);
+
+    /// <summary>
+    /// <paramref name="catalog"/> con <c>tuning.movement.accelTicks</c> = <paramref name="ticks"/>. Lo usan los CONTROLES
+    /// de las sondas de oscilación y de alcance calibrados sobre el motor sin arranque (ADR 0185): el arranque es otro
+    /// remedio del mismo síntoma, y un control que valida el instrumento contra «el motor sin el arreglo» tiene que
+    /// apagarlo también, o mide el arranque y no el instrumento.
+    /// </summary>
+    internal static Catalog WithAccel(Catalog catalog, int ticks) =>
+        catalog with { Tuning = catalog.Tuning with { Movement = catalog.Tuning.Movement with { AccelTicks = ticks } } };
 }

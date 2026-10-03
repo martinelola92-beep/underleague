@@ -52,7 +52,9 @@ public sealed class PositioningHoldTests
     {
         Assert.True(Catalog.Ai.Context.PositioningHoldBonus > 0, "los datos reales debían traer la sostenida encendida");
 
-        var off = OscillationProbeTests.Measure(OscillationProbeTests.WithHold(Catalog, 0), 1, Matches);
+        // El control, sobre el motor sin arranque (ADR 0185): el arranque también quita la oscilación —es otro remedio del
+        // mismo síntoma—, y con él encendido el control dejaba de ver la que la sostenida tiene que quitar (medido: 27,6 %).
+        var off = OscillationProbeTests.Measure(AccelerationTests.WithAccel(OscillationProbeTests.WithHold(Catalog, 0), 0), 1, Matches);
         var on = OscillationProbeTests.Measure(Catalog, 1, Matches);
         OscillationProbeTests.Report(_output, "sin sostener", off);
         OscillationProbeTests.Report(_output, "datos", on);

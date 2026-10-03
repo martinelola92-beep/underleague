@@ -167,15 +167,6 @@ internal sealed class UtilityContext
     public PlayBand Band { get; set; } = PlayBand.Full;
 
     /// <summary>
-    /// ADR 0185: el área que está cerrada este tick (penalti, saque de puerta), o -1. El motor la calcula una vez por tick
-    /// (<c>MatchEngine.ClosedKeeperArea</c>); la cobertura la lee para repartir el punto que de verdad se va a ocupar.
-    /// </summary>
-    public int ClosedArea { get; set; } = -1;
-
-    /// <summary>ADR 0185: si el arranque está encendido (<c>tuning.movement.accelTicks</c> &gt; 0).</summary>
-    public bool Ramped { get; set; }
-
-    /// <summary>
     /// Tick actual del partido. Lo necesita la caducidad de las intenciones de pase (P3): una oferta vale
     /// mientras dure el armado del pase y un poco más, no para siempre.
     /// </summary>
@@ -1653,15 +1644,6 @@ internal static class Utility
             // punto más cercano al balón que la zona permite.
             target = p.Zone.SegmentEntry(from, ownGoal, p.EffectiveHome, direction)
                 ?? p.Zone.Clamp(from, p.EffectiveHome, direction);
-
-            // ADR 0185 (hermano de BB-K encontrado midiendo): con el área cerrada, el punto de cobertura que cae dentro se
-            // va a ocupar en el borde (Move lo saca). Si la separación entre compañeros se aplica al punto de DENTRO, dos
-            // puntos separados acaban en el mismo punto del borde y los dos cuerpos se empujan: medido con el arranque, un
-            // baile de 39 fotogramas durante un penalti (DancingTeammatesTests). Se reparte el punto que se va a ocupar.
-            if (ctx.Ramped && ctx.ClosedArea >= 0 && Pitch.IsInArea(target, ctx.ClosedArea))
-            {
-                target = MatchEngine.PushOutOfArea(target, ctx.ClosedArea);
-            }
 
             // BB-K (ADR 0176): dos compañeros no cubren el mismo punto.
             Vec2 toGoal = ownGoal - from;

@@ -69,12 +69,18 @@ public sealed class RepeatTackleReachTests
     /// centrocampista 4 gana una entrada, Arrollador la repite contra 2000003 (a 1,19) y se quedaba en
     /// <c>Positioning</c> con el balón 304 fotogramas hasta el final (detector BH-A: 280 ticks sin evento). Ahora: ni un
     /// fotograma de juego abierto con el dueño del balón fuera de un estado de portador, y ninguna congelación.
+    /// <para>ADR 0185: el caso es una situación fijada por semilla sobre el motor SIN arranque, y se juega con ese motor
+    /// (<c>accelTicks</c> 0). Con el arranque, Arrollador —rara, en pocas plantillas de run— no se activa en `run:130` ni en
+    /// ninguna de las 400 primeras semillas (medido: 0 de 400, contra 3 de 400 —130, 155, 393— sin arranque), así que no
+    /// hay otro caso real con el que sustituirlo. La regla no depende de la semilla: la fijan con valores conocidos
+    /// <see cref="AnEscapedTackleNeverLeavesTheOwnerOutOfACarrierState"/> y el censo de abajo, que sí corre con los datos.</para>
     /// </summary>
     [Fact]
     public void TheRealCaseNoLongerFreezes()
     {
-        var (setup, seed, config) = WorstCaseProbeTests.Build("run", 130, Catalog);
-        var result = Simulator.Run(setup, seed, Catalog, config);
+        var catalog = AccelerationTests.WithAccel(Catalog, 0);
+        var (setup, seed, config) = WorstCaseProbeTests.Build("run", 130, catalog);
+        var result = Simulator.Run(setup, seed, catalog, config);
         Assert.Contains(result.Events, e => e.Type == EventType.PerkTriggered && e.Detail == "steamroller");
         Assert.Equal(0, OwnerOutOfCarrierFrames(result));
         Assert.Empty(SymptomDetectors.Freeze(DetectorTrace.From(result), out _));

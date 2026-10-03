@@ -733,8 +733,6 @@ internal sealed class MatchEngine : IPerkWorld
         // UpdateBall/CheckOutOfBounds (revisión independiente, fase 0, ya resuelta antes de este cambio).
         bool wasRestarting = _restartTicksLeft > 0;
         _closedArea = ClosedKeeperArea();
-        _context.ClosedArea = _closedArea;
-        _context.Ramped = _tuning.Movement.AccelTicks > 0;
 
         // ADR 0151: durante la celebración de un gol nadie camina —ni el sacador ni el equipo—; el reinicio
         // los coloca a todos de golpe cuando termina.
@@ -1966,7 +1964,7 @@ internal sealed class MatchEngine : IPerkWorld
         Vec2 delta = target - player.Position;
         float distance = delta.Length;
         float step = SpeedPerTick(player, dribbling);
-        if (_tuning.Movement.AccelTicks > 0)
+        if (_tuning.Movement.AccelTicks > 0 && InOpenPlay())
         {
             step = RampedStep(player, delta, distance, step);
         }
@@ -2028,6 +2026,16 @@ internal sealed class MatchEngine : IPerkWorld
         speed = Math.Min(speed, Math.Max(brake, accel));
         return speed / 1000f;
     }
+
+    /// <summary>
+    /// ADR 0185 (acotado, decisión del coordinador): el arranque y la frenada son de la CARRERA, del juego abierto. En una
+    /// colocación de reanudación —cuenta atrás de un saque, falta, penalti o saque de centro, celebración de un gol— o con
+    /// un área cerrada (portero con el balón en su área, saque de puerta) el movimiento es coreografía: se ve igual con
+    /// paso constante y el jugador no tiene por qué notar la diferencia, mientras que con rampa la colocación se alarga y
+    /// la barrera y el área se pelean con quien sale desde parado. La turba es juego abierto: allí la rampa sigue.
+    /// </summary>
+    private bool InOpenPlay() =>
+        _restartTicksLeft == 0 && _goalCelebrationTicks == 0 && _closedArea < 0;
 
     /// <summary>Raíz cuadrada entera por defecto (Newton), para la frenada de la ADR 0185.</summary>
     internal static int IntSqrt(long value)
@@ -5827,6 +5835,15 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         CancelPendingTackles();
+
+        // ADR 0185 (gameplay-debug de un sacador de falta derribado, semilla 81): una reanudación pedida A MITAD DEL BUCLE de
+        // jugadores —una falta se resuelve dentro de él— dejaba el balón muerto para el motor pero vivo para la utilidad, que
+        // leía `BallDead` del principio del tick. CancelPendingTackles anula las entradas y cargas ya decididas, pero los que
+        // decidían DESPUÉS en ese mismo tick seguían viendo «jugada activa» (ADR 0132) y podían empezar una: medido, un
+        // bloqueo decidido en el tick de la falta se resolvió tres ticks después, en plena cuenta atrás, y tumbó al sacador.
+        // Desde que el balón está muerto, lo está también para quien decide (RF-057: sin jugada no hay contacto). No toca
+        // `wasRestarting` de Step, que sigue sin descontar ese primer tick.
+        _context.BallDead = true;
         EndPlay("lost");
     }
 
@@ -6140,7 +6157,7 @@ internal sealed class MatchEngine : IPerkWorld
     }
 
     /// <summary>Saca un punto del área que defiende <paramref name="team"/> por su borde más cercano.</summary>
-    internal static Vec2 PushOutOfArea(Vec2 point, int team)
+    private static Vec2 PushOutOfArea(Vec2 point, int team)
     {
         const float Margin = 0.1f;
         float frontier = team == 0 ? Pitch.AreaColumns + Margin : Pitch.Columns - Pitch.AreaColumns - Margin;

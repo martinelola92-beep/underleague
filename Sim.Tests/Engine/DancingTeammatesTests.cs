@@ -149,7 +149,10 @@ public sealed class DancingTeammatesTests
     [Fact]
     public void TheProbeSeesTheDanceWhenTheSpacingIsOff()
     {
-        var off = Measure(WithCoverSpacing(0f), Matches);
+        // Sobre el motor sin arranque (ADR 0185): con el arranque, dos que se disputan un punto se empujan más despacio y la
+        // sonda ve menos episodios (medido: 274 en 60 partidos, bajo el piso de 300); el control valida el instrumento
+        // contra el baile de BB-K, que se midió sin él.
+        var off = Measure(AccelerationTests.WithAccel(WithCoverSpacing(0f), 0), Matches);
         Report("separación apagada", off);
 
         Assert.True(off.EpisodesInCover >= 5 * Matches, $"el instrumento debía ver el baile con la separación apagada (≥ 5 episodios de cobertura por partido): {off.EpisodesInCover} en {Matches} partidos");

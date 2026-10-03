@@ -107,8 +107,10 @@ public sealed class TackleReachTests
         Assert.True(farBefore * 100 < s.Count * 4, $"entradas resueltas a más de 0,9 al empezar el tick: {farBefore} de {s.Count} (tope 4 %; sin seguir a la víctima, 24 %)");
         Assert.True(farAtEvent * 100 < s.Count * 20, $"entradas a más de 0,9 en el fotograma del suceso: {farAtEvent} de {s.Count} (tope 20 %; sin seguir a la víctima, 59 %)");
 
-        // Control: con la regla apagada, el instrumento ve las entradas al aire de BV-B.
-        var off = Measure(With(follow: false, foulDownsVictim: true), 1, 100);
+        // Control: con la regla apagada, el instrumento ve las entradas al aire de BV-B. Sobre el motor sin arranque (ADR 0185),
+        // donde se midió BV-B: con el arranque la víctima sale más despacio y se aleja menos, otro remedio del mismo síntoma
+        // (medido con accelTicks 3 y el arranque acotado al juego abierto: 192 de 1.338, el 14,3 %, contra el 24 % de antes).
+        var off = Measure(AccelerationTests.WithAccel(With(follow: false, foulDownsVictim: true), 0), 1, 100);
         Report(_output, "sin seguir a la víctima", off);
         Assert.True(off.Count(x => x.BeforeResolving > 0.9f) * 100 > off.Count * 15, "control: sin seguir a la víctima debían verse entradas resueltas a más de 0,9");
     }
@@ -204,8 +206,13 @@ public sealed class TackleReachTests
         Assert.True(offendersDown > 0, "las entradas duras siguen tirando al infractor");
 
         // Control: con la regla apagada, el motor de antes (la víctima de pie, el infractor siempre al suelo).
-        var (offFouls, offVictims, offOffenders) = WhistledFouls(With(follow: true, foulDownsVictim: false));
-        _output.WriteLine($"regla apagada: faltas pitadas {offFouls}: víctima en el suelo {offVictims}, infractor en el suelo {offOffenders}");
+        // El control cuenta sólo las faltas de ENTRADA: en un bloqueo que gana y además es falta («blockFoul») la víctima cae
+        // por el propio bloqueo (ResolveBlock la derriba si gana, ADR 0030 §2), no por la regla de la ADR 0186. Medido con el
+        // arranque de la ADR 0185 (más bloqueos): con la regla apagada, 29 de las 34 víctimas en el suelo venían de un
+        // bloqueo ganado, y el control mezclaba los dos mecanismos (34 de 325, al borde del 10 %).
+        var (offFouls, offVictims, offOffenders) = WhistledFouls(With(follow: true, foulDownsVictim: false), excludeBlocks: true);
+        _output.WriteLine($"regla apagada (sin bloqueos): faltas pitadas {offFouls}: víctima en el suelo {offVictims}, infractor en el suelo {offOffenders}");
+        Assert.True(offFouls > 50, $"muestra escasa en el control: {offFouls} faltas de entrada pitadas");
         Assert.True(offVictims * 10 < offFouls, "control: con la regla apagada la víctima casi nunca está en el suelo");
         Assert.Equal(offFouls, offOffenders);
     }
@@ -314,7 +321,7 @@ public sealed class TackleReachTests
                 .ToList(),
         };
 
-    private static (int Fouls, int VictimsDown, int OffendersDown) WhistledFouls(Catalog catalog)
+    private static (int Fouls, int VictimsDown, int OffendersDown) WhistledFouls(Catalog catalog, bool excludeBlocks = false)
     {
         int fouls = 0, victimsDown = 0, offendersDown = 0;
         for (ulong seed = 1; seed <= 100; seed++)
@@ -327,10 +334,18 @@ public sealed class TackleReachTests
                 byId[trace.Players[i].Id] = i;
             }
 
-            foreach (var e in result.Events)
+            var events = result.Events;
+            for (int k = 0; k < events.Count; k++)
             {
+                var e = events[k];
                 if (e.Type != EventType.Foul || e.Detail != "foul"
                     || !byId.TryGetValue(e.Actor, out int offender) || !byId.TryGetValue(e.Opponent, out int victim))
+                {
+                    continue;
+                }
+
+                // El suceso TACKLE que la precede (el mismo actor, el mismo tick) dice si fue un bloqueo.
+                if (excludeBlocks && k > 0 && events[k - 1].Type == EventType.Tackle && events[k - 1].Detail == "blockFoul")
                 {
                     continue;
                 }
