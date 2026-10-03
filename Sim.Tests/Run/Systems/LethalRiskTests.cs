@@ -328,7 +328,12 @@ public sealed class LethalRiskTests
                 continue;
             }
 
-            if (CanExercisePlacementLever(found.State, found.Node))
+            // La segunda palanca del test —sentar al de más riesgo y sacar a un suplente— necesita un suplente. Sin este filtro
+            // la búsqueda aceptaba una run que llegaba al partido letal sin nadie en el banquillo (medido con el arranque de la
+            // ADR 0185: los partidos previos de la semilla dejan otra enfermería y el test fallaba en Assert.NotNull(bench),
+            // sin señalar la causa). Mismo criterio que CanExercisePlacementLever: un escenario que no puede probar la palanca
+            // se descarta, no se deja fallar.
+            if (CanExercisePlacementLever(found.State, found.Node) && HasBench(found.State, found.Node))
             {
                 return found;
             }
@@ -377,6 +382,13 @@ public sealed class LethalRiskTests
 
         return moved.Any(r => r.PlayerId == marked)
             && moved.Single(r => r.PlayerId == marked).Risk < original.Single(r => r.PlayerId == marked).Risk;
+    }
+
+    /// <summary>Si hay algún disponible que no juega: la palanca «quién juega» de <see cref="MovingThePlayersChangesTheNumber"/>.</summary>
+    private static bool HasBench(RunState state, MapNode node)
+    {
+        var playing = RunEngine.LethalRisks(state, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+        return state.AvailablePlayers.Any(p => playing.All(r => r.PlayerId != p.Id));
     }
 
     /// <summary>Una run parada delante de un partido cuyo rival lleva algún perk letal.</summary>

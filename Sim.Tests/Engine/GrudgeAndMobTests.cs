@@ -103,12 +103,23 @@ public sealed class GrudgeAndMobTests
 
             mobs++;
 
-            foreach (var e in result.Events)
+            // Por ORDEN de sucesos, no por tick (Regla J): MOB_START se emite en CheckEndConditions, al final del tick, y una
+            // falta pitada en ese mismo último tick del tiempo reglamentario va antes —medido con el arranque de la ADR 0185,
+            // semilla 17: TACKLE/FOUL «foul» en el tick 1555 con índices 227-228 y MOB_START con el 230—. El árbitro aún
+            // estaba; comparar ticks la contaba como pitada en la turba.
+            int from = -1;
+            for (int i = 0; i < result.Events.Count; i++)
             {
-                if (e.Tick < start.Tick)
+                if (ReferenceEquals(result.Events[i], start))
                 {
-                    continue;
+                    from = i;
+                    break;
                 }
+            }
+
+            for (int i = from + 1; i < result.Events.Count; i++)
+            {
+                var e = result.Events[i];
 
                 // Una falta SEÑALADA lleva detail "foul"; la que el árbitro no ve lleva "unseen" y sigue
                 // existiendo —el que entra se derriba igual, que es física y no castigo—.
