@@ -35,3 +35,43 @@ Capturas: `capturas/playtest-3oct-saque-portero.png` (saque de puerta al centro,
 
 ## Paquete 5 — Muertes
 - **BX-20** Contra unos orcos pegones, en un partido mataron a 2 jugadores y lesionaron gravemente a otros 2; en la run murieron 5. «Sed de médula igual es demasiado.» Esto va contra la condición «la muerte es rara» de la ADR 0048.
+
+## Paquete 1 — estado tras la sesión del 3 oct (commits 413ee93..0209589)
+
+Etiquetas de la Regla F. Capturas en `Game/screenshots/` (`equipo-once-*`, `equipo-arrastre-*`, `equipo-dorsal`, `cambio-*`).
+
+- **BX-1 — CONFIRMED (causa) / arreglado.** Hipótesis ordenadas: (a) `SetLineup` exigía ≥ 5 titulares y `PruneLineup` deja la
+  guardada con menos tras las bajas; (b) `PlacementView.WithPlayerAt` admitía un octavo titular que `SetLineup` rechazaba;
+  (c) lisiados (ADR 0187) o muertos puestos a mano; (d) BG-A/BG-C (`Effective` frente a la guardada). Ganó (a): con la guardada
+  podada a < 5, **cualquier** movimiento lanzaba `ArgumentException` en la pantalla de Equipo (se quedaba muda) mientras
+  `RunLineup.Build` completaba hasta 7 al jugar. Dos reglas del mismo hecho. Arreglo: el suelo de 5 lo garantiza `Build`, no
+  `SetLineup` (acepta 1..7); `WithPlayerAt` rechaza el octavo; Equipo dice por qué no deja (lisiado/muerto, once completo,
+  casilla del portero) con un cartel. (c) se descarta como causa de este síntoma: `Effective` ya sustituye al lisiado puesto a
+  mano (`CrippledTests`), solo faltaba avisarlo. (d) sigue abierta tal como la describen BG-A/BG-C. Tests: `LineupEditTests`;
+  `RunEngineTests.LineupAndConsumables_AreValidated` cambia (antes exigía que 4 titulares lanzara; esa era la causa).
+  *No reproducido con la partida del revisor* (no hay guardado): la reproducción es el estado sintético del test, no el suyo.
+- **BX-2 — CONFIRMED / arreglado.** Los brochazos «Titulares»/«Suplentes» se fijaban al construir la columna; al entrar un
+  suplente en una casilla libre cambiaba el número de titulares y el que subía seguía bajo «Suplentes». Se rehacen al cambiar
+  el reparto. Capturas `equipo-once-corto` / `equipo-once-completo`.
+- **BX-3 — hecho.** Arrastre nativo de Godot desde la columna o el campo hasta una casilla o un titular; el cursor sigue al
+  ratón (misma previsualización de `/Sim`) y la fila destino se resalta. El clic y el mando siguen. Capturas `equipo-arrastre-*`.
+  Solo del arnés de capturas: el ratón sintético exige `Input.WarpMouse` además del evento.
+- **BX-4 — hecho, esquema de guardado 10.** `RunPlayer.ShirtNumber`: primero libre ≥ 1 al entrar; los muertos conservan el suyo
+  (nadie lo hereda); la traza lo respeta si todo el equipo lo trae (los rivales generados siguen repartidos). Los guardados de la
+  8 y la 9 se numeran por id al cargar. Visible en la fila de Equipo.
+- **BX-5 — hecho (recompensa, mercado, mercenario); el evento `Recruit` queda fuera.** `ReplacePlayerId` opcional en
+  `ChooseReward`, `BuyOffer` y `HireMercenary`, una sola decisión atómica. El soltado se **vende** si el veto de la ADR 0108 lo
+  permite (mercado) y si no se **descarta** sin cobrar (siempre en una recompensa): la regla de siempre, sin economía nueva.
+  - *game-design-review breve.* Fantasía: el cambio de cromo — ganas uno, pierdes uno. Decisión y coste de oportunidad: el
+    cuerpo soltado es real y la plantilla no crece (la ADR 0046 sigue mandando). Previsibilidad (RF-012d): el panel dice, antes
+    de confirmar, a quién y qué le pasa (se vende por N / se descarta sin cobrar); no se ofrece a los muertos. Degeneración: no
+    hay grifo — el canterano recién fichado no se vende (ADR 0108), así que se descarta sin cobrar; vender cobra lo que ya
+    cobraría vender a mano y comprar después. No toca la política de `/Balance` (ninguna decisión suya trae `ReplacePlayerId`),
+    por eso **no se ha lanzado lote**; medir solo si una política futura lo usa.
+  - Fuera: la opción `Recruit` de un evento con la plantilla llena sigue bloqueada (`EventSystem`); es el mismo patrón y cabría
+    en `MakeRoomFor`, pero el evento elige a quién señala y requiere un diseño aparte.
+- **BX-6 — LIKELY / arreglado, sin captura.** `AfterDecision` crea un director nuevo y deja `_lastVoiceMoment = null`;
+  `ApplyPresentation` compara `result.Voice == _lastVoiceMoment` (null == null) y sale sin ocultar el pergamino, que aguantaba
+  hasta que otra voz (el gol) lo pisaba. Es el único camino que lo explica y coincide con el síntoma (ocurre tras la decisión de
+  sustitución que abre una lesión por tirada); `SeekTo` ya hacía la limpieza que faltaba y ahora comparten `HideVoiceLayers`.
+  No reproducido en pantalla: falta una captura de una tirada que acabe en decisión.
