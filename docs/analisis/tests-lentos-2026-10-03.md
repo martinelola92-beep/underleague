@@ -9,7 +9,27 @@ filtro de arriba, sobre el mismo commit base y sobre el HEAD final; las duracion
 duraciones por prueba del `.trx` (son tiempo de reloj de cada prueba, con las clases corriendo en paralelo entre sí;
 sirven para comparar dentro de la misma medición, no como CPU exacta).
 
-@@RESULTADO@@
+## Resultado
+
+La máquina estaba compartida con lotes de `/Balance` y otras suites del otro agente (load average 20-28 durante las
+dos mediciones, 4 núcleos), así que **el reloj no es comparable**; se mide el tiempo de CPU del proceso
+(`times` del shell que lanza `tools/test-resumen.sh`), que sí lo es razonablemente. Mismo filtro, mismo `-c Release -m:1`,
+HEAD frente a `ad53f44` (mismos 1.899 tests verdes los dos):
+
+| | CPU (user+sys) | Reloj (con carga) |
+|---|---|---|
+| Base `ad53f44` | 13 m 15 s + 11 s = **806 s** | 4 m 47 s |
+| HEAD | 12 m 27 s + 12 s = **759 s** | 5 m 04 s (load 28) |
+
+Ahorro medido: **~47 s de CPU (~6 %)**, a repartir entre 4 hilos: ~12 s de reloj en una máquina libre. Es menos de lo
+que sugería la lista de candidatos porque **las clases más caras son estadísticas o «nunca»** (ver abajo) y ahí sólo
+valían las dos técnicas aprobadas. Una medición de reloj limpia (máquina libre) queda por hacer; una primera con la
+máquina libre de antes de empezar dio 4 m 31 s de base (879 CPU-s según el revisor).
+
+Reloj por clase tocada, base → HEAD (suma de duraciones por prueba del `.trx`, ambas con carga alta, orientativo):
+PreResolutionParticipants 111 → 50, GuardShot 28 → 11, ShotAperture 17 → 11, ShotHeight 18 → 6, ConsumableLoop 10 → 7,
+Steamroller 13 → 6, EndToEnd 26 → 20. `ReboundShotTests` salió 30 → 52 en estas mediciones por la carga (su trabajo
+bajó de 2.300 a 2.050 partidos): hay que repetirla con la máquina libre antes de darle crédito.
 
 ## Qué se cambió (técnica 3 en todos los casos)
 
@@ -26,7 +46,7 @@ ni entre hilos del arnés. No cambia ningún assert de comportamiento.
 | `PreResolutionParticipantsTests` | 98 | 3 | BM-B (ADR 0180): una resolución publicada antes de tirarse mira a sus participantes después; nadie acaba un tick derribado con el balón; `ankle_bite` no entra contra la víctima que ya no está; la mordida que lesiona se pita al mismo ritmo | Los partidos `(índice, perk, slot)` que repiten `ATackleThatWon…` y `AMissedTackle…` (charge, bull_rush × 300) y `AVictimInjured…` y `TheBiteThatInjures…` (`ankle_bite` × 5 slots × 300). Se guardan **sin traza** (con traza 1.500 partidos pasaban de 3 GB; sin ella ~220 MB); la prueba que necesita la traza (`NobodyEndsATick…`) sigue jugando los suyos |
 | `GuardShotTests` | 24 | 3 | BC-D (ADR 0181): `last_man` sólo se activa con un tiro rival a puerta, una vez por partido, al ritmo del dato; tras la tirada fallida el bloqueo genérico sigue actuando | Los 750 partidos reales con `last_man` (3 defensas × 250) que recorren `InRealMatches…` y `AfterAFailedRoll…` |
 | `EndToEndProtocolDemoTests` | 28 | 3 | El protocolo de balanceo es ejecutable de punta a punta (tripleta de Tuning, réplica, determinismo, registro) | Los lotes emparejados de Tuning (valores 40/60/100, semilla 2) y la réplica (semilla 3) que juegan las dos pruebas |
-| `ReboundShotTests` | 44 | 3 | BC-C (ADR 0180): cada activación de `double_shot`/`point_blank` sigue a un rebote del propio tiro y precede a otro tiro; límite y enfriamiento; dos perks de rebote no gastan los dos | `double_shot` en el slot 6 (índices 0..249 los juegan la prueba por perk y la del límite) |
+| `ReboundShotTests` | 44 (30 en la 2.ª medición) | 3 | BC-C (ADR 0180): cada activación de `double_shot`/`point_blank` sigue a un rebote del propio tiro y precede a otro tiro; límite y enfriamiento; dos perks de rebote no gastan los dos | `double_shot` en el slot 6 (índices 0..249 los juegan la prueba por perk y la del límite) |
 | `ShotApertureTests` | 14 | 3 | ADR 0135/0138: un tiro sin ángulo no convierte mejor que la media; el término de apertura cuesta tiros a puerta | Los 400 informes de `WithAperture()` (penalización 2000) que leen `ShotsWithoutAngle…` y `TheApertureTerm…`; el brazo apagado (penalización 0) sólo lo juega una |
 | `SteamrollerConditionTests` | 11 | 3 | BB-Q: `steamroller` se activa y sigue activándose menos que su gemelo `charge` | Los dos lotes de 200 partidos (`charge`, `steamroller`) que cuentan `SteamrollerFires…` y `SteamrollerChains…` |
 | `ShotHeightTests` | 11 | 3 | ADR 0135 paso 2: los goles no van todos al centro; el marco rechaza y no cuenta como gol | Las observaciones por semilla (filas de gol, tiros, tiros al marco, problemas) de los partidos 1..300/1..400 con traza; se guardan las observaciones y no la traza |
