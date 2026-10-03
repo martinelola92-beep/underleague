@@ -946,7 +946,7 @@ public sealed partial class PlayerModel : Node3D
 
         // La entrada, ALINEADA con el tick del contacto (BV-A, tercera pasada): plancha si acaba en el suelo, y si sigue de
         // pie (gana el balón o la pierde sin caer) un toque con la pierna, que es el golpeo, para no levantarse de golpe.
-        if (fall.SecondsToTackle >= 0f && _gesture is not ("tackle" or "kick"))
+        if (fall.SecondsToTackle >= 0f && !(_gestureHeld && _gesture is "tackle" or "kick"))
         {
             if (fall.TacklerFalls && fall.SecondsToTackle <= TackleLeadSeconds)
             {
@@ -1235,7 +1235,9 @@ public sealed partial class PlayerModel : Node3D
         for (int i = 0; i < GestureKeys.Length; i++)
         {
             gestures.SetInputName(i, GestureKeys[i]);
-            gestures.SetInputReset(i, true);
+            // Sin reinicio al cambiar de entrada: el gesto se coloca cada fotograma en su reloj (Pose) y el reinicio de la
+            // transición competía con esa búsqueda (medido: una plancha pedida en su segundo 0 se veía ya en el suelo).
+            gestures.SetInputReset(i, false);
             var node = Clip(GestureKeys[i]);
             if (GestureKeys[i] == "stagger")
             {
