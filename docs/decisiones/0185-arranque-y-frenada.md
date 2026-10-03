@@ -116,6 +116,14 @@ igual el resto salvo **BF-C «delantero elige pegar sin portador»** 2,33 → 2,
 vieja mientras está derribado (anotado para BF-C, no tocado aquí). Gol sin ángulo 0,178 → 0,205 (±0,019) y balón suelto
 quieto (run) 0,057 → 0,070 (±0,011): dentro del ruido.
 
+## Procedencia del 3 (Regla H): criterio escrito ANTES del barrido 2/3/4
+
+Escrito y commiteado antes de medir 2 y 4 (revisión independiente: el 3 no tenía procedencia). Se elige **el menor
+`accelTicks` cuya sonda limpia (40 partidos, `ReversalsWithAndWithoutTheRamp`) deje las inversiones a velocidad de
+carrera en ≤ 0,02 por jugador y segundo**; a igualdad, el de menor subida de lesiones por partido (lote 10.000, s1). El
+0,02 es **provisional, sin medir** su percepción: es un orden de magnitud por debajo del motor sin rampa (0,092), que es
+lo que pedía BV-A («que no vayan y vengan»), no una cifra observada en pantalla.
+
 ## Siguiente paso
 
 Que el revisor lo juegue. Abierto: el aumento de contacto y lesiones (+9-13 %) es el coste de la rampa en la carrera
