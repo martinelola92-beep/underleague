@@ -13,11 +13,48 @@ namespace Underleague.Sim.Tests.Engine;
 /// apertura &lt; 0,5 y producía el 37,1 % de los goles, o sea que <b>convertían mejor que la media</b>.
 /// Ésa es la inversión que estos tests vigilan.</para>
 /// </summary>
-public sealed class ShotApertureTests
+public sealed class ShotApertureTests : IClassFixture<ShotApertureTests.Batches>
 {
     private static readonly Catalog Catalog = TestData.LoadCatalog();
 
     private const int Matches = 400;
+
+    private readonly Batches _batches;
+
+    public ShotApertureTests(Batches batches) => _batches = batches;
+
+    /// <summary>
+    /// Informes de los <see cref="Matches"/> partidos de referencia por punto de trabajo de la apertura, ya
+    /// jugados (técnica «compartir lo que se repite»): <c>ShotsWithoutAngleNoLongerConvertBetterThanAverage</c> y
+    /// <c>TheApertureTermActuallyCostsShotsOnTarget</c> juegan los mismos 400 partidos con <c>WithAperture()</c>
+    /// (semillas 1..400, <c>SimConfig.Default</c>) y sólo leen contadores distintos del informe. El fixture se
+    /// suelta al acabar la clase; sólo guarda informes, no eventos.
+    /// </summary>
+    public sealed class Batches
+    {
+        private readonly Dictionary<int, MatchReport[]> _byPenalty = new();
+
+        public MatchReport[] Get(int offTargetPenalty)
+        {
+            lock (_byPenalty)
+            {
+                if (!_byPenalty.TryGetValue(offTargetPenalty, out var reports))
+                {
+                    var catalog = WithAperture(offTargetPenalty);
+                    reports = new MatchReport[Matches];
+                    for (int i = 0; i < Matches; i++)
+                    {
+                        ulong seed = (ulong)(i + 1);
+                        reports[i] = Simulator.Run(TestMatches.Reference(catalog, seed), seed, catalog, SimConfig.Default).Report;
+                    }
+
+                    _byPenalty[offTargetPenalty] = reports;
+                }
+
+                return reports;
+            }
+        }
+    }
 
     /// <summary>
     /// <b>El punto de trabajo con el que se MIDIÓ la mecánica</b>, no el que viene en <c>tuning.json</c>.
@@ -77,11 +114,8 @@ public sealed class ShotApertureTests
     {
         int shots = 0, goals = 0, lowShots = 0, lowGoals = 0;
 
-        var catalog = WithAperture();
-        for (ulong seed = 1; seed <= Matches; seed++)
+        foreach (var r in _batches.Get(2000))
         {
-            var result = Simulator.Run(TestMatches.Reference(catalog, seed), seed, catalog, SimConfig.Default);
-            var r = result.Report;
             shots += r.Shots[0] + r.Shots[1];
             goals += r.Goals[0] + r.Goals[1];
             lowShots += r.LowApertureShots;
@@ -128,8 +162,8 @@ public sealed class ShotApertureTests
     [Fact]
     public void TheApertureTermActuallyCostsShotsOnTarget()
     {
-        (int onTarget, int shots) With = Count(WithAperture());
-        (int onTarget, int shots) Without = Count(WithAperture(offTargetPenalty: 0));
+        (int onTarget, int shots) With = Count(_batches.Get(2000));
+        (int onTarget, int shots) Without = Count(_batches.Get(0));
 
         double withRate = (double)With.onTarget / With.shots;
         double withoutRate = (double)Without.onTarget / Without.shots;
@@ -138,12 +172,11 @@ public sealed class ShotApertureTests
             withoutRate > withRate,
             $"apagar offTargetAperturePenalty no cambió la puntería: {withoutRate:P2} contra {withRate:P2}");
 
-        static (int, int) Count(Catalog catalog)
+        static (int, int) Count(MatchReport[] reports)
         {
             int onTarget = 0, shots = 0;
-            for (ulong seed = 1; seed <= Matches; seed++)
+            foreach (var r in reports)
             {
-                var r = Simulator.Run(TestMatches.Reference(catalog, seed), seed, catalog, SimConfig.Default).Report;
                 onTarget += r.ShotsOnTarget[0] + r.ShotsOnTarget[1];
                 shots += r.Shots[0] + r.Shots[1];
             }
