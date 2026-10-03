@@ -94,3 +94,15 @@ faltas +4-5 %, lesiones hasta +5 %, goles −3 %; muertes por partido 0,149 → 
 
 **Abierto:** BN-A (amontonamiento sobre el portero) 0,60 → 0,72 por partido en `ref` y 0,42 → 0,56 en `run` de `main` al
 final (≈ 1-1,4 errores típicos en cada traza), sin aislar entre 0184 y 0186.
+
+### `visual-review` de la falta pitada (3 oct 2026, código final de la ADR 0186)
+
+Instrumento de BV-A (`-- movimiento`, semilla 20260905, ventanas `ventana`), cadera dibujada (`hipsY`; de pie ~0,48,
+tumbado 0,08-0,15) en `fotogramas.csv`. **Falta del tick 54** (infractor rival 2000001, víctima #6 con modelo): #6 pasa
+a `KnockedDown` con `trip` y la cadera baja 0,48 → 0,29 en 0,2 s (la víctima cae). **Falta dura del tick 1328**
+(infractor #5 con modelo, víctima rival): #5 entra con la plancha (`tackle`) y queda en el suelo (cadera 0,09-0,16) los
+18 ticks del derribo. Imágenes `faltablanda_0037.jpg` y `faltadura_0036.jpg` del instrumento (no se suben: a pantalla
+completa los muñecos son pequeños y la cifra que manda es la cadera). **Límite:** en esta semilla la maqueta sólo pone
+modelo al equipo humano y las cuatro faltas pitadas son duras, así que no hay captura de un infractor con modelo que se
+quede de pie; eso lo cubre el test `FoulByFoulTheHardOnesTopplesTheOffenderAndTheBallIsDropped` (61 faltas no duras,
+ningún infractor en el suelo).
