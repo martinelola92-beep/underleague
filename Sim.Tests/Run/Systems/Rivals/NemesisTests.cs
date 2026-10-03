@@ -22,7 +22,7 @@ public sealed class NemesisTests
     private const string OpponentId = "act1_orc_ironclad";
     private const string Clan = "ironclad";
 
-    private static readonly Catalog Catalog = SystemsTestSupport.Catalog;
+    private static Catalog Catalog => SystemsTestSupport.Catalog;
     private static readonly StandardRunSystems Systems = SystemsTestSupport.Systems;
     private static readonly NemesisCatalog Nemesis = Systems.Nemesis;
     private static readonly RivalCatalog Rivals = Systems.Rivals;

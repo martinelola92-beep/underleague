@@ -12,7 +12,7 @@ namespace Underleague.Sim.Tests.Run.View;
 /// <summary>ADR 0163: la Gaceta de fin de run es determinista, no deja textos vacíos ni marcadores sin sustituir, y cuenta lo que pasó.</summary>
 public sealed class GazetteViewTests
 {
-    private static readonly Catalog Catalog = Run.Systems.SystemsTestSupport.Catalog;
+    private static Catalog Catalog => Run.Systems.SystemsTestSupport.Catalog;
     private static readonly Underleague.Sim.Run.Systems.StandardRunSystems Systems = Run.Systems.SystemsTestSupport.Systems;
     private static readonly string[] Languages = { "es", "en" };
 

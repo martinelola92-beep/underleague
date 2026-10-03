@@ -8,8 +8,14 @@ namespace Underleague.Sim.Tests.Run.Systems;
 /// <summary>Ayudantes de los tests del paquete X: catálogos reales de /data y una RunSetup lista para jugar.</summary>
 internal static class SystemsTestSupport
 {
-    /// <summary>Catálogo compartido (perks, razas, tuning...), cargado una vez.</summary>
-    public static Catalog Catalog { get; } = TestData.LoadCatalog();
+    /// <summary>
+    /// El catálogo (perks, razas, tuning...) <b>de este hilo</b> (<see cref="ThreadCatalogs"/>). Antes era uno solo,
+    /// estático, para las 39 clases que lo usan, y xUnit las ejecuta en paralelo: dos hilos evaluando la misma condición
+    /// NCalc se pisan el contexto (lo documenta <see cref="ThreadCatalogs"/>; lo prohíbe CLAUDE.md). Medido el 3 oct
+    /// 2026: <c>RunPolicySellTests</c> lanzó una vez una sustitución ilegal (la reproducción del partido no coincidía con
+    /// la primera pasada) y no se reprodujo ni sola ni en el bucle siguiente. Un hilo, un catálogo: el dato es idéntico.
+    /// </summary>
+    public static Catalog Catalog => ThreadCatalogs.Current;
 
     /// <summary>Los cuatro catálogos del paquete X (economía, objetos, consumibles, rivales), cargados una vez.</summary>
     public static StandardRunSystems Systems { get; } = StandardRunSystems.FromJson(TestData.LoadAllFiles());

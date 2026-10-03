@@ -13,7 +13,7 @@ namespace Underleague.Sim.Tests.Run.Systems;
 /// </summary>
 public sealed class RunEquipmentTests
 {
-    private static readonly Underleague.Sim.Data.Catalog Catalog = SystemsTestSupport.Catalog;
+    private static Underleague.Sim.Data.Catalog Catalog => SystemsTestSupport.Catalog;
 
     [Fact]
     public void TheEquippedItemTravelsFromTheRosterToTheMatch()

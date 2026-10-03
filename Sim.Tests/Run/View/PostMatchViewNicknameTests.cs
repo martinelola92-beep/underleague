@@ -8,7 +8,7 @@ namespace Underleague.Sim.Tests.Run.View;
 /// <summary>ADR 0163: el informe post-partido enseña las estadísticas por jugador y los apodos ganados.</summary>
 public sealed class PostMatchViewNicknameTests
 {
-    private static readonly Catalog Catalog = Run.Systems.SystemsTestSupport.Catalog;
+    private static Catalog Catalog => Run.Systems.SystemsTestSupport.Catalog;
     private static readonly Underleague.Sim.Run.Systems.StandardRunSystems Systems = Run.Systems.SystemsTestSupport.Systems;
 
     private static (PostMatchReport Report, Underleague.Sim.Engine.MatchReport Match, RunState After) Play(ulong seed, NicknameCatalog? nicknames)
