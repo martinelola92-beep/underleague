@@ -515,6 +515,8 @@ public sealed partial class PlayerModel : Node3D
         var forward = new Vector2(Mathf.Sin(_yaw), Mathf.Cos(_yaw));
         // Hacia atrás sólo cuando reculaba mirando al balón: en un giro a la carrera el cuerpo va un instante «de
         // espaldas» al muñeco que aún está girando, y ahí la zancada no debe invertirse (visto en la hoja del giro).
+        // «Hacia atrás» = componente hacia atrás de más de un cuarto del paso (provisional, sin medir). El tope de 0,6
+        // casillas por fotograma es el umbral de teletransporte de la vista (BA-K): eso no es una zancada.
         float signed = _faceBall && step.Dot(forward) < -0.25f * distance ? -distance : distance;
         _phase = Mathf.PosMod(_phase + (signed / cycle), 1f);
 
