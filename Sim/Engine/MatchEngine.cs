@@ -3589,6 +3589,14 @@ internal sealed class MatchEngine : IPerkWorld
         ExecuteAction(tackler);
     }
 
+    /// <summary>BH-A: resuelve ya una entrada de <paramref name="tacklerIndex"/> contra un blanco fuera de alcance.</summary>
+    internal void ResolveTackleOnEscapedForTest(int tacklerIndex, int victimIndex)
+    {
+        var tackler = _players[tacklerIndex];
+        tackler.TackleTarget = _players[victimIndex];
+        ResolveTackle(tackler);
+    }
+
     internal void FinishRepeatedTackleForTest(MatchPlayer tackler) => FinishRepeatedTackle(tackler, wasFoul: false, won: false, deferredFall: false);
 
     /// <summary>
@@ -4310,7 +4318,7 @@ internal sealed class MatchEngine : IPerkWorld
         if (carrier is null || !carrier.OnPitch || Vec2.Distance(tackler.Position, carrier.Position) > reach)
         {
             // El rival se fue de su alcance antes de que la entrada llegara: no hay contacto ni evento.
-            tackler.EnterState(PlayerState.Positioning, 0);
+            StandUpFromTackle(tackler);
             return;
         }
 
@@ -4454,7 +4462,25 @@ internal sealed class MatchEngine : IPerkWorld
             return;
         }
 
-        actor.EnterState(PlayerState.Positioning, 0);
+        StandUpFromTackle(actor);
+    }
+
+    /// <summary>
+    /// Quien entra (o bloquea) sin contacto vuelve al juego. Si lleva el balón —la repetición de <c>extraAction</c> de
+    /// quien acaba de ganarlo— vuelve como portador, igual que en <see cref="SetOwner"/>; si no, a <c>Positioning</c>.
+    /// BH-A (revisión independiente): un dueño del balón en <c>Positioning</c> no decide como portador y el partido se
+    /// congela (`run:130@1025`, 280 ticks). <c>TackleResolveReach</c> cerró el camino conocido; esto cierra la rama.
+    /// </summary>
+    private void StandUpFromTackle(MatchPlayer player)
+    {
+        if (ReferenceEquals(_ball.Owner, player))
+        {
+            player.EnterState(PlayerState.Dribbling, 0);
+            Decide(player);
+            return;
+        }
+
+        player.EnterState(PlayerState.Positioning, 0);
     }
 
     /// <summary>

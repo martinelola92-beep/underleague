@@ -80,6 +80,71 @@ public sealed class RepeatTackleReachTests
         Assert.Empty(SymptomDetectors.Freeze(DetectorTrace.From(result), out _));
     }
 
+    /// <summary>
+    /// BH-A (revisión independiente): la rama «el rival se escapó» no deja a un dueño del balón fuera de un estado de
+    /// portador, venga de donde venga. Valor conocido: con el balón y el blanco a 2 casillas vuelve como portador. Control:
+    /// sin el balón vuelve a <c>Positioning</c>, como siempre.
+    /// </summary>
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void AnEscapedTackleNeverLeavesTheOwnerOutOfACarrierState(bool withBall)
+    {
+        var engine = new MatchEngine(TestMatches.Reference(Catalog, 5), 5, Catalog, SimConfig.Default);
+        int tackler = engine.OutfieldIndexForTest(0, 0);
+        int rival = engine.OutfieldIndexForTest(1, 5);
+        var at = new Vec2(7f, 3.5f);
+        if (withBall)
+        {
+            engine.GiveBallForTest(tackler, at);
+        }
+        else
+        {
+            engine.PlaceForTest(tackler, at);
+        }
+
+        engine.PlaceForTest(rival, new Vec2(at.X + 2f, at.Y));
+        engine.ResolveTackleOnEscapedForTest(tackler, rival);
+
+        var state = engine.StateForTest(tackler);
+        if (withBall)
+        {
+            Assert.Equal(engine.PlayerAtForTest(tackler).Id, engine.BallOwnerIdForTest);
+            Assert.False(state is PlayerState.Positioning or PlayerState.Chasing or PlayerState.Tackling or PlayerState.Blocking, $"dueño del balón en {state}");
+        }
+        else
+        {
+            Assert.Equal(PlayerState.Positioning, state);
+        }
+    }
+
+    /// <summary>
+    /// Censo permanente de la clase (BH-A): 60 partidos de run (con perks, donde vive Arrollador) y 60 de referencia sin
+    /// un solo fotograma de juego abierto con el dueño del balón en un estado que no es de portador. Antes del arreglo, en
+    /// 1.000 + 1.000 había uno (`run:130`); 60 no lo garantizan: es la red barata, el barrido es la cara.
+    /// </summary>
+    [Fact]
+    public void NoOwnerIsLeftOutOfACarrierState()
+    {
+        int frames = 0;
+        var where = new List<string>();
+        foreach (string kind in new[] { "run", "ref" })
+        {
+            for (ulong seed = 1; seed <= 60; seed++)
+            {
+                var (setup, s, config) = WorstCaseProbeTests.Build(kind, seed, Catalog);
+                int n = OwnerOutOfCarrierFrames(Simulator.Run(setup, s, Catalog, config));
+                if (n > 0)
+                {
+                    frames += n;
+                    where.Add($"{kind}:{seed} ({n})");
+                }
+            }
+        }
+
+        Assert.True(frames == 0, "dueño del balón fuera de estado de portador: " + string.Join(", ", where));
+    }
+
     internal static int OwnerOutOfCarrierFrames(MatchResult result)
     {
         var tr = result.Trace!;

@@ -38,9 +38,9 @@ public sealed class MobNarrowingTests
 
     // Las mismas tres huellas con las reglas de las ADR 0184/0186 apagadas (positioningHoldBonus = 0, BV-B apagada) y las
     // bases de lesión de antes: el motor de antes de la ADR 0184 más los arreglos sin dato posteriores (BO-A).
-    private const ulong RegulationOnlyBeforeAdr0184 = 2380212350706324353UL;
-    private const int RegulationOnlyMatchesBeforeAdr0184 = 43;
-    private const ulong EveryMatchBeforeAdr0184 = 8084161313723921521UL;
+    private const ulong RegulationOnlyBeforeAdr0184PlusBoA = 2380212350706324353UL;
+    private const int RegulationOnlyMatchesBeforeAdr0184PlusBoA = 43;
+    private const ulong EveryMatchBeforeAdr0184PlusBoA = 8084161313723921521UL;
 
     private const float Eps = 0.001f;
 
@@ -151,14 +151,17 @@ public sealed class MobNarrowingTests
     }
 
     /// <summary>
-    /// ADR 0184 y 0186: con <c>positioningHoldBonus</c> = 0 y las tres reglas de BV-B apagadas
-    /// (<c>followVictimWhileTackling</c>, <c>whistledFoulDownsVictim</c>, <c>escapeBeyondDecisionReach</c>) el motor es el de antes, bit a bit. Las tres
-    /// huellas de antes de la ADR 0184 tienen que seguir saliendo (el reglamentario, su número de partidos y todos los
-    /// partidos con la turba a 0/0). El arreglo de <c>SetOwner</c> (quien recoge el balón bloqueando pasa a portador)
-    /// no tiene dato: no ocurría en estos 60 partidos con el motor de antes, y por eso las huellas no lo ven.
+    /// ADR 0184 y 0186: con <c>positioningHoldBonus</c> = 0, las tres reglas de BV-B apagadas
+    /// (<c>followVictimWhileTackling</c>, <c>whistledFoulDownsVictim</c>, <c>escapeBeyondDecisionReach</c>) y las bases de
+    /// lesión de antes, el motor es el de antes de la ADR 0184 <b>más el arreglo de BO-A</b> (el último compromiso de
+    /// proteger es lo que queda de <c>shieldMaxTicks</c>, enmienda de la ADR 0153), que no tiene dato y sí cambia estos 60
+    /// partidos. No es, por tanto, «el motor de antes» bit a bit: es el de antes con BO-A. Las huellas de antes de la 0184
+    /// sin BO-A (1085505645508475356 / 44 / 9633395058359667205) salían en el commit `92b473b`, el último sin BO-A.
+    /// El arreglo de <c>SetOwner</c> (quien recoge el balón bloqueando pasa a portador) y los de BH-A
+    /// (<c>TackleResolveReach</c>, <c>StandUpFromTackle</c>) tampoco tienen dato, pero no ocurren en estos 60 partidos.
     /// </summary>
     [Fact]
-    public void WithTheNewRulesOffEveryTraceIsTheOneBeforeAdr0184()
+    public void WithTheNewRulesOffEveryTraceIsTheOneBeforeAdr0184PlusBoA()
     {
         var current = Before(Current);
         var noMob = Before(NoMobChanges);
@@ -178,9 +181,9 @@ public sealed class MobNarrowingTests
             every = (every ^ Fingerprint(Play(noMob, seed))) * FnvPrime;
         }
 
-        Assert.Equal(RegulationOnlyBeforeAdr0184, regulation);
-        Assert.Equal(RegulationOnlyMatchesBeforeAdr0184, played);
-        Assert.Equal(EveryMatchBeforeAdr0184, every);
+        Assert.Equal(RegulationOnlyBeforeAdr0184PlusBoA, regulation);
+        Assert.Equal(RegulationOnlyMatchesBeforeAdr0184PlusBoA, played);
+        Assert.Equal(EveryMatchBeforeAdr0184PlusBoA, every);
     }
 
     private static Catalog Before(Catalog catalog)
