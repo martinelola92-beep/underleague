@@ -101,3 +101,12 @@ que lo pida. `tagsRequired` hace que el motor rechace asignarla a un no Bulwark 
 medición la asignan a jugadores sin la etiqueta Bulwark; con `tagsRequired` el motor lanzaría y habría que cambiar las líneas base de las
 puertas (ADR 0118). Queda como pendiente de decidir con el revisor: o se corrigen esas builds, o se acepta la carta muerta (hoy su `condition`
 ya la deja inerte fuera de Bulwark).
+
+## `immovable` entra en una build (3 oct 2026, tarde)
+
+`BuildGateTests.EveryCatalogPerkIsAssignedInSomeBuild` estaba roja en `main` desde `610c567`: ninguna build asignaba
+`immovable`. Va a `dwarf_fortress` (la build coherente de La Muralla), en el jugador 5 (estilo Bulwark), en lugar de
+`game_management` (sigue asignado en otras nueve builds). Medido, `--builds dwarf_fortress --vs dwarf_neutral`, 4.000
+partidos, semillas 1 y 2: victoria **79,05 / 80,25 → 80,58 / 78,97** (+1,5 / −1,3, ruido; e.t. ≈ 0,65); `immovable` se
+activa en el 89 % de los partidos. Se descartó, medido, ponerlo en el jugador 2 en lugar de `own_third_anchor`: 77,00 /
+75,75 (−2,1 / −4,5). Puerta en verde; validador de `/data` sin errores.

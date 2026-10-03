@@ -19,7 +19,7 @@ primera pasada y la reproducción, que es exactamente el síntoma.
 ## Arreglo
 
 `SystemsTestSupport.Catalog` devuelve `ThreadCatalogs.Current` (un catálogo por hilo, Regla G: el patrón ya existía).
-Las cinco clases que lo copiaban en un `static readonly` propio (`RunEquipmentTests`, `NemesisTests`,
+Las cuatro clases que lo copiaban en un `static readonly` propio (`RunEquipmentTests`, `NemesisTests`,
 `PostMatchViewNicknameTests`, `GazetteViewTests`) lo leen ahora con `=>`. `Systems` sigue compartido: no lleva condiciones
 compiladas.
 
