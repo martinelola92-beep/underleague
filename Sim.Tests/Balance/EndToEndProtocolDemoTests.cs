@@ -23,7 +23,7 @@ namespace Underleague.Sim.Tests.Balance;
 /// estado de escalada) demuestra el mecanismo, no cierra el balance de nada — igual que pide el criterio
 /// de éxito del encargo.</para>
 /// </summary>
-public sealed class EndToEndProtocolDemoTests
+public sealed class EndToEndProtocolDemoTests : IClassFixture<EndToEndProtocolDemoTests.TuningRuns>
 {
     private const int ScreeningRosters = 20;
     // 20 -> 60 (23 sep 2026). A 20 plantillas el paso de seguridad mide RT-056 sobre 40 partidos, donde
@@ -35,7 +35,38 @@ public sealed class EndToEndProtocolDemoTests
     private static readonly Catalog BaseCatalog = TestData.LoadCatalog();
 
     private readonly ITestOutputHelper _output;
-    public EndToEndProtocolDemoTests(ITestOutputHelper output) => _output = output;
+    private readonly TuningRuns _runs;
+
+    public EndToEndProtocolDemoTests(ITestOutputHelper output, TuningRuns runs)
+    {
+        _output = output;
+        _runs = runs;
+    }
+
+    /// <summary>
+    /// Lotes emparejados de Tuning/Validation (<see cref="TuningRosters"/> plantillas) ya jugados: las dos pruebas
+    /// de la clase juegan la misma tripleta de candidatos (semilla 2) y la misma réplica (semilla 3) sobre el mismo
+    /// fixture, y el resultado es función pura de (valor, semilla). Se juegan una vez (técnica «compartir lo que se
+    /// repite»); xUnit corre las pruebas de la clase una detrás de otra y el fixture se suelta al acabar.
+    /// </summary>
+    public sealed class TuningRuns
+    {
+        private readonly Dictionary<(int Value, ulong Seed), PairedBalanceHarness.PairedResult> _runs = new();
+
+        public PairedBalanceHarness.PairedResult Get(int value, ulong seed)
+        {
+            lock (_runs)
+            {
+                if (!_runs.TryGetValue((value, seed), out var run))
+                {
+                    run = PairedBalanceHarness.Run(CatalogWith(value), "demo_tackle_fixture", Position.Defender, TuningRosters, seed);
+                    _runs[(value, seed)] = run;
+                }
+
+                return run;
+            }
+        }
+    }
 
     private static PerkDefinition BuildFixture(int value) => new(
         Id: "demo_tackle_fixture",
@@ -140,7 +171,7 @@ public sealed class EndToEndProtocolDemoTests
         // --- 2. TUNING: tripleta anclada, monotonicidad, potencia, descarte de seguridad ---
         int[] candidates = { 40, 60, 100 }; // tripleta de demostración (no derivada de un volcado, ver docblock)
         var byCandidate = candidates
-            .Select(value => (Value: value, Run: PairedBalanceHarness.Run(CatalogWith(value), "demo_tackle_fixture", Position.Defender, TuningRosters, seed: 2)))
+            .Select(value => (Value: value, Run: _runs.Get(value, seed: 2)))
             .ToList();
 
         var deltas = new List<double>();
@@ -207,7 +238,7 @@ public sealed class EndToEndProtocolDemoTests
         _output.WriteLine($"Potencia del candidato elegido ({chosen.Value}): suficiente={chosenHasPower}");
 
         // --- 3. VALIDATION: réplica en segunda semilla + determinismo + checklist completo ---
-        var replicaRun = PairedBalanceHarness.Run(CatalogWith(chosen.Value), "demo_tackle_fixture", Position.Defender, TuningRosters, seed: 3);
+        var replicaRun = _runs.Get(chosen.Value, seed: 3);
         double replicaDelta = replicaRun.ArmedMatches.Average(m => (double)m.Tackles) - replicaRun.ControlMatches.Average(m => (double)m.Tackles);
         bool sameSign = Math.Sign(chosen.ArmedMean - chosen.ControlMean) == Math.Sign(replicaDelta) && Math.Abs(replicaDelta) > 0.0;
         _output.WriteLine($"Réplica (semilla 3): delta={replicaDelta:F2}  mismo signo que semilla 2={sameSign}");
@@ -287,7 +318,7 @@ public sealed class EndToEndProtocolDemoTests
     {
         int[] candidates = { 40, 60, 100 };
         var byCandidate = candidates
-            .Select(value => (Value: value, Run: PairedBalanceHarness.Run(CatalogWith(value), "demo_tackle_fixture", Position.Defender, TuningRosters, seed: 2)))
+            .Select(value => (Value: value, Run: _runs.Get(value, seed: 2)))
             .ToList();
 
         var deltas = new List<double>();
@@ -354,7 +385,7 @@ public sealed class EndToEndProtocolDemoTests
         bool deterministic = VerifyDeterminism(CatalogWith(chosen.Value));
         Assert.True(deterministic, "RT-024: la misma semilla debe producir el mismo resultado");
 
-        var replicaRun = PairedBalanceHarness.Run(CatalogWith(chosen.Value), "demo_tackle_fixture", Position.Defender, TuningRosters, seed: 3);
+        var replicaRun = _runs.Get(chosen.Value, seed: 3);
         double replicaDelta = replicaRun.ArmedMatches.Average(m => (double)m.Tackles) - replicaRun.ControlMatches.Average(m => (double)m.Tackles);
         bool sameSign = Math.Sign(chosen.ArmedMean - chosen.ControlMean) == Math.Sign(replicaDelta);
 
