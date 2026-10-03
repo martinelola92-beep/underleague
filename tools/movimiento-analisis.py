@@ -162,7 +162,8 @@ def foot_ball_metrics(rows, window):
     - conducción: con el balón en su poder y el cuerpo a > 0,5 c/s, distancia horizontal del balón a la puntera más
       cercana, y velocidad del balón RESPECTO al cuerpo (un balón que salta de un pie a otro la dispara).
     """
-    loco_skate, kick_skate = [], []
+    loco_skate, kick_skate, turn_skate = [], [], []
+    knees, reversed_knees, knee_frames, proc = [], 0, 0, []
     sep, rel = [], []
     for (w, p), seq in rows.items():
         if w != window or not seq[0]["hasModel"]:
@@ -182,8 +183,19 @@ def foot_ball_metrics(rows, window):
                     foot = math.hypot(b[k + "x"] - a[k + "x"], b[k + "z"] - a[k + "z"]) * FPS
                     if b["clip"] in LOCO and a["clip"] in LOCO:
                         loco_skate.append(foot / body)
+                        # En giro: el muñeco gira más de 90°/s entre los dos fotogramas (provisional: ~la mitad del tope).
+                        if abs(wrap(b["yaw"] - a["yaw"])) * FPS > math.radians(90):
+                            turn_skate.append(foot / body)
                     elif b["clip"] == "kick" and a["clip"] == "kick":
                         kick_skate.append(foot / body)
+            if b.get("kneeL") not in (None, "") and b["visible"]:
+                knee_frames += 1
+                for side in ("L", "R"):
+                    knees.append(float(b["knee" + side]))
+                    # Rodilla al revés: más de 2 cm de personaje (0,01 casillas) por detrás de la recta cadera-tobillo.
+                    if float(b["front" + side]) < -0.01 and float(b["knee" + side]) < 170:
+                        reversed_knees += 1
+                proc.append(float(b["procMs"]))
             if b["owner"] == p and a["owner"] == p and body > 0.5 and body < 9 and b["clip"] in LOCO:
                 d = min(math.hypot(b["bx"] - b["lx"], b["bz"] - b["lz"]), math.hypot(b["bx"] - b["rx"], b["bz"] - b["rz"]))
                 sep.append(d)
@@ -192,6 +204,9 @@ def foot_ball_metrics(rows, window):
                 rel.append(math.hypot(rb[0] - ra[0], rb[1] - ra[1]) * FPS)
     return {
         "pie de apoyo / cuerpo en locomoción (p50/p90; 0 = clavado)": (pct(loco_skate, 50), pct(loco_skate, 90), len(loco_skate)),
+        "pie de apoyo / cuerpo EN GIROS > 90°/s (p50/p90; n)": (pct(turn_skate, 50), pct(turn_skate, 90), len(turn_skate)),
+        "rodilla: ángulo mínimo y p5 (°), y fotogramas-pierna con la rodilla al revés": (min(knees) if knees else float("nan"), pct(knees, 5), reversed_knees),
+        "tiempo de proceso por fotograma, ms (p50/p90)": (pct(proc, 50), pct(proc, 90)),
         "pie de apoyo / cuerpo en el golpeo (p50/p90)": (pct(kick_skate, 50), pct(kick_skate, 90), len(kick_skate)),
         "conducción: balón-puntera más cercana, casillas (p50/p90/p99)": (pct(sep, 50), pct(sep, 90), pct(sep, 99)),
         "conducción: velocidad del balón respecto al cuerpo, c/s (p50/p90/p99)": (pct(rel, 50), pct(rel, 90), pct(rel, 99)),

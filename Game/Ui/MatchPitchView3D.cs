@@ -3096,7 +3096,8 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// </summary>
     public readonly record struct BodyProbe(
         bool Visible, bool HasModel, Vector3 Position, float Yaw, string Clip, float ClipTime, float SpeedScale,
-        float InputSpeed, float NaturalSpeed, Vector2 Screen, Vector3 LeftToe = default, Vector3 RightToe = default, float HipsY = 0f);
+        float InputSpeed, float NaturalSpeed, Vector2 Screen, Vector3 LeftToe = default, Vector3 RightToe = default, float HipsY = 0f,
+        (float AngleL, float AngleR, float FrontL, float FrontR, float LockL, float LockR) Knees = default);
 
     /// <summary>Número de cuerpos montados (uno por ficha de la traza). BV-A.</summary>
     public int BodyCount => _bodies.Count;
@@ -3123,7 +3124,7 @@ public partial class MatchPitchView3D : SubViewportContainer
         model.DebugToes(out var leftToe, out var rightToe);
         return new BodyProbe(
             body.Visible, true, center, model.Rotation.Y, model.DebugClip, model.DebugClipTime, model.DebugSpeedScale,
-            model.DebugInputSpeed, model.DebugNaturalCellsPerSecond(model.DebugClip), screen, leftToe, rightToe, model.DebugHipsY());
+            model.DebugInputSpeed, model.DebugNaturalCellsPerSecond(model.DebugClip), screen, leftToe, rightToe, model.DebugHipsY(), model.DebugKnees());
     }
 
     // ------------------------------------------------------------------ marcas de perk (regla 5, ADR 0119)

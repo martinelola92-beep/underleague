@@ -396,6 +396,19 @@ public sealed partial class PlayerModel : Node3D
     private static float _jogOffset, _runOffset;
     private static Vector3 _reachRun, _reachIdle, _reachKick;
 
+    /// <summary>Muestras por ciclo de las tablas de apoyo (una cada 1/60 de zancada).</summary>
+    private const int StancePhases = 60;
+
+    /// <summary>
+    /// Un pie pisa cuando su puntera está a menos de esto, en cm del personaje, sobre lo más bajo que llega en el clip.
+    /// <b>Provisional</b>: el orden de la suela; el instrumento de BV-A da la puntera apoyada a 0-2 cm del suelo.
+    /// </summary>
+    private const float StanceToeCm = 3f;
+
+    /// <summary>Apoyo por fase: [pie (0 izquierdo, 1 derecho), fase].</summary>
+    private static readonly bool[,] _stanceJog = new bool[2, StancePhases];
+    private static readonly bool[,] _stanceRun = new bool[2, StancePhases];
+
     /// <summary>
     /// Índices de hueso resueltos una vez por modelo. <see cref="Skeleton3D.FindBone"/> recorre los 65
     /// huesos por nombre, y esto se consultaría catorce veces por fotograma.
@@ -588,6 +601,7 @@ public sealed partial class PlayerModel : Node3D
         float idleRate = 1f + (IdleRateSpread * ((Mathf.PosMod(Variant * 0.381966f, 1f) * 2f) - 1f));
         _tree.Set("parameters/idle_scale/scale", rate * idleRate);
         Lean(down, simDelta);
+        UpdateFootLock(down, move, jogToRun, delta);
         // El gesto se COLOCA cada fotograma en su reloj (BV-A, tercera pasada). Medido con la cadera dibujada: la búsqueda
         // pedida al lanzar el gesto se perdía, porque la transición reinicia su entrada a 0 después de buscar; la plancha
         // arrancaba en su segundo 0 y no en el 0,83 pedido, y el instrumento (que leía este reloj) no lo veía (Regla J).
@@ -738,6 +752,178 @@ public sealed partial class PlayerModel : Node3D
         _torsoLook.Influence = TorsoLookInfluence * _lookWeight;
     }
 
+    // ------------------------------------------------------------------ IK del pie apoyado (BV-A, B3)
+
+    /// <summary>Fundidos de entrada y salida del bloqueo del pie, en segundos de partido. <b>Provisionales</b>: ~1 y ~1,5 fotogramas a 15 ticks/s.</summary>
+    private const float FootLockInSeconds = 0.05f;
+    private const float FootLockOutSeconds = 0.08f;
+
+    /// <summary>
+    /// El pie bloqueado se suelta si la cadera se le aleja más de esta fracción de la pierna (no llega sin estirarla del
+    /// todo) o si el cuerpo ha girado más de <see cref="FootLockMaxTurnDegrees"/> desde que pisó: entonces vuelve a dar el
+    /// paso animado. <b>Provisionales</b>.
+    /// </summary>
+    private const float FootLockMaxReach = 0.95f;
+    private const float FootLockMaxTurnDegrees = 50f;
+
+    /// <summary>Por debajo de esta mezcla espera→marcha se considera parado: los dos pies pisan. Provisional.</summary>
+    private const float FootLockIdleMove = 0.15f;
+
+    private sealed class Foot
+    {
+        public TwoBoneIK3D? Ik;
+        public Node3D? Target;
+        public Node3D? Pole;
+        public int Hip = -1;
+        public int Ankle = -1;
+        public bool Locked;
+        public Vector3 Pin;
+        public float PinYaw;
+        public float Weight;
+        public float Length;
+    }
+
+    private readonly Foot[] _feet = { new(), new() };
+
+    /// <summary>Desactiva el IK del pie (para medir el antes con el mismo binario). Solo instrumento.</summary>
+    public static bool DebugFootLockOff { get; set; }
+
+    /// <summary>
+    /// Clava el pie que pisa en su sitio del mundo mientras dura el apoyo y resuelve la pierna con <see cref="TwoBoneIK3D"/>
+    /// (cadera-rodilla-tobillo), con la rodilla apuntando a un polo delante de la pierna (nunca hacia atrás). El apoyo sale
+    /// de las tablas medidas del clip según la fase de la zancada; parado, pisan los dos. Se suelta al levantar el pie, si
+    /// la pierna no llega, si el cuerpo gira mucho, en gestos (golpeo, entrada, caída) y en saltos de la reproducción.
+    /// </summary>
+    private void UpdateFootLock(bool down, float move, float jogToRun, float delta)
+    {
+        EnsureFootLock();
+        if (_skeleton is null || _feet[0].Ik is null)
+        {
+            return;
+        }
+
+        var toWorld = _skeleton.GlobalTransform;
+        var forward = new Vector3(Mathf.Sin(_yaw), 0f, Mathf.Cos(_yaw));
+        bool free = !DebugFootLockOff && !down && _gestureWeight < 0.01f && _gesture.Length == 0 && delta > 0f;
+        int phase = (int)(Mathf.PosMod(_phase, 1f) * StancePhases) % StancePhases;
+        var table = jogToRun >= 0.5f ? _stanceRun : _stanceJog;
+        float simDelta = delta * _rate;
+        for (int side = 0; side < 2; side++)
+        {
+            var foot = _feet[side];
+            var hip = toWorld * _skeleton.GetBoneGlobalPose(foot.Hip).Origin;
+            var ankle = toWorld * _skeleton.GetBoneGlobalPose(foot.Ankle).Origin;
+            bool stance = move < FootLockIdleMove || table[side, phase];
+
+            if (!free || !stance)
+            {
+                foot.Locked = false;
+            }
+            else if (!foot.Locked)
+            {
+                // Pisa ahora: se clava donde está el tobillo (el del fotograma anterior, ya casi sin IK porque estaba en el aire).
+                foot.Locked = true;
+                foot.Pin = ankle;
+                foot.PinYaw = _yaw;
+            }
+            else if (hip.DistanceTo(foot.Pin) > foot.Length * FootLockMaxReach
+                || Mathf.Abs(Mathf.Wrap(_yaw - foot.PinYaw, -Mathf.Pi, Mathf.Pi)) > Mathf.DegToRad(FootLockMaxTurnDegrees))
+            {
+                foot.Locked = false;
+            }
+
+            float target = foot.Locked ? 1f : 0f;
+            float fade = target > foot.Weight ? FootLockInSeconds : FootLockOutSeconds;
+            foot.Weight = delta <= 0f ? 0f : Mathf.MoveToward(foot.Weight, target, simDelta / fade);
+            foot.Ik!.Influence = foot.Weight;
+            foot.Ik.Active = foot.Weight > 0.001f;
+            if (foot.Locked)
+            {
+                foot.Target!.GlobalPosition = foot.Pin;
+            }
+
+            // El polo, medio metro de personaje delante de la rodilla: la rodilla dobla hacia delante siempre.
+            foot.Pole!.GlobalPosition = ((hip + ankle) * 0.5f) + (forward * foot.Length);
+        }
+    }
+
+    private void EnsureFootLock()
+    {
+        if (_feet[0].Ik is not null || _skeleton is null || !_skeleton.IsInsideTree())
+        {
+            return;
+        }
+
+        string[] sides = { "Left", "Right" };
+        for (int side = 0; side < 2; side++)
+        {
+            var foot = _feet[side];
+            string s = sides[side];
+            foot.Hip = _skeleton.FindBone($"mixamorig_{s}UpLeg");
+            int knee = _skeleton.FindBone($"mixamorig_{s}Leg");
+            foot.Ankle = _skeleton.FindBone($"mixamorig_{s}Foot");
+            if (foot.Hip < 0 || knee < 0 || foot.Ankle < 0)
+            {
+                return;
+            }
+
+            var toWorld = _skeleton.GlobalTransform;
+            var h = toWorld * _skeleton.GetBoneGlobalRest(foot.Hip).Origin;
+            var k = toWorld * _skeleton.GetBoneGlobalRest(knee).Origin;
+            var a = toWorld * _skeleton.GetBoneGlobalRest(foot.Ankle).Origin;
+            foot.Length = h.DistanceTo(k) + k.DistanceTo(a);
+            foot.Target = new Node3D { Name = $"FootTarget{s}", TopLevel = true };
+            foot.Pole = new Node3D { Name = $"KneePole{s}", TopLevel = true };
+            AddChild(foot.Target);
+            AddChild(foot.Pole);
+            var ik = new TwoBoneIK3D { Name = $"FootIK{s}", SettingCount = 1, Influence = 0f, Active = false };
+            ik.SetRootBoneName(0, $"mixamorig_{s}UpLeg");
+            ik.SetMiddleBoneName(0, $"mixamorig_{s}Leg");
+            ik.SetEndBoneName(0, $"mixamorig_{s}Foot");
+            ik.SetPoleDirection(0, SkeletonModifier3D.SecondaryDirection.PlusZ);
+            _skeleton.AddChild(ik);
+            ik.SetTargetNode(0, ik.GetPathTo(foot.Target));
+            ik.SetPoleNode(0, ik.GetPathTo(foot.Pole));
+            foot.Ik = ik;
+        }
+    }
+
+    /// <summary>
+    /// Ángulo de cada rodilla (grados, 180 = estirada) y si dobla hacia delante: distancia con signo de la rodilla a la recta
+    /// cadera-tobillo, a lo largo de la mirada del muñeco (negativa = rodilla al revés). Solo instrumento (BV-A, B3).
+    /// </summary>
+    public (float AngleL, float AngleR, float FrontL, float FrontR, float LockL, float LockR) DebugKnees()
+    {
+        if (_skeleton is null)
+        {
+            return default;
+        }
+
+        var toWorld = _skeleton.GlobalTransform;
+        var forward = new Vector3(Mathf.Sin(_yaw), 0f, Mathf.Cos(_yaw));
+        (float, float) Knee(string s)
+        {
+            int hb = _skeleton.FindBone($"mixamorig_{s}UpLeg");
+            int kb = _skeleton.FindBone($"mixamorig_{s}Leg");
+            int ab = _skeleton.FindBone($"mixamorig_{s}Foot");
+            if (hb < 0 || kb < 0 || ab < 0)
+            {
+                return (0f, 0f);
+            }
+
+            var h = toWorld * _skeleton.GetBoneGlobalPose(hb).Origin;
+            var k = toWorld * _skeleton.GetBoneGlobalPose(kb).Origin;
+            var a = toWorld * _skeleton.GetBoneGlobalPose(ab).Origin;
+            float angle = Mathf.RadToDeg((h - k).AngleTo(a - k));
+            var mid = (h + a) * 0.5f;
+            return (angle, (k - mid).Dot(forward));
+        }
+
+        var (al, fl) = Knee("Left");
+        var (ar, fr) = Knee("Right");
+        return (al, ar, fl, fr, _feet[0].Weight, _feet[1].Weight);
+    }
+
     private void EnsureLook()
     {
         if (_headLook is not null || _skeleton is null || !_skeleton.IsInsideTree())
@@ -873,6 +1059,28 @@ public sealed partial class PlayerModel : Node3D
 
                 (_jogOffset, _) = LeftForward("jog");
                 (_runOffset, _reachRun) = LeftForward("run");
+
+                // BV-A, IK del pie: en qué fases de cada ciclo pisa cada pie. Un pie pisa cuando su puntera está a menos de
+                // StanceToeCm del punto más bajo que alcanza en el clip (medido aquí, por clip y por pie).
+                foreach (var (key, offset, table) in new[] { ("jog", _jogOffset, _stanceJog), ("run", _runOffset, _stanceRun) })
+                {
+                    float length = ClipLength(key);
+                    var heights = new (float L, float R)[StancePhases];
+                    float minL = float.MaxValue, minR = float.MaxValue;
+                    for (int i = 0; i < StancePhases; i++)
+                    {
+                        var (l, r) = Toes(key, Mathf.PosMod(offset + (i * length / StancePhases), length));
+                        heights[i] = (l.Y, r.Y);
+                        minL = Mathf.Min(minL, l.Y);
+                        minR = Mathf.Min(minR, r.Y);
+                    }
+
+                    for (int i = 0; i < StancePhases; i++)
+                    {
+                        table[0, i] = heights[i].L < minL + (StanceToeCm / 100f);
+                        table[1, i] = heights[i].R < minR + (StanceToeCm / 100f);
+                    }
+                }
                 var (il, ir) = Toes("idle", 0f);
                 _reachIdle = il.Z >= ir.Z ? il : ir;
                 var (kl, kr) = Toes("kick", KickContactSeconds);

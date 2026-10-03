@@ -62,6 +62,9 @@ public partial class BroadcastCapture
         IReadOnlyList<(string Label, int StartTick, int EndTick, string Focus)>? custom = null)
     {
         _movementImages = images;
+
+        // BV-A, B3: `sinik` mide el antes del IK del pie con el mismo binario.
+        Ui.PlayerModel.DebugFootLockOff = System.Array.IndexOf(OS.GetCmdlineUserArgs(), "sinik") >= 0;
         _movementDirectory = directory;
         Directory.CreateDirectory(directory);
 
@@ -111,7 +114,7 @@ public partial class BroadcastCapture
         File.WriteAllText(Path.Combine(directory, "tramos.csv"), plan.ToString());
 
         _movementLog = new StringBuilder(
-            "window,n,frame,alpha,frozen,timescale,player,team,hasModel,visible,state,x,z,yaw,clip,clipTime,speedScale,inputSpeed,naturalSpeed,sx,sy,lx,ly,lz,rx,ry,rz,bx,by,bz,owner,hipsY\n");
+            "window,n,frame,alpha,frozen,timescale,player,team,hasModel,visible,state,x,z,yaw,clip,clipTime,speedScale,inputSpeed,naturalSpeed,sx,sy,lx,ly,lz,rx,ry,rz,bx,by,bz,owner,hipsY,kneeL,kneeR,frontL,frontR,lockL,lockR,procMs\n");
         RenderingServer.FramePostDraw += OnMovementPostDraw;
         foreach (var w in windows)
         {
@@ -205,7 +208,7 @@ public partial class BroadcastCapture
             log.Append(CultureInfo.InvariantCulture,
                 $"{probe.Position.X:0.#####},{probe.Position.Z:0.#####},{probe.Yaw:0.#####},{probe.Clip},{probe.ClipTime:0.####},{probe.SpeedScale:0.####},{probe.InputSpeed:0.####},{probe.NaturalSpeed:0.####},{probe.Screen.X:0.#},{probe.Screen.Y:0.#},");
             log.Append(CultureInfo.InvariantCulture,
-                $"{probe.LeftToe.X:0.####},{probe.LeftToe.Y:0.####},{probe.LeftToe.Z:0.####},{probe.RightToe.X:0.####},{probe.RightToe.Y:0.####},{probe.RightToe.Z:0.####},{ballAt.X:0.####},{ballAt.Y:0.####},{ballAt.Z:0.####},{owner},{probe.HipsY:0.####}\n");
+                $"{probe.LeftToe.X:0.####},{probe.LeftToe.Y:0.####},{probe.LeftToe.Z:0.####},{probe.RightToe.X:0.####},{probe.RightToe.Y:0.####},{probe.RightToe.Z:0.####},{ballAt.X:0.####},{ballAt.Y:0.####},{ballAt.Z:0.####},{owner},{probe.HipsY:0.####},{probe.Knees.AngleL:0.#},{probe.Knees.AngleR:0.#},{probe.Knees.FrontL:0.####},{probe.Knees.FrontR:0.####},{probe.Knees.LockL:0.##},{probe.Knees.LockR:0.##},{Performance.GetMonitor(Performance.Monitor.TimeProcess) * 1000.0:0.###}\n");
         }
 
         if (w.Images && _movementImages)
