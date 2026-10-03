@@ -19,15 +19,51 @@ namespace Underleague.Sim.Tests.Perks;
 /// nadie acaba un tick derribado y con el balón. Los casos 1 (la repetición iba antes que la original) y 4
 /// (la entrada se seguía tirando contra un lesionado que ya no está) sí lo eran.</para>
 /// </summary>
-public sealed class PreResolutionParticipantsTests
+public sealed class PreResolutionParticipantsTests : IClassFixture<PreResolutionParticipantsTests.Plays>
 {
     private static readonly Catalog Catalog = TestData.LoadCatalog();
     private static readonly RefereeSetup Referee = new("Referee", RefereeTrait.Neutral, 0);
     private readonly ITestOutputHelper _output;
+    private readonly Plays _plays;
 
-    public PreResolutionParticipantsTests(ITestOutputHelper output) => _output = output;
+    public PreResolutionParticipantsTests(ITestOutputHelper output, Plays plays)
+    {
+        _output = output;
+        _plays = plays;
+    }
 
-    private static MatchResult Play(int index, string perkId, int slot)
+    /// <summary>
+    /// Partidos ya jugados de la clase (técnica «compartir lo que se repite»). Varias pruebas juegan
+    /// exactamente el mismo partido <c>(índice, perk, slot)</c> —la semilla es función pura de esos tres
+    /// datos— y lo recorren buscando cosas distintas; el fixture lo juega una vez. xUnit ejecuta las
+    /// pruebas de una clase una detrás de otra, así que no hay acceso concurrente, y el fixture se suelta
+    /// al terminar la clase. Se guarda <b>sin la traza</b> (pesa varios MB por partido: 1.500 partidos de
+    /// <c>ankle_bite</c> con traza pasaban de 3 GB). Los partidos se juegan igual, con <c>Trace: true</c>;
+    /// quien necesita la traza (la prueba de «nadie acaba un tick derribado con el balón») llama a
+    /// <c>PlayNew</c> y se queda con la traza entera; el resto sólo lee eventos e informe.
+    /// </summary>
+    public sealed class Plays
+    {
+        private readonly Dictionary<(int Index, string PerkId, int Slot), MatchResult> _results = new();
+
+        public MatchResult Get(int index, string perkId, int slot)
+        {
+            lock (_results)
+            {
+                if (!_results.TryGetValue((index, perkId, slot), out var result))
+                {
+                    result = PlayNew(index, perkId, slot) with { Trace = null };
+                    _results[(index, perkId, slot)] = result;
+                }
+
+                return result;
+            }
+        }
+    }
+
+    private MatchResult Play(int index, string perkId, int slot) => _plays.Get(index, perkId, slot);
+
+    private static MatchResult PlayNew(int index, string perkId, int slot)
     {
         var homeRng = RngStreams.Generation(1, index);
         var awayRng = RngStreams.Generation(1, 10_000 + index);
@@ -66,7 +102,7 @@ public sealed class PreResolutionParticipantsTests
         int frames = 0;
         for (int i = 0; i < matches; i++)
         {
-            var trace = Play(i, perkId, slot).Trace!;
+            var trace = PlayNew(i, perkId, slot).Trace!;
             for (int f = 0; f < trace.FrameCount; f++)
             {
                 frames++;
