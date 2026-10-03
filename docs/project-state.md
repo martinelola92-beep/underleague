@@ -75,6 +75,12 @@ Siguiente:
 6. Apuesta: ajustar `into_the_mob` d2/d3 y `eye_for_eye` d3.
 Prioridad absoluta: IA y animaciones 3D para la build de la mañana del 3 oct (dos pistas: /Game presentación y /Sim oscilación/aceleración).
 
+**Lesiones tras la 0184/0186 (3 oct):** HECHO, ADR 0188 (BV-D). La entrada limpia lesiona menos y la falta lo mismo
+(`onTackleBase` 140 → 90, `onFoulBase` 60 → 110). Lesiones por partido 0,789/0,464 → 0,742/0,412 (antes de la 0184:
+0,692/0,395); propias por run 4,04 → 3,50 (3,70); entradas, goles y muertes sin cambio; ninguna puerta roja nueva. La
+s1 queda a mitad de camino: un solo valor no devuelve las tres cifras; si el revisor la quiere exacta, hace falta otra
+palanca.
+
 **SIGUIENTE (3 oct):** la cola de la noche está vacía. Decisiones abiertas del revisor (antes de responderlas):
 - tope de seguridad del herrero sobre un titular (ADR 0164);
 - «nunca todos los sumideros» por acto (ADR 0182);

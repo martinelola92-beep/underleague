@@ -1,6 +1,6 @@
 # BV-D — Las lesiones subieron con las ADR 0184/0186 y hay que devolverlas sin quitar entradas
 
-**Estado:** abierto (3 oct 2026). Hermanas: [BV-A](./BV-A.md), [BV-B](./BV-B.md), [BV-C](./BV-C.md).
+**Estado:** cerrado (3 oct 2026) con la [ADR 0188](../decisiones/0188-la-entrada-limpia-lesiona-menos.md): 90 / 110. La s1 queda a mitad de camino (0,742 frente a 0,692); otra palanca sólo si el revisor lo pide. Hermanas: [BV-A](./BV-A.md), [BV-B](./BV-B.md), [BV-C](./BV-C.md).
 
 ## Observación
 
