@@ -16,7 +16,7 @@ namespace Underleague.Sim.Tests.Perks;
 /// <para>No tocan <c>/data</c> ni ningún perk: solo miden el motor tal como está. Ficha completa con las
 /// hipótesis y su estado epistemológico: <c>docs/pendientes/BB-Q.md</c>.</para>
 /// </summary>
-public sealed class SteamrollerConditionTests
+public sealed class SteamrollerConditionTests : IClassFixture<SteamrollerConditionTests.ActivationCounts>
 {
     private static readonly Catalog Catalog = TestData.LoadCatalog();
     private static readonly RefereeSetup Referee = new("Referee", RefereeTrait.Neutral, 0);
@@ -34,7 +34,38 @@ public sealed class SteamrollerConditionTests
     private const int ActivationMatches = 200;
 
     private readonly ITestOutputHelper _output;
-    public SteamrollerConditionTests(ITestOutputHelper output) => _output = output;
+    private readonly ActivationCounts _counts;
+
+    public SteamrollerConditionTests(ITestOutputHelper output, ActivationCounts counts)
+    {
+        _output = output;
+        _counts = counts;
+    }
+
+    /// <summary>
+    /// Activaciones por perk en el lote de <see cref="ActivationMatches"/> partidos, ya contadas (técnica «compartir lo
+    /// que se repite»): <c>SteamrollerFiresButItsConditionStillSeparatesItFromItsTwin</c> y
+    /// <c>SteamrollerChainsAtLeastOnceWhenItsCarrierWinsTackles</c> cuentan los mismos dos lotes (<c>charge</c> y
+    /// <c>steamroller</c>, portador fijo). La cuenta es función pura del perk.
+    /// </summary>
+    public sealed class ActivationCounts
+    {
+        private readonly Dictionary<string, int> _byPerk = new(StringComparer.Ordinal);
+
+        public int Get(string perkId)
+        {
+            lock (_byPerk)
+            {
+                if (!_byPerk.TryGetValue(perkId, out int total))
+                {
+                    total = Count(perkId);
+                    _byPerk[perkId] = total;
+                }
+
+                return total;
+            }
+        }
+    }
 
     private static MatchResult PlayOne(int index, string? carrierPerk, out int carrierId)
     {
@@ -147,8 +178,8 @@ public sealed class SteamrollerConditionTests
     [Fact]
     public void SteamrollerFiresButItsConditionStillSeparatesItFromItsTwin()
     {
-        int steamroller = Activations("steamroller");
-        int charge = Activations("charge");
+        int steamroller = _counts.Get("steamroller");
+        int charge = _counts.Get("charge");
 
         _output.WriteLine($"activaciones en 20 partidos | steamroller: {steamroller} | charge (sin condición): {charge}");
 
@@ -172,16 +203,16 @@ public sealed class SteamrollerConditionTests
     [Fact]
     public void SteamrollerChainsAtLeastOnceWhenItsCarrierWinsTackles()
     {
-        Assert.True(Activations("charge") > 0, "precondición: el portador encadena con el gemelo sin condición");
+        Assert.True(_counts.Get("charge") > 0, "precondición: el portador encadena con el gemelo sin condición");
         Assert.True(
-            Activations("steamroller") > 0,
+            _counts.Get("steamroller") > 0,
             "Arrollador debe encadenar alguna vez cuando su entrada derriba al rival (docs/pendientes/BB-Q.md)");
     }
 
     /// <summary>
-    /// Activaciones del perk en <see cref="ActivationMatches"/> partidos con el portador fijo.
+    /// Cuenta las activaciones del perk en <see cref="ActivationMatches"/> partidos con el portador fijo.
     /// </summary>
-    private static int Activations(string perkId)
+    private static int Count(string perkId)
     {
         int total = 0;
         for (int i = 0; i < ActivationMatches; i++)
