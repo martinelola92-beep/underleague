@@ -5149,6 +5149,9 @@ internal sealed class MatchEngine : IPerkWorld
         return Math.Clamp(chance, 0, 5000);
     }
 
+    /// <summary>ADR 0188: la cuota con la que se tiró la última lesión (−1 si aún no se tiró ninguna). Sólo la leen los tests.</summary>
+    internal int LastInjuryChanceForTest { get; private set; } = -1;
+
     /// <summary>ADR 0188: la cuota de lesión de un contacto entre dos jugadores del partido, sin tirarla.</summary>
     internal int InjuryChanceForTest(int tacklerIndex, int victimIndex, bool isFoul) =>
         InjuryChance(_players[tacklerIndex], _players[victimIndex], isFoul);
@@ -5167,6 +5170,7 @@ internal sealed class MatchEngine : IPerkWorld
 
         var injury = _tuning.Injury;
         int injuryChance = InjuryChance(tackler, victim, isFoul);
+        LastInjuryChanceForTest = injuryChance;
         bool lethalStake = IsLethalStake(victim);
         if (!_rng.Chance(injuryChance))
         {

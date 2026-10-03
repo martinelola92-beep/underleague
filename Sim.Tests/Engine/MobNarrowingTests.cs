@@ -179,8 +179,9 @@ public sealed class MobNarrowingTests
 
     private static Catalog Before(Catalog catalog)
     {
-        // ADR 0188 (BV-D): el motor de antes de la ADR 0184 tenía también las bases de lesión de antes (140 / 60); con las de
-        // ahora (90 / 110) estas trayectorias sí cruzan la franja que se movió y la huella deja de ser la de antes.
+        // ADR 0188 (BV-D): el motor de ANTES de la ADR 0184 (sostenida 0, BV-B apagada) tenía también las bases de lesión de
+        // antes (140 / 60). Con las de ahora (90 / 110) las trayectorias de ESE motor sí cruzan la franja movida y su huella
+        // deja de ser la de antes. Con el motor vigente no pasa en estos 60 partidos (ver InjuryChanceTests).
         var held = OscillationProbeTests.WithHold(InjuryChanceTests.WithOldInjuryBases(catalog), 0);
         return held with
         {
