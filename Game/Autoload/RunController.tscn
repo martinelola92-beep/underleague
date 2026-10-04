@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://der84phj0kevu"]
 
-[ext_resource type="Script" path="res://Autoload/RunController.cs" id="1"]
+[ext_resource type="Script" uid="uid://e0mit8864ppj" path="res://Autoload/RunController.cs" id="1"]
 
-[node name="RunController" type="Node"]
+[node name="RunController" type="Node" unique_id=637133462]
 script = ExtResource("1")

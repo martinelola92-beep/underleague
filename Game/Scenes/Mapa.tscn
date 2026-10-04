@@ -1,8 +1,9 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://cia7fbohh3dvt"]
 
-[ext_resource type="Script" path="res://Screens/MapScreen.cs" id="1"]
+[ext_resource type="Script" uid="uid://b6xsxg5s4ox3r" path="res://Screens/MapScreen.cs" id="1"]
 
-[node name="Mapa" type="Control"]
+[node name="Mapa" type="Control" unique_id=672510386]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0

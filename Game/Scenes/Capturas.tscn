@@ -1,8 +1,9 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://mbcul7bwrdcy"]
 
-[ext_resource type="Script" path="res://Screens/CaptureRunner.cs" id="1"]
+[ext_resource type="Script" uid="uid://bbvhitg5ebmnj" path="res://Screens/CaptureRunner.cs" id="1"]
 
-[node name="Capturas" type="Control"]
+[node name="Capturas" type="Control" unique_id=288542887]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0

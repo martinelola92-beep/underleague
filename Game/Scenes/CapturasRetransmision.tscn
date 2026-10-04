@@ -1,8 +1,9 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://o3dh384senan"]
 
-[ext_resource type="Script" path="res://Screens/BroadcastCapture.cs" id="1"]
+[ext_resource type="Script" uid="uid://bcskb0pu3v6m1" path="res://Screens/BroadcastCapture.cs" id="1"]
 
-[node name="CapturasRetransmision" type="Control"]
+[node name="CapturasRetransmision" type="Control" unique_id=2071140866]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0

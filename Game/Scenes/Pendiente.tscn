@@ -1,8 +1,9 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://cm7kg701vjhp2"]
 
-[ext_resource type="Script" path="res://Screens/PlaceholderScreen.cs" id="1"]
+[ext_resource type="Script" uid="uid://c6hxgcff5gwii" path="res://Screens/PlaceholderScreen.cs" id="1"]
 
-[node name="Pendiente" type="Control"]
+[node name="Pendiente" type="Control" unique_id=554737071]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0

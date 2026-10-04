@@ -1,8 +1,9 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://bdr7n4derof7t"]
 
-[ext_resource type="Script" path="res://Screens/RunEndScreen.cs" id="1"]
+[ext_resource type="Script" uid="uid://o3xsomvb52ef" path="res://Screens/RunEndScreen.cs" id="1"]
 
-[node name="FinDeRun" type="Control"]
+[node name="FinDeRun" type="Control" unique_id=186579252]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0

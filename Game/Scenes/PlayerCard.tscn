@@ -1,11 +1,11 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://uqq6fls5sge1"]
 
-[ext_resource type="Script" path="res://Ui/PlayerCard.cs" id="1"]
+[ext_resource type="Script" uid="uid://b4dmn2mmx02ou" path="res://Ui/PlayerCard.cs" id="1"]
 
-[node name="PlayerCard" type="Control"]
+[node name="PlayerCard" type="Control" unique_id=2044139479]
 custom_minimum_size = Vector2(0, 24)
+layout_mode = 3
 anchors_preset = 0
 offset_right = 356.0
 offset_bottom = 24.0
-mouse_filter = 0
 script = ExtResource("1")

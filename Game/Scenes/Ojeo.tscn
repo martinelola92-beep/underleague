@@ -1,8 +1,9 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://dpf8n51r1aqtk"]
 
-[ext_resource type="Script" path="res://Screens/ScoutScreen.cs" id="1"]
+[ext_resource type="Script" uid="uid://dgmcy8o86l3pr" path="res://Screens/ScoutScreen.cs" id="1"]
 
-[node name="Ojeo" type="Control"]
+[node name="Ojeo" type="Control" unique_id=371839787]
+layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0

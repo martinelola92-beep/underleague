@@ -55,7 +55,9 @@ public sealed partial class AudioManager : Node
     private const string MusicPrefix = "music/";
     private const string AmbiencePrefix = "ambience/";
 
-    /// <summary>Buses. Deben existir en <c>default_bus_layout.tres</c>; si no, Godot manda todo al Master.</summary>
+    /// <summary>Buses. Deben existir en <c>default_bus_layout.tres</c>; si no, Godot manda todo al Master.
+    /// Los −6 dB de <c>Music</c> en ese fichero son la mezcla de partida: el partido se oye por encima de su
+    /// propia música. (El comentario vivía en el <c>.tres</c>, pero el editor lo borra al guardar.)</summary>
     private const string SfxBus = "SFX";
     private const string MusicBus = "Music";
     private const string AmbienceBus = "Ambience";

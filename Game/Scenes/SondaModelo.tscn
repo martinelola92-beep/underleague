@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://x8s1fum8fffn"]
 
-[ext_resource type="Script" path="res://Screens/ModelProbe.cs" id="1"]
+[ext_resource type="Script" uid="uid://m5sk8w31ipfn" path="res://Screens/ModelProbe.cs" id="1"]
 
-[node name="SondaModelo" type="Node"]
+[node name="SondaModelo" type="Node" unique_id=876445133]
 script = ExtResource("1")
