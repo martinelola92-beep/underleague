@@ -9,6 +9,21 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
+## UI EDITABLE EN GODOT PARA LOS SPRITES DEL REVISOR (4 oct 2026)
+
+Decisión del revisor: el arte de la interfaz lo produce él, sustituyendo poco a poco el dibujo por código
+(`CLAUDE.md` regla 10). Edita en el clon de Windows `C:\dev\underleague` (Godot 4.6.3 mono de Windows,
+compila con el .NET de Windows) y hace push; en WSL, `git pull` antes de tocar la misma pantalla.
+
+- **Hecho, piloto**: el tablero superior del partido (`Game/Ui/Broadcast/BroadcastBoard.tscn`). Patrón:
+  nodos estándar en la escena, la tinta como `InkStyleBox` (relleno provisional que se cambia por un
+  `StyleBoxTexture`), el script solo rellena nodos `%Únicos`, `[Tool]` con datos de ejemplo. Capturas
+  antes/después iguales salvo el texto de los botones, ahora centrado. Guía: `docs/ui/editar-en-godot.md`.
+- **Siguiente paso**: cuando el revisor confirme que el flujo le sirve en Windows, aplicar el mismo patrón
+  a las otras ocho piezas de `Game/Ui/Broadcast/` (`PlayerStrip`/`BenchPlaque`, `Stamp`, `HeraldBanner`,
+  `ProclamationBand`, `Edict`, `MatchRecord`, `DecisionTray`), delegable con el tablero como modelo; luego
+  componerlas en `Retransmision.tscn`. Otras pantallas solo si el revisor las pide.
+
 ## COLA DE LA NOCHE (29-30 sep 2026) — lee esto primero si la sesión se corta
 
 **Decisiones del revisor (29 sep, noche):** las lesiones se arrastran (gate 5: el desgaste es de la run);
