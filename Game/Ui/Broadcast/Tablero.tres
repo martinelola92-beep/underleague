@@ -1,0 +1,50 @@
+[gd_resource type="Theme" format=3]
+
+[ext_resource type="Script" path="res://Ui/Broadcast/InkStyleBox.cs" id="ink"]
+[ext_resource type="FontFile" path="res://Fonts/BarlowCondensed-Bold.ttf" id="data"]
+
+[sub_resource type="StyleBox" id="boton_normal"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.2902, 0.2000, 0.1294, 1)
+Edge = Color(0.1059, 0.0902, 0.0706, 1)
+Seed = 30
+Amplitude = 1.2
+EdgeWidth = 2.0
+
+[sub_resource type="StyleBox" id="boton_encendido"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.7882, 0.5961, 0.1843, 1)
+Edge = Color(0.1059, 0.0902, 0.0706, 1)
+Seed = 31
+Amplitude = 1.2
+EdgeWidth = 2.0
+
+[sub_resource type="StyleBox" id="boton_apagado"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.1886, 0.1300, 0.0841, 1)
+Edge = Color(0.1059, 0.0902, 0.0706, 1)
+Seed = 32
+Amplitude = 1.2
+EdgeWidth = 2.0
+
+[sub_resource type="StyleBoxEmpty" id="nada"]
+
+[resource]
+default_font = ExtResource("data")
+default_font_size = 20
+Button/colors/font_color = Color(0.9373, 0.8863, 0.7529, 1)
+Button/colors/font_hover_color = Color(0.9373, 0.8863, 0.7529, 1)
+Button/colors/font_focus_color = Color(0.9373, 0.8863, 0.7529, 1)
+Button/colors/font_pressed_color = Color(0.1059, 0.0902, 0.0706, 1)
+Button/colors/font_hover_pressed_color = Color(0.1059, 0.0902, 0.0706, 1)
+Button/colors/font_disabled_color = Color(0.6561, 0.6204, 0.5271, 1)
+Button/styles/normal = SubResource("boton_normal")
+Button/styles/hover = SubResource("boton_normal")
+Button/styles/pressed = SubResource("boton_encendido")
+Button/styles/hover_pressed = SubResource("boton_encendido")
+Button/styles/disabled = SubResource("boton_apagado")
+Button/styles/focus = SubResource("nada")
+Label/colors/font_color = Color(0.9373, 0.8863, 0.7529, 1)

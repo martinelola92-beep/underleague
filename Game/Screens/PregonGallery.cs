@@ -73,7 +73,7 @@ public partial class PregonGallery : Control
         Widgets.Panel(this, new Rect2(Vector2.Zero, new Vector2(CanvasWidth, CanvasHeight)), new Color("41502f"));
         Widgets.Panel(this, new Rect2(new Vector2(0f, 300f), new Vector2(CanvasWidth, 690f)), Style.Grass);
 
-        _board = new BroadcastBoard();
+        _board = BroadcastBoard.Create();
         AddChild(_board);
         _board.Position = new Vector2(0f, 8f);
         _board.Size = new Vector2(CanvasWidth, BroadcastBoard.DesignHeight);

@@ -1,0 +1,438 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Ui/Broadcast/InkStyleBox.cs" id="ink"]
+[ext_resource type="Script" path="res://Ui/Broadcast/BroadcastBoard.cs" id="board"]
+[ext_resource type="Script" path="res://Ui/Broadcast/InkShield.cs" id="shield"]
+[ext_resource type="Script" path="res://Ui/Broadcast/BiasTrack.cs" id="track"]
+[ext_resource type="Theme" path="res://Ui/Broadcast/Tablero.tres" id="theme"]
+[ext_resource type="PackedScene" path="res://Ui/Broadcast/ConsumableButton.tscn" id="consumible"]
+[ext_resource type="PackedScene" path="res://Ui/Broadcast/ShoutTag.tscn" id="grito"]
+[ext_resource type="FontFile" path="res://Fonts/GrenzeGotisch-Variable.ttf" id="titular"]
+[ext_resource type="FontFile" path="res://Fonts/Cinzel-Variable.ttf" id="score"]
+
+[sub_resource type="StyleBox" id="fondo"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.2902, 0.2000, 0.1294, 1)
+Edge = Color(0.1059, 0.0902, 0.0706, 1)
+Seed = 1
+Amplitude = 2
+EdgeWidth = 2.5
+GrainLines = 3
+
+[sub_resource type="StyleBox" id="pano_propio"]
+script = ExtResource("ink")
+Shape = 1
+Fill = Color(0.1176, 0.2275, 0.4314, 1)
+Edge = Color(0.1059, 0.0902, 0.0706, 1)
+Seed = 1
+Amplitude = 1.2
+EdgeWidth = 2.0
+ShadowColor = Color(0, 0, 0, 0)
+Orla = true
+
+[sub_resource type="StyleBox" id="pano_rival"]
+script = ExtResource("ink")
+Shape = 1
+Fill = Color(0.5569, 0.1216, 0.1216, 1)
+Edge = Color(0.1059, 0.0902, 0.0706, 1)
+Seed = 1
+Amplitude = 1.2
+EdgeWidth = 2.0
+ShadowColor = Color(0, 0, 0, 0)
+Orla = true
+
+[sub_resource type="StyleBox" id="placa_propia"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.9373, 0.8863, 0.7529, 1)
+Edge = Color(0.7216, 0.6118, 0.4078, 1)
+Seed = 10
+Amplitude = 1.5
+EdgeWidth = 2.0
+
+[sub_resource type="StyleBox" id="placa_rival"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.9373, 0.8863, 0.7529, 1)
+Edge = Color(0.7216, 0.6118, 0.4078, 1)
+Seed = 11
+Amplitude = 1.5
+EdgeWidth = 2.0
+
+[sub_resource type="StyleBox" id="residuo"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.9373, 0.8863, 0.7529, 1)
+Edge = Color(0.7216, 0.6118, 0.4078, 1)
+Seed = 12
+Amplitude = 1
+EdgeWidth = 1.5
+
+[sub_resource type="StyleBox" id="barra"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.2902, 0.2000, 0.1294, 1)
+Edge = Color(0.1059, 0.0902, 0.0706, 1)
+Seed = 13
+Amplitude = 1
+EdgeWidth = 1.5
+
+[sub_resource type="StyleBoxFlat" id="barra_relleno"]
+bg_color = Color(0.7882, 0.5961, 0.1843, 1)
+
+[sub_resource type="StyleBox" id="criterio"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.2902, 0.2000, 0.1294, 1)
+Edge = Color(0.1059, 0.0902, 0.0706, 1)
+Seed = 40
+Amplitude = 1.2
+EdgeWidth = 2.0
+
+[sub_resource type="StyleBoxFlat" id="aro"]
+bg_color = Color(0.7882, 0.5961, 0.1843, 1)
+draw_center = false
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.7882, 0.5961, 0.1843, 1)
+
+
+[node name="Tablero" type="Control"]
+custom_minimum_size = Vector2(0, 116)
+layout_mode = 3
+offset_right = 1920.0
+offset_bottom = 116.0
+theme = ExtResource("theme")
+script = ExtResource("board")
+ConsumableScene = ExtResource("consumible")
+ShoutScene = ExtResource("grito")
+
+[node name="Fondo" type="Panel" parent="."]
+layout_mode = 1
+anchor_left = 0
+anchor_right = 1
+offset_left = 0.0
+offset_top = 6.0
+offset_right = 0.0
+offset_bottom = 74.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("fondo")
+
+[node name="Ordenes" type="HBoxContainer" parent="."]
+layout_mode = 0
+offset_left = 24.0
+offset_top = 14.0
+offset_right = 328.0
+offset_bottom = 60.0
+theme_override_constants/separation = 8
+
+[node name="Defensa" type="Button" parent="Ordenes"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(96, 46)
+focus_mode = 0
+toggle_mode = true
+text = "Defensa"
+
+[node name="Aro" type="Panel" parent="Ordenes/Defensa"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 2.0
+offset_top = 2.0
+offset_right = -2.0
+offset_bottom = -2.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("aro")
+visible = false
+
+[node name="Neutro" type="Button" parent="Ordenes"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(96, 46)
+focus_mode = 0
+toggle_mode = true
+text = "Neutro"
+
+[node name="Aro" type="Panel" parent="Ordenes/Neutro"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 2.0
+offset_top = 2.0
+offset_right = -2.0
+offset_bottom = -2.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("aro")
+visible = false
+
+[node name="Ataque" type="Button" parent="Ordenes"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(96, 46)
+focus_mode = 0
+toggle_mode = true
+text = "Ataque"
+
+[node name="Aro" type="Panel" parent="Ordenes/Ataque"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 2.0
+offset_top = 2.0
+offset_right = -2.0
+offset_bottom = -2.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("aro")
+visible = false
+
+[node name="FilaAcciones" type="HBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 24.0
+offset_top = 64.0
+offset_right = 1024.0
+offset_bottom = 98.0
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="PlacaCriterio" type="Panel" parent="."]
+layout_mode = 0
+offset_left = 344.0
+offset_top = 14.0
+offset_right = 596.0
+offset_bottom = 60.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("criterio")
+
+[node name="Criterio" type="Label" parent="PlacaCriterio"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 10.0
+offset_top = 2.0
+offset_right = 242.0
+offset_bottom = 26.0
+text = "CRITERIO −23"
+text_overrun_behavior = 3
+
+[node name="PistaCriterio" type="Control" parent="PlacaCriterio"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 10.0
+offset_top = 22.0
+offset_right = 242.0
+offset_bottom = 42.0
+mouse_filter = 2
+script = ExtResource("track")
+
+[node name="Bloque" type="Control" parent="."]
+layout_mode = 1
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -348.0
+offset_top = 0.0
+offset_right = 348.0
+offset_bottom = 116.0
+mouse_filter = 2
+
+[node name="PanoPropio" type="Panel" parent="Bloque"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 10.0
+offset_right = 260.0
+offset_bottom = 76.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("pano_propio")
+
+[node name="Escudo" type="Control" parent="Bloque/PanoPropio"]
+layout_mode = 0
+offset_left = 14.0
+offset_top = 6.0
+offset_right = 48.0
+offset_bottom = 48.0
+mouse_filter = 2
+script = ExtResource("shield")
+Ours = true
+
+[node name="NombrePropio" type="Label" parent="Bloque/PanoPropio"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 50.0
+offset_top = 8.0
+offset_right = 246.0
+offset_bottom = 48.0
+theme_override_fonts/font = ExtResource("titular")
+theme_override_font_sizes/font_size = 26
+text = "Equipo"
+vertical_alignment = 1
+text_overrun_behavior = 3
+
+[node name="PlacaPropia" type="Panel" parent="Bloque"]
+layout_mode = 0
+offset_left = 276.0
+offset_top = 8.0
+offset_right = 348.0
+offset_bottom = 92.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("placa_propia")
+
+[node name="GolesPropios" type="Label" parent="Bloque/PlacaPropia"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+theme_override_colors/font_color = Color(0.1059, 0.0902, 0.0706, 1)
+theme_override_fonts/font = ExtResource("score")
+theme_override_font_sizes/font_size = 60
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PlacaRival" type="Panel" parent="Bloque"]
+layout_mode = 0
+offset_left = 348.0
+offset_top = 8.0
+offset_right = 420.0
+offset_bottom = 92.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("placa_rival")
+
+[node name="GolesRival" type="Label" parent="Bloque/PlacaRival"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+theme_override_colors/font_color = Color(0.1059, 0.0902, 0.0706, 1)
+theme_override_fonts/font = ExtResource("score")
+theme_override_font_sizes/font_size = 60
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PanoRival" type="Panel" parent="Bloque"]
+layout_mode = 0
+offset_left = 436.0
+offset_top = 10.0
+offset_right = 696.0
+offset_bottom = 76.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("pano_rival")
+
+[node name="Escudo" type="Control" parent="Bloque/PanoRival"]
+layout_mode = 0
+offset_left = 212.0
+offset_top = 6.0
+offset_right = 246.0
+offset_bottom = 48.0
+mouse_filter = 2
+script = ExtResource("shield")
+Ours = false
+
+[node name="NombreRival" type="Label" parent="Bloque/PanoRival"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 12.0
+offset_top = 8.0
+offset_right = 208.0
+offset_bottom = 48.0
+theme_override_fonts/font = ExtResource("titular")
+theme_override_font_sizes/font_size = 26
+text = "Equipo"
+vertical_alignment = 1
+text_overrun_behavior = 3
+
+[node name="Residuo" type="Panel" parent="Bloque"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 708.0
+offset_top = 74.0
+offset_right = 816.0
+offset_bottom = 100.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("residuo")
+
+[node name="ResiduoTexto" type="Label" parent="Bloque/Residuo"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 6.0
+offset_top = 0.0
+offset_right = 108.0
+offset_bottom = 26.0
+theme_override_colors/font_color = Color(0.5569, 0.1216, 0.1216, 1)
+text = "−2"
+vertical_alignment = 1
+
+[node name="Progreso" type="ProgressBar" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -280.0
+offset_top = 90.0
+offset_right = 280.0
+offset_bottom = 98.0
+mouse_filter = 2
+theme_override_styles/background = SubResource("barra")
+theme_override_styles/fill = SubResource("barra_relleno")
+max_value = 1.0
+step = 0.0
+value = 0.45
+show_percentage = false
+
+[node name="Velocidad" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchor_left = 1
+anchor_right = 1
+offset_left = -304.0
+offset_top = 14.0
+offset_right = -24.0
+offset_bottom = 60.0
+theme_override_constants/separation = 8
+
+[node name="X1" type="Button" parent="Velocidad"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(64, 46)
+focus_mode = 0
+toggle_mode = true
+text = "x1"
+
+[node name="X4" type="Button" parent="Velocidad"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(64, 46)
+focus_mode = 0
+toggle_mode = true
+text = "x4"
+
+[node name="X16" type="Button" parent="Velocidad"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(64, 46)
+focus_mode = 0
+toggle_mode = true
+text = "x16"
+
+[node name="Pausa" type="Button" parent="Velocidad"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(64, 46)
+focus_mode = 0
+toggle_mode = true
+text = "||"

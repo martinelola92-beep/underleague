@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[node name="Consumible" type="Button"]
+custom_minimum_size = Vector2(270, 34)
+focus_mode = 0
+toggle_mode = true
+text_overrun_behavior = 3
+text = "Consumible"

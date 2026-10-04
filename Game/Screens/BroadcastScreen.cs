@@ -413,7 +413,7 @@ public partial class BroadcastScreen : Control
         AddChild(_veil);
         _cut.Bind(_playback.Result.Events, _trace);
 
-        _board = new BroadcastBoard();
+        _board = BroadcastBoard.Create();
         AddChild(_board);
         _board.Position = new Vector2(0f, 8f);
         _board.Size = new Vector2(CanvasWidth, BroadcastBoard.DesignHeight);

@@ -1,0 +1,48 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Ui/Broadcast/InkStyleBox.cs" id="ink"]
+
+[sub_resource type="StyleBox" id="fondo"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.1176, 0.2275, 0.4314, 1)
+Edge = Color(0.1059, 0.0902, 0.0706, 1)
+Seed = 60
+Amplitude = 1.2
+EdgeWidth = 2.0
+
+[sub_resource type="StyleBoxFlat" id="pista"]
+bg_color = Color(0.1059, 0.0902, 0.0706, 1)
+
+[sub_resource type="StyleBoxFlat" id="relleno"]
+bg_color = Color(0.7882, 0.5961, 0.1843, 1)
+
+[node name="Grito" type="Panel"]
+custom_minimum_size = Vector2(250, 34)
+mouse_filter = 2
+theme_override_styles/panel = SubResource("fondo")
+
+[node name="Texto" type="Label" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 10.0
+offset_top = 2.0
+offset_right = 240.0
+offset_bottom = 26.0
+text = "Grito · 12 s"
+text_overrun_behavior = 3
+
+[node name="Cuenta" type="ProgressBar" parent="."]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 10.0
+offset_top = 26.0
+offset_right = 240.0
+offset_bottom = 30.0
+mouse_filter = 2
+theme_override_styles/background = SubResource("pista")
+theme_override_styles/fill = SubResource("relleno")
+max_value = 1.0
+step = 0.0
+value = 0.6
+show_percentage = false
