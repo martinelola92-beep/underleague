@@ -19,10 +19,12 @@ compila con el .NET de Windows) y hace push; en WSL, `git pull` antes de tocar l
   nodos estándar en la escena, la tinta como `InkStyleBox` (relleno provisional que se cambia por un
   `StyleBoxTexture`), el script solo rellena nodos `%Únicos`, `[Tool]` con datos de ejemplo. Capturas
   antes/después iguales salvo el texto de los botones, ahora centrado. Guía: `docs/ui/editar-en-godot.md`.
-- **Siguiente paso**: cuando el revisor confirme que el flujo le sirve en Windows, aplicar el mismo patrón
-  a las otras ocho piezas de `Game/Ui/Broadcast/` (`PlayerStrip`/`BenchPlaque`, `Stamp`, `HeraldBanner`,
-  `ProclamationBand`, `Edict`, `MatchRecord`, `DecisionTray`), delegable con el tablero como modelo; luego
-  componerlas en `Retransmision.tscn`. Otras pantallas solo si el revisor las pide.
+- **Hecho (7 oct)**: las otras ocho piezas de `Game/Ui/Broadcast/` con el mismo patrón (capturas de la
+  galería 8/8 iguales) y la pantalla del partido compuesta en `Game/Scenes/Retransmision.tscn` (las piezas
+  ancladas en la escena; fondo, campo 3D y velo por código en los índices 0-2). Capturas de la retransmisión
+  idénticas.
+- **Siguiente paso**: esperar a que el revisor pruebe en Windows (tenía cambios sin commitear en
+  `BroadcastBoard.tscn` y `Tablero.tres`: hacer `git pull` antes de tocarlos). Otras pantallas, solo si las pide.
 
 ## COLA DE LA NOCHE (29-30 sep 2026) — lee esto primero si la sesión se corta
 
