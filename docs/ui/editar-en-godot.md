@@ -28,7 +28,24 @@
 | Acta del encuentro | `Game/Ui/Broadcast/MatchRecord.tscn` | Listo. Por código: los dos escudos (`EscudoPropio`, `EscudoRival`) |
 | Bandeja de sustitución | `Game/Ui/Broadcast/DecisionTray.tscn` | Listo. Cada casilla es la escena `TraySlot.tscn` |
 | Casilla de la bandeja (el que sale, candidato, respuesta) | `Game/Ui/Broadcast/TraySlot.tscn` | Listo. Por código: el escudo (`Escudo/Dibujo`) |
+| **Pantalla del partido entera**, con las nueve piezas colocadas | `Game/Scenes/Retransmision.tscn` | Listo. Ver abajo |
 | Resto de pantallas | — | Pendiente, solo si se piden |
+
+## La pantalla del partido entera
+
+`Game/Scenes/Retransmision.tscn` lleva las nueve piezas colocadas donde salen en el juego, sobre un lienzo
+de 1920 × 1080 (el juego lo escala a la ventana). Ahí se **colocan**: mover el tablero, las tiras o la
+bandeja se hace en esta escena; cambiar su **aspecto**, en la escena de cada pieza (doble clic en el
+icono de escena del nodo, o abrir `Game/Ui/Broadcast/<Pieza>.tscn`).
+
+- En el editor salen **todas a la vez** con datos de ejemplo, unas encima de otras (en el juego solo se
+  ve cada una en su momento). Apaga el ojo de las que estorben mientras colocas otra.
+- El campo 3D, el fondo y el velo los pone el código **por debajo** de todo: en el editor el fondo sale vacío.
+- Las tiras y la bandeja están ancladas abajo y el tablero arriba: aguantan cualquier proporción de ventana.
+- El **estandarte** cambia de lado en el juego (sale por el lado contrario a donde pasó la jugada): de lo
+  que pongas en la escena se respeta la altura y el tamaño; el lado lo decide el código.
+- No renombres los nodos con `%` (`Tablero`, `Tira1`…`Tira7`, `Banquillo`, `Sello`, `Estandarte`, `Banda`,
+  `Bando`, `Acta`, `Bandeja`).
 
 ## Cómo está hecha una pieza
 
