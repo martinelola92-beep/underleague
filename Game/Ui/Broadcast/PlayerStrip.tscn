@@ -1,0 +1,234 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Ui/Broadcast/InkStyleBox.cs" id="ink"]
+[ext_resource type="Script" path="res://Ui/Broadcast/PlayerStrip.cs" id="main"]
+[ext_resource type="Script" path="res://Ui/Broadcast/InkShield.cs" id="shield"]
+[ext_resource type="Script" path="res://Ui/Broadcast/StripStateMark.cs" id="mark"]
+[ext_resource type="FontFile" path="res://Fonts/Cinzel-Variable.ttf" id="f_score"]
+[ext_resource type="FontFile" path="res://Fonts/BarlowCondensed-Bold.ttf" id="f_bold"]
+[ext_resource type="FontFile" path="res://Fonts/BarlowCondensed-SemiBold.ttf" id="f_semi"]
+
+[sub_resource type="StyleBox" id="ink1"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.9373, 0.8863, 0.7529, 1)
+Edge = Color(0.7216, 0.6118, 0.4078, 1)
+Seed = 37
+Amplitude = 1.5
+EdgeWidth = 1.5
+
+[sub_resource type="StyleBox" id="ink2"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.9373, 0.8863, 0.7529, 0.55)
+Edge = Color(0.7216, 0.6118, 0.4078, 1)
+Seed = 37
+Amplitude = 1.5
+EdgeWidth = 1.5
+
+[sub_resource type="StyleBoxFlat" id="flat3"]
+bg_color = Color(0.2275, 0.1647, 0.1020, 0.25)
+
+[sub_resource type="StyleBoxFlat" id="flat4"]
+bg_color = Color(0.2471, 0.4784, 0.2667, 1)
+
+[sub_resource type="StyleBoxFlat" id="flat5"]
+bg_color = Color(0.7882, 0.5961, 0.1843, 1)
+
+[sub_resource type="StyleBoxFlat" id="flat6"]
+bg_color = Color(0.7020, 0.0706, 0.1059, 1)
+
+[sub_resource type="StyleBoxFlat" id="flat7"]
+draw_center = false
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.1059, 0.0902, 0.0706, 0.8)
+
+[node name="Tira" type="Control"]
+layout_mode = 3
+offset_right = 232.0
+offset_bottom = 72.0
+custom_minimum_size = Vector2(232.0, 72.0)
+mouse_filter = 2
+script = ExtResource("main")
+
+[node name="Fondo" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink1")
+
+[node name="FondoApagado" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+unique_name_in_owner = true
+mouse_filter = 2
+visible = false
+theme_override_styles/panel = SubResource("ink2")
+
+[node name="Destello" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+unique_name_in_owner = true
+visible = false
+mouse_filter = 2
+color = Color(0.7882, 0.5961, 0.1843, 0.45)
+
+[node name="Escudo" type="Control" parent="."]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 50.0
+offset_bottom = 60.0
+mouse_filter = 2
+script = ExtResource("shield")
+Ours = true
+
+[node name="Dorsal" type="Label" parent="."]
+layout_mode = 0
+offset_left = 15.0
+offset_top = 16.0
+offset_right = 45.0
+offset_bottom = 42.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.9373, 0.8863, 0.7529, 1)
+theme_override_fonts/font = ExtResource("f_score")
+theme_override_font_sizes/font_size = 20
+text = "7"
+
+[node name="Nombre" type="Label" parent="."]
+layout_mode = 0
+offset_left = 58.0
+offset_top = 6.0
+offset_right = 200.0
+offset_bottom = 36.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.1059, 0.0902, 0.0706, 1)
+theme_override_fonts/font = ExtResource("f_bold")
+theme_override_font_sizes/font_size = 22
+text = "MAZKA COMECRÁNEOS"
+text_overrun_behavior = 3
+
+[node name="Subtitulo" type="Label" parent="."]
+layout_mode = 0
+offset_left = 58.0
+offset_top = 36.0
+offset_right = 200.0
+offset_bottom = 60.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.2275, 0.1647, 0.1020, 1)
+theme_override_fonts/font = ExtResource("f_semi")
+theme_override_font_sizes/font_size = 20
+text = "delantero · orco · 2 perks"
+text_overrun_behavior = 3
+
+[node name="MarcaEstado" type="Control" parent="."]
+layout_mode = 0
+offset_left = 190.0
+offset_top = 24.0
+offset_right = 214.0
+offset_bottom = 48.0
+unique_name_in_owner = true
+mouse_filter = 2
+script = ExtResource("mark")
+
+[node name="Energia" type="Control" parent="."]
+layout_mode = 0
+offset_left = 58.0
+offset_top = 61.0
+offset_right = 222.0
+offset_bottom = 67.0
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="EnergiaVerde" type="ProgressBar" parent="Energia"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_styles/background = SubResource("flat3")
+theme_override_styles/fill = SubResource("flat4")
+max_value = 100.0
+step = 0.0
+value = 60.0
+show_percentage = false
+visible = false
+
+[node name="EnergiaOro" type="ProgressBar" parent="Energia"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_styles/background = SubResource("flat3")
+theme_override_styles/fill = SubResource("flat5")
+max_value = 100.0
+step = 0.0
+value = 60.0
+show_percentage = false
+
+[node name="EnergiaSangre" type="ProgressBar" parent="Energia"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_styles/background = SubResource("flat3")
+theme_override_styles/fill = SubResource("flat6")
+max_value = 100.0
+step = 0.0
+value = 60.0
+show_percentage = false
+visible = false
+
+[node name="Marco" type="Panel" parent="Energia"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("flat7")

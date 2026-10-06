@@ -14,157 +14,128 @@ public sealed record StripModel(int Number, string Name, string Subtitle, int Pe
 
 /// <summary>
 /// Tira de jugador de 232×72 (docs/ui/README.md §7): papel con borde rasgado, escudo con dorsal, nombre en
-/// tinta, «puesto · raza» y recuento de perks, y una marca de estado físico por color <b>y</b> forma
-/// (sano ●, tocado ▼, grave ■; UI-002). <see cref="Flash"/> es el destello de perk activado (UI-013): ~1 s
-/// de resalte dorado, sin bloquear el resto del dibujo.
+/// tinta, «puesto · raza» y recuento de perks, una marca de estado físico por color <b>y</b> forma (sano ●,
+/// tocado ▼, grave ■; UI-002) y la barra de fatiga. <see cref="Flash"/> es el destello de perk activado
+/// (UI-013): ~1 s de resalte dorado, sin bloquear el resto.
+/// <para>
+/// <b>La forma vive en <c>PlayerStrip.tscn</c></b> (regla 10 de <c>CLAUDE.md</c>; guía en
+/// <c>docs/ui/editar-en-godot.md</c>): el código solo rellena los nodos con nombre único. Se crea siempre con
+/// <see cref="Create"/>. Atenuada (muerto o expulsado) se enseña el fondo «apagado» en lugar del normal.
+/// </para>
 /// </summary>
+[Tool]
 public partial class PlayerStrip : Control
 {
     public const float DesignWidth = 232f;
     public const float DesignHeight = 72f;
 
+    private const string ScenePath = "res://Ui/Broadcast/PlayerStrip.tscn";
+
     private StripModel _model = new(0, string.Empty, string.Empty, 0, PhysicalState.Healthy, false);
-    private float _flash;
+
+    private bool _bound;
+    private Control _background = null!;
+    private Control _backgroundOff = null!;
+    private Control _flash = null!;
+    private Label _number = null!;
+    private Label _name = null!;
+    private Label _subtitle = null!;
+    private StripStateMark _stateMark = null!;
+    private Control _energy = null!;
+    private ProgressBar _energyGreen = null!;
+    private ProgressBar _energyGold = null!;
+    private ProgressBar _energyBlood = null!;
+
+    /// <summary>La tira con su escena. La única forma correcta de crearla.</summary>
+    public static PlayerStrip Create() => GD.Load<PackedScene>(ScenePath).Instantiate<PlayerStrip>();
 
     public override void _Ready()
     {
-        CustomMinimumSize = new Vector2(DesignWidth, DesignHeight);
-        MouseFilter = MouseFilterEnum.Ignore;
+        var background = GetNodeOrNull<Control>("%Fondo");
+        if (background is null)
+        {
+            GD.PushError("PlayerStrip sin su escena: créala con PlayerStrip.Create(), no con new.");
+            return;
+        }
+
+        _background = background;
+        _backgroundOff = GetNode<Control>("%FondoApagado");
+        _flash = GetNode<Control>("%Destello");
+        _number = GetNode<Label>("%Dorsal");
+        _name = GetNode<Label>("%Nombre");
+        _subtitle = GetNode<Label>("%Subtitulo");
+        _stateMark = GetNode<StripStateMark>("%MarcaEstado");
+        _energy = GetNode<Control>("%Energia");
+        _energyGreen = GetNode<ProgressBar>("%EnergiaVerde");
+        _energyGold = GetNode<ProgressBar>("%EnergiaOro");
+        _energyBlood = GetNode<ProgressBar>("%EnergiaSangre");
+        _bound = true;
+        _flash.Visible = false;
+
+        if (Engine.IsEditorHint())
+        {
+            _model = new StripModel(
+                7, "MAZKA COMECRÁNEOS", UiText.Get("ui.pregon.strip.subtitle", UiText.Get("ui.pos.Forward"), "orco"), 2, PhysicalState.MinorInjury, false, 60);
+        }
+
+        Refresh();
     }
 
     public void SetModel(StripModel model)
     {
         _model = model;
-        QueueRedraw();
+        Refresh();
     }
 
     /// <summary>Destello de ~1 s: un perk se acaba de activar en juego (UI-013).</summary>
     public void Flash()
     {
-        _flash = 1f;
+        SetFlashLevel(1f);
         var tween = CreateTween();
         tween.TweenMethod(Callable.From<float>(SetFlashLevel), 1f, 0f, 1.0);
     }
 
     private void SetFlashLevel(float level)
     {
-        _flash = level;
-        QueueRedraw();
+        if (!_bound)
+        {
+            return;
+        }
+
+        _flash.Visible = level > 0f;
+        _flash.Modulate = new Color(1f, 1f, 1f, level);
     }
 
-    public override void _Draw()
+    private void Refresh()
     {
-        int seed = (_model.Number * 31) + _model.Name.Length;
+        if (!_bound)
+        {
+            return;
+        }
+
         bool attenuated = _model.Off || _model.State == PhysicalState.Dead;
-        var fill = attenuated ? new Color(Pregon.Vellum, 0.55f) : Pregon.Vellum;
-        Pregon.DrawParchment(this, Vector2.Zero, DesignWidth, DesignHeight, fill, Pregon.VellumEdge, seed, amplitude: 1.5f, edgeWidth: 1.5f);
+        _background.Visible = !attenuated;
+        _backgroundOff.Visible = attenuated;
 
-        if (_flash > 0f)
-        {
-            DrawRect(new Rect2(Vector2.Zero, Size), new Color(Pregon.Or, 0.45f * _flash), filled: true);
-        }
+        // Atenuada: la tinta pierde fuerza (alfa), no cambia de color; el color es el de la escena.
+        float ink = attenuated ? 0.55f : 1f;
+        _number.Text = _model.Number.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        _number.SelfModulate = new Color(1f, 1f, 1f, attenuated ? 0.6f : 1f);
+        _name.Text = _model.Name;
+        _name.SelfModulate = new Color(1f, 1f, 1f, ink);
+        _subtitle.Text = UiText.Get("ui.pregon.strip.perks", _model.Subtitle, _model.PerkCount);
+        _subtitle.SelfModulate = new Color(1f, 1f, 1f, ink);
+        _stateMark.SetState(_model.State, attenuated);
 
-        var inkName = attenuated ? new Color(Pregon.Sable, 0.55f) : Pregon.Sable;
-        var inkSub = attenuated ? new Color(Pregon.InkBrown, 0.55f) : Pregon.InkBrown;
-
-        Pregon.DrawShield(this, new Vector2(10f, 10f), 40f, 50f, ours: true);
-        Style.DrawText(this, Pregon.Score, new Vector2(15f, 16f), _model.Number.ToString(System.Globalization.CultureInfo.InvariantCulture), Pregon.SizeDataSmall, attenuated ? new Color(Pregon.Vellum, 0.6f) : Pregon.Vellum);
-
-        Pregon.DrawTextEllipsized(this, Pregon.DataBold, new Vector2(58f, 6f), _model.Name, Pregon.SizeData, inkName, 142f);
-        Pregon.DrawTextEllipsized(this, Pregon.DataSemiBold, new Vector2(58f, 36f), UiText.Get("ui.pregon.strip.perks", _model.Subtitle, _model.PerkCount), Pregon.SizeDataSmall, inkSub, 142f);
-
-        DrawStateMark(new Vector2(202f, 36f), attenuated);
-        DrawFatigueBar(attenuated);
-    }
-
-    /// <summary>
-    /// La barra de fatiga (ADR 0142): la energía que le queda, en la franja inferior de la ficha. Verde con
-    /// más de la mitad, oro hasta un cuarto y sangre por debajo, para que el jugador vea de un vistazo quién
-    /// está fundido y decida la orden o el cambio. Sale de la traza (RT-014): la pantalla no calcula nada.
-    /// </summary>
-    private void DrawFatigueBar(bool attenuated)
-    {
-        const float X = 58f;
-        const float Y = 61f;
-        const float Width = 164f;
-        const float Height = 6f;
-        float fraction = Mathf.Clamp(_model.Energy / 100f, 0f, 1f);
-        var fill = _model.Energy > 50 ? new Color("3f7a44") : _model.Energy > 25 ? Pregon.Or : Pregon.Blood;
-        float alpha = attenuated ? 0.45f : 1f;
-
-        DrawRect(new Rect2(X, Y, Width, Height), new Color(Pregon.InkBrown, 0.25f * alpha), filled: true);
-        if (fraction > 0f)
-        {
-            DrawRect(new Rect2(X, Y, Width * fraction, Height), new Color(fill, alpha), filled: true);
-        }
-
-        DrawRect(new Rect2(X, Y, Width, Height), new Color(Pregon.Sable, 0.8f * alpha), filled: false, width: 1.2f);
-    }
-
-    private void DrawStateMark(Vector2 center, bool attenuated)
-    {
-        Color color = _model.State switch
-        {
-            PhysicalState.MinorInjury => Pregon.Or,
-            PhysicalState.SevereInjury => Pregon.Blood,
-            PhysicalState.Dead => new Color("6b6258"),
-            _ => new Color("3f7a44"),
-        };
-        if (attenuated)
-        {
-            color = new Color(color, 0.6f);
-        }
-
-        Vector2[] shape = _model.State switch
-        {
-            PhysicalState.MinorInjury => new[] { new Vector2(0, -11), new Vector2(11, 9), new Vector2(-11, 9) },
-            PhysicalState.SevereInjury => new[] { new Vector2(-10, -10), new Vector2(10, -10), new Vector2(10, 10), new Vector2(-10, 10) },
-            _ => Pregon.Burst(11f, 11f, 8, Vector2.Zero),
-        };
-
-        var shifted = new Vector2[shape.Length];
-        for (int i = 0; i < shape.Length; i++)
-        {
-            shifted[i] = shape[i] + center;
-        }
-
-        DrawColoredPolygon(shifted, color);
-        DrawLine(shifted[^1], shifted[0], Pregon.Sable, 1.5f);
-        for (int i = 1; i < shifted.Length; i++)
-        {
-            DrawLine(shifted[i - 1], shifted[i], Pregon.Sable, 1.5f);
-        }
-
-        if (attenuated)
-        {
-            Style.DrawDownMark(this, center, 11f, Pregon.Sable);
-        }
-    }
-}
-
-/// <summary>Placa de banquillo («Banquillo N»): mismo material que la tira, sin escudo ni estado.</summary>
-public partial class BenchPlaque : Control
-{
-    public const float DesignWidth = 150f;
-    public const float DesignHeight = 72f;
-
-    private int _count;
-
-    public override void _Ready()
-    {
-        CustomMinimumSize = new Vector2(DesignWidth, DesignHeight);
-        MouseFilter = MouseFilterEnum.Ignore;
-    }
-
-    public void SetCount(int count)
-    {
-        _count = count;
-        QueueRedraw();
-    }
-
-    public override void _Draw()
-    {
-        Pregon.DrawParchment(this, Vector2.Zero, DesignWidth, DesignHeight, Pregon.Vellum, Pregon.VellumEdge, seed: 500, amplitude: 1.5f, edgeWidth: 1.5f);
-        Style.DrawText(this, Pregon.DataBold, new Vector2(10f, 20f), UiText.Get("ui.pregon.bench", _count), Pregon.SizeData, Pregon.Sable, maxWidth: DesignWidth - 20f);
+        // La barra de fatiga (ADR 0142): verde con más de la mitad, oro hasta un cuarto y sangre por debajo,
+        // para ver de un vistazo quién está fundido. Sale de la traza (RT-014): aquí no se calcula nada.
+        _energy.Modulate = new Color(1f, 1f, 1f, attenuated ? 0.45f : 1f);
+        _energyGreen.Visible = _model.Energy > 50;
+        _energyGold.Visible = _model.Energy is <= 50 and > 25;
+        _energyBlood.Visible = _model.Energy <= 25;
+        double value = Mathf.Clamp(_model.Energy, 0, 100);
+        _energyGreen.Value = value;
+        _energyGold.Value = value;
+        _energyBlood.Value = value;
     }
 }

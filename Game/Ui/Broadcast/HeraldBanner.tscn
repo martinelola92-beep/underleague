@@ -1,0 +1,460 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Ui/Broadcast/InkStyleBox.cs" id="ink"]
+[ext_resource type="Script" path="res://Ui/Broadcast/HeraldBanner.cs" id="main"]
+[ext_resource type="Script" path="res://Ui/Broadcast/InkShield.cs" id="shield"]
+[ext_resource type="Script" path="res://Ui/Broadcast/InkCrown.cs" id="crown"]
+[ext_resource type="FontFile" path="res://Fonts/GrenzeGotisch-Variable.ttf" id="f_titular"]
+[ext_resource type="FontFile" path="res://Fonts/Grenze-Italic-Variable.ttf" id="f_italic"]
+
+[sub_resource type="StyleBox" id="ink1"]
+script = ExtResource("ink")
+Shape = 2
+Fill = Color(0.0000, 0.0000, 0.0000, 0.28)
+Edge = Color(0.0000, 0.0000, 0.0000, 0.28)
+Seed = 1
+Amplitude = 2.0
+EdgeWidth = 2.0
+ShadowColor = Color(0, 0, 0, 0)
+
+[sub_resource type="StyleBox" id="ink2"]
+script = ExtResource("ink")
+Shape = 2
+Fill = Color(0.0000, 0.0000, 0.0000, 0.28)
+Edge = Color(0.7216, 0.6118, 0.4078, 1)
+Seed = 1
+Amplitude = 2.0
+EdgeWidth = 0.0
+ShadowColor = Color(0, 0, 0, 0)
+
+[sub_resource type="StyleBox" id="ink3"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.9373, 0.8863, 0.7529, 1)
+Edge = Color(0.7882, 0.5961, 0.1843, 1)
+Seed = 30
+Amplitude = 1.4
+EdgeWidth = 2.0
+ShadowColor = Color(0, 0, 0, 0)
+
+[sub_resource type="StyleBox" id="ink4"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.9373, 0.8863, 0.7529, 1)
+Edge = Color(0.1059, 0.0902, 0.0706, 1)
+Seed = 30
+Amplitude = 1.4
+EdgeWidth = 2.0
+ShadowColor = Color(0, 0, 0, 0)
+
+[sub_resource type="StyleBox" id="ink5"]
+script = ExtResource("ink")
+Shape = 2
+Fill = Color(0.4196, 0.2902, 0.1647, 1)
+Edge = Color(0.2745, 0.1882, 0.1020, 1)
+Seed = 1
+Amplitude = 2.0
+EdgeWidth = 2.0
+ShadowColor = Color(0, 0, 0, 0)
+
+[sub_resource type="StyleBox" id="ink6"]
+script = ExtResource("ink")
+Shape = 2
+Fill = Color(0.2745, 0.1882, 0.1020, 1)
+Edge = Color(0.7216, 0.6118, 0.4078, 1)
+Seed = 1
+Amplitude = 2.0
+EdgeWidth = 0.0
+ShadowColor = Color(0, 0, 0, 0)
+
+[node name="Estandarte" type="Control"]
+layout_mode = 3
+offset_right = 500.0
+offset_bottom = 640.0
+custom_minimum_size = Vector2(500.0, 640.0)
+mouse_filter = 2
+script = ExtResource("main")
+
+[node name="Sombras" type="Control" parent="."]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 500.0
+offset_bottom = 640.0
+mouse_filter = 2
+
+[node name="SombraCuerpo" type="ColorRect" parent="Sombras"]
+layout_mode = 0
+offset_left = 53.0
+offset_top = 36.0
+offset_right = 465.0
+offset_bottom = 624.0
+mouse_filter = 2
+color = Color(0.0000, 0.0000, 0.0000, 0.28)
+
+[node name="SombraVaralSuperior" type="Panel" parent="Sombras"]
+layout_mode = 0
+offset_left = 9.0
+offset_top = 11.0
+offset_right = 503.0
+offset_bottom = 35.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink1")
+
+[node name="SombraCaboIzqSuperior" type="Panel" parent="Sombras"]
+layout_mode = 0
+offset_left = 0.92
+offset_top = 12.92
+offset_right = 21.08
+offset_bottom = 33.08
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink2")
+
+[node name="SombraCaboDerSuperior" type="Panel" parent="Sombras"]
+layout_mode = 0
+offset_left = 490.92
+offset_top = 12.92
+offset_right = 511.08
+offset_bottom = 33.08
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink2")
+
+[node name="SombraVaralInferior" type="Panel" parent="Sombras"]
+layout_mode = 0
+offset_left = 9.0
+offset_top = 619.0
+offset_right = 503.0
+offset_bottom = 643.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink1")
+
+[node name="SombraCaboIzqInferior" type="Panel" parent="Sombras"]
+layout_mode = 0
+offset_left = 0.92
+offset_top = 620.92
+offset_right = 21.08
+offset_bottom = 641.08
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink2")
+
+[node name="SombraCaboDerInferior" type="Panel" parent="Sombras"]
+layout_mode = 0
+offset_left = 490.92
+offset_top = 620.92
+offset_right = 511.08
+offset_bottom = 641.08
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink2")
+
+[node name="Propio" type="Control" parent="."]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 500.0
+offset_bottom = 640.0
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="Cuerpo" type="Panel" parent="Propio"]
+layout_mode = 0
+offset_left = 44.0
+offset_top = 26.0
+offset_right = 456.0
+offset_bottom = 614.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink3")
+
+[node name="CintaIzquierda" type="ColorRect" parent="Propio"]
+layout_mode = 0
+offset_left = 44.0
+offset_top = 26.0
+offset_right = 59.0
+offset_bottom = 614.0
+mouse_filter = 2
+color = Color(0.1176, 0.2275, 0.4314, 1)
+
+[node name="CintaDerecha" type="ColorRect" parent="Propio"]
+layout_mode = 0
+offset_left = 441.0
+offset_top = 26.0
+offset_right = 456.0
+offset_bottom = 614.0
+mouse_filter = 2
+color = Color(0.1176, 0.2275, 0.4314, 1)
+
+[node name="FileteIzquierdo" type="ColorRect" parent="Propio"]
+layout_mode = 0
+offset_left = 58.25
+offset_top = 26.0
+offset_right = 59.75
+offset_bottom = 614.0
+mouse_filter = 2
+color = Color(0.7882, 0.5961, 0.1843, 1)
+
+[node name="FileteDerecho" type="ColorRect" parent="Propio"]
+layout_mode = 0
+offset_left = 440.25
+offset_top = 26.0
+offset_right = 441.75
+offset_bottom = 614.0
+mouse_filter = 2
+color = Color(0.7882, 0.5961, 0.1843, 1)
+
+[node name="Escudo" type="Control" parent="Propio"]
+layout_mode = 0
+offset_left = 218.0
+offset_top = 36.0
+offset_right = 282.0
+offset_bottom = 116.0
+mouse_filter = 2
+script = ExtResource("shield")
+Ours = true
+
+[node name="Corona" type="Control" parent="Propio"]
+layout_mode = 0
+offset_left = 222.0
+offset_top = 542.12
+offset_right = 278.0
+offset_bottom = 576.12
+mouse_filter = 2
+script = ExtResource("crown")
+Fill = Color(0.7882, 0.5961, 0.1843, 1)
+
+[node name="Titulo" type="Label" parent="Propio"]
+layout_mode = 0
+offset_left = 73.0
+offset_top = 182.0
+offset_right = 427.0
+offset_bottom = 582.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.1176, 0.2275, 0.4314, 1)
+theme_override_fonts/font = ExtResource("f_titular")
+theme_override_font_sizes/font_size = 340
+text = "Gol"
+horizontal_alignment = 1
+
+[node name="TituloLargo" type="Label" parent="Propio"]
+layout_mode = 0
+offset_left = 73.0
+offset_top = 182.0
+offset_right = 427.0
+offset_bottom = 252.0
+visible = false
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.1176, 0.2275, 0.4314, 1)
+theme_override_fonts/font = ExtResource("f_titular")
+theme_override_font_sizes/font_size = 60
+text = "Expulsado"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Rival" type="Control" parent="."]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 500.0
+offset_bottom = 640.0
+unique_name_in_owner = true
+visible = false
+mouse_filter = 2
+
+[node name="Cuerpo" type="Panel" parent="Rival"]
+layout_mode = 0
+offset_left = 44.0
+offset_top = 26.0
+offset_right = 456.0
+offset_bottom = 614.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink4")
+
+[node name="CintaIzquierda" type="ColorRect" parent="Rival"]
+layout_mode = 0
+offset_left = 44.0
+offset_top = 26.0
+offset_right = 59.0
+offset_bottom = 614.0
+mouse_filter = 2
+color = Color(0.5569, 0.1216, 0.1216, 1)
+
+[node name="CintaDerecha" type="ColorRect" parent="Rival"]
+layout_mode = 0
+offset_left = 441.0
+offset_top = 26.0
+offset_right = 456.0
+offset_bottom = 614.0
+mouse_filter = 2
+color = Color(0.5569, 0.1216, 0.1216, 1)
+
+[node name="FileteIzquierdo" type="ColorRect" parent="Rival"]
+layout_mode = 0
+offset_left = 58.25
+offset_top = 26.0
+offset_right = 59.75
+offset_bottom = 614.0
+mouse_filter = 2
+color = Color(0.1059, 0.0902, 0.0706, 1)
+
+[node name="FileteDerecho" type="ColorRect" parent="Rival"]
+layout_mode = 0
+offset_left = 440.25
+offset_top = 26.0
+offset_right = 441.75
+offset_bottom = 614.0
+mouse_filter = 2
+color = Color(0.1059, 0.0902, 0.0706, 1)
+
+[node name="Escudo" type="Control" parent="Rival"]
+layout_mode = 0
+offset_left = 218.0
+offset_top = 36.0
+offset_right = 282.0
+offset_bottom = 116.0
+mouse_filter = 2
+script = ExtResource("shield")
+Ours = false
+
+[node name="Corona" type="Control" parent="Rival"]
+layout_mode = 0
+offset_left = 222.0
+offset_top = 542.12
+offset_right = 278.0
+offset_bottom = 576.12
+mouse_filter = 2
+script = ExtResource("crown")
+Fill = Color(0.1059, 0.0902, 0.0706, 1)
+
+[node name="Titulo" type="Label" parent="Rival"]
+layout_mode = 0
+offset_left = 73.0
+offset_top = 182.0
+offset_right = 427.0
+offset_bottom = 582.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.5569, 0.1216, 0.1216, 1)
+theme_override_fonts/font = ExtResource("f_titular")
+theme_override_font_sizes/font_size = 340
+text = "Gol"
+horizontal_alignment = 1
+
+[node name="TituloLargo" type="Label" parent="Rival"]
+layout_mode = 0
+offset_left = 73.0
+offset_top = 182.0
+offset_right = 427.0
+offset_bottom = 252.0
+visible = false
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.5569, 0.1216, 0.1216, 1)
+theme_override_fonts/font = ExtResource("f_titular")
+theme_override_font_sizes/font_size = 60
+text = "Expulsado"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Varales" type="Control" parent="."]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 500.0
+offset_bottom = 640.0
+mouse_filter = 2
+
+[node name="VaralSuperior" type="Panel" parent="Varales"]
+layout_mode = 0
+offset_left = 3.0
+offset_top = 4.0
+offset_right = 497.0
+offset_bottom = 28.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink5")
+
+[node name="CaboIzqSuperior" type="Panel" parent="Varales"]
+layout_mode = 0
+offset_left = -5.08
+offset_top = 5.92
+offset_right = 15.08
+offset_bottom = 26.08
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink6")
+
+[node name="CaboDerSuperior" type="Panel" parent="Varales"]
+layout_mode = 0
+offset_left = 484.92
+offset_top = 5.92
+offset_right = 505.08
+offset_bottom = 26.08
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink6")
+
+[node name="VaralInferior" type="Panel" parent="Varales"]
+layout_mode = 0
+offset_left = 3.0
+offset_top = 612.0
+offset_right = 497.0
+offset_bottom = 636.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink5")
+
+[node name="CaboIzqInferior" type="Panel" parent="Varales"]
+layout_mode = 0
+offset_left = -5.08
+offset_top = 613.92
+offset_right = 15.08
+offset_bottom = 634.08
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink6")
+
+[node name="CaboDerInferior" type="Panel" parent="Varales"]
+layout_mode = 0
+offset_left = 484.92
+offset_top = 613.92
+offset_right = 505.08
+offset_bottom = 634.08
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink6")
+
+[node name="Cabecera" type="Label" parent="."]
+layout_mode = 0
+offset_left = 73.0
+offset_top = 128.0
+offset_right = 427.0
+offset_bottom = 168.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.2275, 0.1647, 0.1020, 1)
+theme_override_fonts/font = ExtResource("f_titular")
+theme_override_font_sizes/font_size = 26
+text = "Se hace saber"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Texto" type="Label" parent="."]
+layout_mode = 0
+offset_left = 73.0
+offset_top = 398.0
+offset_right = 427.0
+offset_bottom = 478.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.2275, 0.1647, 0.1020, 1)
+theme_override_fonts/font = ExtResource("f_italic")
+theme_override_font_sizes/font_size = 26
+theme_override_constants/line_spacing = 6
+text = "de Mazka Comecráneos,\nal minuto sesenta y tres"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="Pie" type="Label" parent="."]
+layout_mode = 0
+offset_left = 73.0
+offset_top = 478.0
+offset_right = 427.0
+offset_bottom = 518.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.2275, 0.1647, 0.1020, 1)
+theme_override_fonts/font = ExtResource("f_titular")
+theme_override_font_sizes/font_size = 26
+text = "¡Viva Nuestro F. C.!"
+horizontal_alignment = 1
+autowrap_mode = 3

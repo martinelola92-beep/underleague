@@ -1,0 +1,163 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Ui/Broadcast/InkStyleBox.cs" id="ink"]
+[ext_resource type="Script" path="res://Ui/Broadcast/ProclamationBand.cs" id="main"]
+[ext_resource type="Script" path="res://Ui/Broadcast/InkTrumpet.cs" id="trumpet"]
+[ext_resource type="Script" path="res://Ui/Broadcast/FateSeal.cs" id="seal"]
+[ext_resource type="FontFile" path="res://Fonts/GrenzeGotisch-Variable.ttf" id="f_titular"]
+[ext_resource type="FontFile" path="res://Fonts/Grenze-Italic-Variable.ttf" id="f_italic"]
+
+[sub_resource type="StyleBox" id="ink1"]
+script = ExtResource("ink")
+Shape = 3
+Fill = Color(0.9373, 0.8863, 0.7529, 1)
+Edge = Color(0.7216, 0.6118, 0.4078, 1)
+Seed = 1
+Amplitude = 0.0
+EdgeWidth = 2.0
+ShadowOffset = Vector2(0.0, 6.0)
+ShadowColor = Color(0, 0, 0, 0.25)
+Notch = 30.0
+
+[node name="Banda" type="Control"]
+layout_mode = 3
+offset_right = 1920.0
+offset_bottom = 100.0
+custom_minimum_size = Vector2(0.0, 100.0)
+mouse_filter = 2
+script = ExtResource("main")
+
+[node name="Fondo" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink1")
+
+[node name="FileteSuperior" type="ColorRect" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_left = 40.0
+offset_top = 11.0
+offset_right = -40.0
+offset_bottom = 13.0
+mouse_filter = 2
+color = Color(0.5569, 0.1216, 0.1216, 1)
+
+[node name="FileteInferior" type="ColorRect" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_left = 40.0
+offset_top = 87.0
+offset_right = -40.0
+offset_bottom = 89.0
+mouse_filter = 2
+color = Color(0.5569, 0.1216, 0.1216, 1)
+
+[node name="Trompeta" type="Control" parent="."]
+layout_mode = 0
+offset_left = 48.0
+offset_top = 46.0
+offset_right = 348.0
+offset_bottom = 96.0
+mouse_filter = 2
+script = ExtResource("trumpet")
+Length = 240.0
+Degrees = 2.0
+
+[node name="Cabecera" type="Label" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_left = 380.0
+offset_top = 14.0
+offset_right = -380.0
+offset_bottom = 48.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.1059, 0.0902, 0.0706, 1)
+theme_override_fonts/font = ExtResource("f_titular")
+theme_override_font_sizes/font_size = 26
+text = "Estruendo en la grada"
+text_overrun_behavior = 3
+
+[node name="Texto" type="Label" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+offset_left = 380.0
+offset_top = 56.0
+offset_right = -380.0
+offset_bottom = 90.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.5569, 0.1216, 0.1216, 1)
+theme_override_fonts/font = ExtResource("f_italic")
+theme_override_font_sizes/font_size = 26
+text = "La turba pide sangre"
+text_overrun_behavior = 3
+
+[node name="Sello" type="Control" parent="."]
+layout_mode = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -230.0
+offset_top = 10.0
+offset_right = -150.0
+offset_bottom = 90.0
+unique_name_in_owner = true
+visible = false
+mouse_filter = 2
+
+[node name="Lacre" type="Control" parent="Sello"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+unique_name_in_owner = true
+mouse_filter = 2
+script = ExtResource("seal")
+
+[node name="Porcentaje" type="Label" parent="Sello"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.9373, 0.8863, 0.7529, 1)
+theme_override_fonts/font = ExtResource("f_titular")
+theme_override_font_sizes/font_size = 26
+text = "23 %"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Resultado" type="Label" parent="Sello"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+unique_name_in_owner = true
+visible = false
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.9373, 0.8863, 0.7529, 1)
+theme_override_fonts/font = ExtResource("f_titular")
+theme_override_font_sizes/font_size = 34
+text = "✓"
+horizontal_alignment = 1
+vertical_alignment = 1

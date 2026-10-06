@@ -1,0 +1,48 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Ui/Broadcast/InkStyleBox.cs" id="ink"]
+[ext_resource type="Script" path="res://Ui/Broadcast/BenchPlaque.cs" id="main"]
+[ext_resource type="FontFile" path="res://Fonts/BarlowCondensed-Bold.ttf" id="f_bold"]
+
+[sub_resource type="StyleBox" id="ink1"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.9373, 0.8863, 0.7529, 1)
+Edge = Color(0.7216, 0.6118, 0.4078, 1)
+Seed = 500
+Amplitude = 1.5
+EdgeWidth = 1.5
+
+[node name="Banquillo" type="Control"]
+layout_mode = 3
+offset_right = 150.0
+offset_bottom = 72.0
+custom_minimum_size = Vector2(150.0, 72.0)
+mouse_filter = 2
+script = ExtResource("main")
+
+[node name="Fondo" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink1")
+
+[node name="Texto" type="Label" parent="."]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 20.0
+offset_right = 140.0
+offset_bottom = 50.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.1059, 0.0902, 0.0706, 1)
+theme_override_fonts/font = ExtResource("f_bold")
+theme_override_font_sizes/font_size = 22
+text = "Banquillo 2"
+text_overrun_behavior = 3

@@ -19,9 +19,18 @@ public enum StampTone
 /// lesión leve sin decisión, perk activado en juego, consumible, anulado. El giro es determinista —función
 /// del orden de creación, nunca <see cref="System.Random"/>— para que la misma composición produzca
 /// siempre el mismo trazo.
+/// <para>
+/// <b>La forma vive en <c>Stamp.tscn</c></b> (regla 10 de <c>CLAUDE.md</c>): papel, marcas de cada tono y
+/// rótulos son nodos. El código elige qué marca y qué rótulo se enseñan según el tono, pone el texto y su
+/// tinta (un color por tono, único override de color de la pieza) y tuerce la raíz. Se crea con
+/// <see cref="Create"/>.
+/// </para>
 /// </summary>
+[Tool]
 public partial class Stamp : Control
 {
+    private const string ScenePath = "res://Ui/Broadcast/Stamp.tscn";
+
     private static int _instanceCount;
 
     private readonly int _seed;
@@ -29,15 +38,58 @@ public partial class Stamp : Control
     private StampTone _tone;
     private bool _large;
 
+    private bool _bound;
+    private Control _paper = null!;
+    private Control _paperCancelled = null!;
+    private Control _markFoul = null!;
+    private Control _markYellow = null!;
+    private Control _markCross = null!;
+    private CanvasItem _markCancelled = null!;
+    private Label _textData = null!;
+    private Label _textTitle = null!;
+    private Label _textTitleLarge = null!;
+
     public Stamp()
     {
         _seed = _instanceCount++;
     }
 
+    /// <summary>El sello con su escena. La única forma correcta de crearlo.</summary>
+    public static Stamp Create() => GD.Load<PackedScene>(ScenePath).Instantiate<Stamp>();
+
     public override void _Ready()
     {
+        var paper = GetNodeOrNull<Control>("%Papel");
+        if (paper is null)
+        {
+            GD.PushError("Stamp sin su escena: créalo con Stamp.Create(), no con new.");
+            return;
+        }
+
+        _paper = paper;
+        _paperCancelled = GetNode<Control>("%PapelAnulado");
+        _markFoul = GetNode<Control>("%MarcaFalta");
+        _markYellow = GetNode<Control>("%MarcaAmarilla");
+        _markCross = GetNode<Control>("%MarcaCruz");
+        _markCancelled = GetNode<CanvasItem>("%MarcaAnulado");
+        _textData = GetNode<Label>("%TextoDato");
+        _textTitle = GetNode<Label>("%TextoTitular");
+        _textTitleLarge = GetNode<Label>("%TextoTitularGrande");
+        _bound = true;
+
+        // El giro, determinista: 2-4° a un lado u otro según el orden de creación. Se gira desde la esquina
+        // superior izquierda, que es el pivote por defecto.
+        // En el editor no se tuerce ni se esconde: el giro no debe acabar guardado en la escena.
+        if (Engine.IsEditorHint())
+        {
+            Show("Sangre caliente", StampTone.Perk, large: false);
+            return;
+        }
+
+        float mag = 2f + Mathf.Abs(Pregon.Jitter(_seed, 2f));
+        float sign = Pregon.Jitter(_seed + 1, 1f) >= 0f ? 1f : -1f;
+        Rotation = Mathf.DegToRad(mag * sign);
         Visible = false;
-        MouseFilter = MouseFilterEnum.Ignore;
     }
 
     /// <summary>Muestra el sello con su texto (ya resuelto por el llamador, RT-035) y su tono.</summary>
@@ -49,63 +101,46 @@ public partial class Stamp : Control
         CustomMinimumSize = large ? new Vector2(220f, 66f) : new Vector2(240f, 42f);
         Size = CustomMinimumSize;
         Visible = true;
-        QueueRedraw();
+        Refresh();
     }
 
-    private (Color Fill, Color Ink, string Glyph) Tone() => _tone switch
+    private (Color Ink, string Glyph) Tone() => _tone switch
     {
-        StampTone.Foul => (Pregon.Vellum, Pregon.Wax, string.Empty),
-        StampTone.Unseen => (Pregon.Vellum, Pregon.Sable, string.Empty),
-        StampTone.Yellow => (Pregon.Vellum, new Color("8a6a12"), string.Empty),
-        StampTone.MinorInjury => (Pregon.Vellum, Pregon.Blood, string.Empty),
-        StampTone.Perk => (Pregon.Vellum, Pregon.InkBrown, "✦ "),
-        StampTone.Consumable => (Pregon.Vellum, Pregon.InkBrown, "❖ "),
-        StampTone.Cancelled => (new Color(Pregon.VellumEdge, 0.8f), new Color("5a5248"), string.Empty),
-        _ => (Pregon.Vellum, Pregon.Sable, string.Empty),
+        StampTone.Foul => (Pregon.Wax, string.Empty),
+        StampTone.Unseen => (Pregon.Sable, string.Empty),
+        StampTone.Yellow => (new Color("8a6a12"), string.Empty),
+        StampTone.MinorInjury => (Pregon.Blood, string.Empty),
+        StampTone.Perk => (Pregon.InkBrown, "✦ "),
+        StampTone.Consumable => (Pregon.InkBrown, "❖ "),
+        StampTone.Cancelled => (new Color("5a5248"), string.Empty),
+        _ => (Pregon.Sable, string.Empty),
     };
 
-    public override void _Draw()
+    private void Refresh()
     {
-        float mag = 2f + Mathf.Abs(Pregon.Jitter(_seed, 2f));
-        float sign = Pregon.Jitter(_seed + 1, 1f) >= 0f ? 1f : -1f;
-        float angle = Mathf.DegToRad(mag * sign);
-        var (fill, ink, glyph) = Tone();
-        float w = Size.X, h = Size.Y;
-
-        Pregon.Tilted(this, Vector2.Zero, angle, () =>
+        if (!_bound)
         {
-            Pregon.DrawParchment(this, Vector2.Zero, w, h, fill, Pregon.VellumEdge, _seed, amplitude: 2f, edgeWidth: 1.5f);
+            return;
+        }
 
-            if (_tone == StampTone.Foul)
-            {
-                DrawLine(new Vector2(8f, 8f), new Vector2(w - 8f, 8f), ink, 1.5f);
-                DrawLine(new Vector2(8f, h - 8f), new Vector2(w - 8f, h - 8f), ink, 1.5f);
-            }
-            else if (_tone == StampTone.Yellow)
-            {
-                DrawRect(new Rect2(8f, h / 2f - 10f, 16f, 20f), new Color("d9a72a"));
-            }
-            else if (_tone == StampTone.MinorInjury)
-            {
-                DrawRect(new Rect2(10f, (h / 2f) - 2f, 16f, 4f), Pregon.Blood);
-                DrawRect(new Rect2(16f, (h / 2f) - 8f, 4f, 16f), Pregon.Blood);
-            }
-            else if (_tone == StampTone.Cancelled)
-            {
-                DrawLine(new Vector2(10f, h - 10f), new Vector2(w - 10f, 10f), new Color("5a5248"), 3f);
-            }
+        var (ink, glyph) = Tone();
+        _paper.Visible = _tone != StampTone.Cancelled;
+        _paperCancelled.Visible = _tone == StampTone.Cancelled;
+        _markFoul.Visible = _tone == StampTone.Foul;
+        _markYellow.Visible = _tone == StampTone.Yellow;
+        _markCross.Visible = _tone == StampTone.MinorInjury;
+        _markCancelled.Visible = _tone == StampTone.Cancelled;
 
-            // Perk y consumible son la voz de dato (Barlow), no la voz que proclama (Grenze Gotisch): son
-            // un recuento en curso, no un suceso arbitrado. La talla grande/pequeña la decide el tamaño de
-            // letra, no el fichero — Grenze Gotisch es una sola familia variable para las dos tallas.
-            bool dataVoice = _tone is StampTone.Perk or StampTone.Consumable;
-            var font = dataVoice ? Pregon.DataBold : Pregon.Titular;
-            int size = dataVoice ? Pregon.SizeData : (_large ? Pregon.SizeTitleSmall / 2 : Pregon.SizeHeader);
+        // Perk y consumible son la voz de dato (Barlow), no la voz que proclama (Grenze Gotisch): son un
+        // recuento en curso, no un suceso arbitrado. La talla grande/pequeña la decide el rótulo que se
+        // enseña, no el fichero — Grenze Gotisch es una sola familia variable para las dos tallas.
+        bool dataVoice = _tone is StampTone.Perk or StampTone.Consumable;
+        _textData.Visible = dataVoice;
+        _textTitle.Visible = !dataVoice && !_large;
+        _textTitleLarge.Visible = !dataVoice && _large;
 
-            // La cruz médica de MinorInjury vive en x 10-20 (revisión del orquestador, 19 sep 2026: se
-            // pintaba encima de la «T» de «Tocado»): el texto empieza después de ella, no a los mismos 8px.
-            float textX = _tone == StampTone.MinorInjury ? 30f : 8f;
-            Style.DrawText(this, font, new Vector2(textX, (h - size) / 2f), glyph + _text, size, ink, maxWidth: w - textX - 8f);
-        });
+        var label = dataVoice ? _textData : _large ? _textTitleLarge : _textTitle;
+        label.Text = glyph + _text;
+        label.AddThemeColorOverride("font_color", ink);
     }
 }

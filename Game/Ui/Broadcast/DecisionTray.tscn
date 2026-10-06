@@ -1,0 +1,136 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Ui/Broadcast/InkStyleBox.cs" id="ink"]
+[ext_resource type="Script" path="res://Ui/Broadcast/DecisionTray.cs" id="main"]
+[ext_resource type="PackedScene" path="res://Ui/Broadcast/TraySlot.tscn" id="slot"]
+[ext_resource type="FontFile" path="res://Fonts/GrenzeGotisch-Variable.ttf" id="f_titular"]
+[ext_resource type="FontFile" path="res://Fonts/BarlowCondensed-SemiBold.ttf" id="f_semi"]
+
+[sub_resource type="StyleBox" id="ink1"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.8902, 0.8235, 0.6588, 1)
+Edge = Color(0.7216, 0.6118, 0.4078, 1)
+Seed = 700
+Amplitude = 2.0
+EdgeWidth = 2.0
+
+[sub_resource type="StyleBox" id="ink2"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.7882, 0.5961, 0.1843, 1)
+Edge = Color(0.1059, 0.0902, 0.0706, 1)
+Seed = 701
+Amplitude = 1.5
+EdgeWidth = 2.0
+
+[sub_resource type="StyleBoxEmpty" id="empty3"]
+
+[node name="Bandeja" type="Control"]
+layout_mode = 3
+offset_right = 1920.0
+offset_bottom = 124.0
+custom_minimum_size = Vector2(0.0, 124.0)
+mouse_filter = 0
+focus_mode = 2
+script = ExtResource("main")
+
+[node name="Fondo" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink1")
+
+[node name="Titulo" type="Label" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 4.0
+offset_right = 620.0
+offset_bottom = 40.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.1059, 0.0902, 0.0706, 1)
+theme_override_fonts/font = ExtResource("f_titular")
+theme_override_font_sizes/font_size = 26
+text = "Sustitución · partido en pausa"
+
+[node name="Ayuda" type="Label" parent="."]
+layout_mode = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -320.0
+offset_top = 10.0
+offset_right = -20.0
+offset_bottom = 38.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.2275, 0.1647, 0.1020, 1)
+theme_override_fonts/font = ExtResource("f_semi")
+theme_override_font_sizes/font_size = 20
+text = "◀ ▶ elegir · A / clic confirmar"
+text_overrun_behavior = 3
+
+[node name="Saliente" parent="." instance=ExtResource("slot")]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 40.0
+offset_right = 340.0
+offset_bottom = 116.0
+unique_name_in_owner = true
+
+[node name="Flecha" type="Label" parent="."]
+layout_mode = 0
+offset_left = 360.0
+offset_top = 46.0
+offset_right = 410.0
+offset_bottom = 86.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.1059, 0.0902, 0.0706, 1)
+theme_override_fonts/font = ExtResource("f_titular")
+theme_override_font_sizes/font_size = 30
+text = "→"
+
+[node name="Fila" type="HBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchor_right = 1.0
+offset_left = 420.0
+offset_top = 40.0
+offset_right = -260.0
+offset_bottom = 116.0
+mouse_filter = 2
+theme_override_constants/separation = 20
+
+[node name="Confirmar" type="Button" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -240.0
+offset_top = 48.0
+offset_right = -20.0
+offset_bottom = 108.0
+focus_mode = 0
+theme_override_colors/font_color = Color(0.1059, 0.0902, 0.0706, 1)
+theme_override_colors/font_hover_color = Color(0.1059, 0.0902, 0.0706, 1)
+theme_override_colors/font_pressed_color = Color(0.1059, 0.0902, 0.0706, 1)
+theme_override_colors/font_hover_pressed_color = Color(0.1059, 0.0902, 0.0706, 1)
+theme_override_colors/font_focus_color = Color(0.1059, 0.0902, 0.0706, 1)
+theme_override_colors/font_disabled_color = Color(0.1059, 0.0902, 0.0706, 1)
+theme_override_fonts/font = ExtResource("f_titular")
+theme_override_font_sizes/font_size = 26
+theme_override_styles/normal = SubResource("ink2")
+theme_override_styles/hover = SubResource("ink2")
+theme_override_styles/pressed = SubResource("ink2")
+theme_override_styles/hover_pressed = SubResource("ink2")
+theme_override_styles/disabled = SubResource("ink2")
+theme_override_styles/focus = SubResource("empty3")
+text = "Confirmar"
+action_mode = 0

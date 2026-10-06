@@ -1,0 +1,140 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Ui/Broadcast/InkStyleBox.cs" id="ink"]
+[ext_resource type="Script" path="res://Ui/Broadcast/MatchRecord.cs" id="main"]
+[ext_resource type="Script" path="res://Ui/Broadcast/InkShield.cs" id="shield"]
+[ext_resource type="FontFile" path="res://Fonts/GrenzeGotisch-Variable.ttf" id="f_titular"]
+[ext_resource type="FontFile" path="res://Fonts/Cinzel-Variable.ttf" id="f_score"]
+[ext_resource type="FontFile" path="res://Fonts/Grenze-Italic-Variable.ttf" id="f_italic"]
+
+[sub_resource type="StyleBox" id="ink1"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.9373, 0.8863, 0.7529, 1)
+Edge = Color(0.7216, 0.6118, 0.4078, 1)
+Seed = 950
+Amplitude = 3.5
+EdgeWidth = 2.0
+
+[node name="Acta" type="Control"]
+layout_mode = 3
+offset_right = 1920.0
+offset_bottom = 1080.0
+mouse_filter = 2
+script = ExtResource("main")
+
+[node name="Velo" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+mouse_filter = 2
+color = Color(0.0000, 0.0000, 0.0000, 0.55)
+
+[node name="Hoja" type="Panel" parent="."]
+layout_mode = 1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -410.0
+offset_top = -280.0
+offset_right = 410.0
+offset_bottom = 280.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink1")
+
+[node name="LineaGruesa" type="Line2D" parent="Hoja"]
+points = PackedVector2Array(60, 110, 760, 110)
+width = 1.5
+default_color = Color(0.2275, 0.1647, 0.1020, 1)
+antialiased = true
+
+[node name="LineaFina" type="Line2D" parent="Hoja"]
+points = PackedVector2Array(60, 116, 760, 116)
+width = 1.0
+default_color = Color(0.2275, 0.1647, 0.1020, 1)
+antialiased = true
+
+[node name="Titulo" type="Label" parent="Hoja"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 24.0
+offset_right = 820.0
+offset_bottom = 94.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.1059, 0.0902, 0.0706, 1)
+theme_override_fonts/font = ExtResource("f_titular")
+theme_override_font_sizes/font_size = 54
+text = "Acta del encuentro"
+horizontal_alignment = 1
+autowrap_mode = 3
+
+[node name="EscudoPropio" type="Control" parent="Hoja"]
+layout_mode = 0
+offset_left = 110.0
+offset_top = 150.0
+offset_right = 220.0
+offset_bottom = 288.0
+mouse_filter = 2
+script = ExtResource("shield")
+Ours = true
+
+[node name="EscudoRival" type="Control" parent="Hoja"]
+layout_mode = 0
+offset_left = 600.0
+offset_top = 150.0
+offset_right = 710.0
+offset_bottom = 288.0
+mouse_filter = 2
+script = ExtResource("shield")
+Ours = false
+
+[node name="Resultado" type="Label" parent="Hoja"]
+layout_mode = 0
+offset_left = 240.0
+offset_top = 130.0
+offset_right = 580.0
+offset_bottom = 210.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.1059, 0.0902, 0.0706, 1)
+theme_override_fonts/font = ExtResource("f_score")
+theme_override_font_sizes/font_size = 60
+text = "1 — 0"
+horizontal_alignment = 1
+
+[node name="Ganador" type="Label" parent="Hoja"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 320.0
+offset_right = 820.0
+offset_bottom = 360.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.1176, 0.2275, 0.4314, 1)
+theme_override_fonts/font = ExtResource("f_titular")
+theme_override_font_sizes/font_size = 26
+text = "Gana Altos Hornos FC"
+horizontal_alignment = 1
+
+[node name="Pie" type="Label" parent="Hoja"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 380.0
+offset_right = 820.0
+offset_bottom = 480.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.2275, 0.1647, 0.1020, 1)
+theme_override_fonts/font = ExtResource("f_italic")
+theme_override_font_sizes/font_size = 26
+theme_override_constants/line_spacing = 6
+text = "Pie de crónica"
+horizontal_alignment = 1
+autowrap_mode = 3

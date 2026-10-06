@@ -1,0 +1,196 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Ui/Broadcast/InkStyleBox.cs" id="ink"]
+[ext_resource type="Script" path="res://Ui/Broadcast/Stamp.cs" id="main"]
+[ext_resource type="FontFile" path="res://Fonts/BarlowCondensed-Bold.ttf" id="f_bold"]
+[ext_resource type="FontFile" path="res://Fonts/GrenzeGotisch-Variable.ttf" id="f_titular"]
+
+[sub_resource type="StyleBox" id="ink1"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.9373, 0.8863, 0.7529, 1)
+Edge = Color(0.7216, 0.6118, 0.4078, 1)
+Seed = 1
+Amplitude = 2.0
+EdgeWidth = 1.5
+
+[sub_resource type="StyleBox" id="ink2"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.7216, 0.6118, 0.4078, 0.8)
+Edge = Color(0.7216, 0.6118, 0.4078, 1)
+Seed = 1
+Amplitude = 2.0
+EdgeWidth = 1.5
+
+[node name="Sello" type="Control"]
+layout_mode = 3
+offset_right = 240.0
+offset_bottom = 42.0
+custom_minimum_size = Vector2(240.0, 42.0)
+mouse_filter = 2
+script = ExtResource("main")
+
+[node name="Papel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink1")
+
+[node name="PapelAnulado" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+unique_name_in_owner = true
+mouse_filter = 2
+visible = false
+theme_override_styles/panel = SubResource("ink2")
+
+[node name="MarcaFalta" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+unique_name_in_owner = true
+visible = false
+mouse_filter = 2
+
+[node name="LineaSuperior" type="ColorRect" parent="MarcaFalta"]
+layout_mode = 1
+anchor_right = 1.0
+offset_left = 8.0
+offset_top = 8.0
+offset_right = -8.0
+offset_bottom = 9.5
+mouse_filter = 2
+color = Color(0.5608, 0.1137, 0.1137, 1)
+
+[node name="LineaInferior" type="ColorRect" parent="MarcaFalta"]
+layout_mode = 1
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_top = -9.5
+offset_right = -8.0
+offset_bottom = -8.0
+mouse_filter = 2
+color = Color(0.5608, 0.1137, 0.1137, 1)
+
+[node name="MarcaAmarilla" type="ColorRect" parent="."]
+layout_mode = 1
+anchor_left = 0.0
+anchor_top = 0.5
+anchor_right = 0.0
+anchor_bottom = 0.5
+offset_left = 8.0
+offset_top = -10.0
+offset_right = 24.0
+offset_bottom = 10.0
+unique_name_in_owner = true
+visible = false
+mouse_filter = 2
+color = Color(0.8510, 0.6549, 0.1647, 1)
+
+[node name="Fila" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 8.0
+offset_right = -8.0
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="MarcaCruz" type="Control" parent="Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(22, 0)
+unique_name_in_owner = true
+visible = false
+mouse_filter = 2
+
+[node name="Barra" type="ColorRect" parent="Fila/MarcaCruz"]
+layout_mode = 1
+anchor_left = 0.0
+anchor_top = 0.5
+anchor_right = 0.0
+anchor_bottom = 0.5
+offset_left = 2.0
+offset_top = -2.0
+offset_right = 18.0
+offset_bottom = 2.0
+mouse_filter = 2
+color = Color(0.7020, 0.0706, 0.1059, 1)
+
+[node name="Palo" type="ColorRect" parent="Fila/MarcaCruz"]
+layout_mode = 1
+anchor_left = 0.0
+anchor_top = 0.5
+anchor_right = 0.0
+anchor_bottom = 0.5
+offset_left = 8.0
+offset_top = -8.0
+offset_right = 12.0
+offset_bottom = 8.0
+mouse_filter = 2
+color = Color(0.7020, 0.0706, 0.1059, 1)
+
+[node name="TextoDato" type="Label" parent="Fila"]
+layout_mode = 2
+unique_name_in_owner = true
+visible = false
+mouse_filter = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.2275, 0.1647, 0.1020, 1)
+theme_override_fonts/font = ExtResource("f_bold")
+theme_override_font_sizes/font_size = 22
+text = "Sangre caliente"
+vertical_alignment = 1
+text_overrun_behavior = 3
+
+[node name="TextoTitular" type="Label" parent="Fila"]
+layout_mode = 2
+unique_name_in_owner = true
+mouse_filter = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.1059, 0.0902, 0.0706, 1)
+theme_override_fonts/font = ExtResource("f_titular")
+theme_override_font_sizes/font_size = 26
+text = "Falta"
+vertical_alignment = 1
+text_overrun_behavior = 3
+
+[node name="TextoTitularGrande" type="Label" parent="Fila"]
+layout_mode = 2
+unique_name_in_owner = true
+visible = false
+mouse_filter = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.1059, 0.0902, 0.0706, 1)
+theme_override_fonts/font = ExtResource("f_titular")
+theme_override_font_sizes/font_size = 30
+text = "Falta"
+vertical_alignment = 1
+text_overrun_behavior = 3
+
+[node name="MarcaAnulado" type="Line2D" parent="."]
+unique_name_in_owner = true
+visible = false
+points = PackedVector2Array(10, 32, 230, 10)
+width = 3.0
+default_color = Color(0.3529, 0.3216, 0.2824, 1)

@@ -87,7 +87,7 @@ public partial class PregonGallery : Control
         var states = new[] { PhysicalState.Healthy, PhysicalState.Healthy, PhysicalState.MinorInjury, PhysicalState.Healthy, PhysicalState.SevereInjury, PhysicalState.Healthy, PhysicalState.Healthy };
         for (int i = 0; i < Names.Length; i++)
         {
-            var strip = new PlayerStrip();
+            var strip = PlayerStrip.Create();
             AddChild(strip);
             strip.Position = new Vector2(x0 + (i * 244f), StripY);
             strip.Size = new Vector2(PlayerStrip.DesignWidth, PlayerStrip.DesignHeight);
@@ -96,41 +96,41 @@ public partial class PregonGallery : Control
             _strips.Add(strip);
         }
 
-        _bench = new BenchPlaque();
+        _bench = BenchPlaque.Create();
         AddChild(_bench);
         _bench.Position = new Vector2(x0 + (7 * 244f) + 12f, StripY);
         _bench.Size = new Vector2(BenchPlaque.DesignWidth, BenchPlaque.DesignHeight);
         _bench.SetCount(2);
 
-        _foulStamp = new Stamp();
+        _foulStamp = Stamp.Create();
         AddChild(_foulStamp);
         _foulStamp.Position = new Vector2(980f, 165f);
 
-        _perkStamp = new Stamp();
+        _perkStamp = Stamp.Create();
         AddChild(_perkStamp);
         _perkStamp.Position = new Vector2(720f, 470f);
 
-        _banner = new HeraldBanner();
+        _banner = HeraldBanner.Create();
         AddChild(_banner);
         _banner.Position = new Vector2(0f, 150f);
         _banner.Size = new Vector2(HeraldBanner.DesignWidth, HeraldBanner.DesignHeight);
 
-        _band = new ProclamationBand();
+        _band = ProclamationBand.Create();
         AddChild(_band);
         _band.Position = new Vector2(0f, 150f);
         _band.Size = new Vector2(CanvasWidth, ProclamationBand.DesignHeight);
 
-        _edict = new Edict();
+        _edict = Edict.Create();
         AddChild(_edict);
         _edict.Position = new Vector2(0f, 150f);
         _edict.Size = new Vector2(Edict.DesignWidth, Edict.DesignHeight);
 
-        _record = new MatchRecord();
+        _record = MatchRecord.Create();
         AddChild(_record);
         _record.Position = Vector2.Zero;
         _record.Size = new Vector2(CanvasWidth, CanvasHeight);
 
-        _tray = new DecisionTray();
+        _tray = DecisionTray.Create();
         AddChild(_tray);
 
         // La bandeja sustituye a la fila de tiras y usa el hueco que deja el campo hasta el borde del

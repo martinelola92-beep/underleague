@@ -6,10 +6,18 @@ namespace Underleague.Game.Ui.Broadcast;
 /// Banda de pregón a lo ancho (N3 de <c>docs/ui/README.md</c> §4): turba y árbitro que abandona el campo,
 /// <b>sin congelar</b> el partido. Es la única presentación de N3 que no es un gonfalón vertical: se lee de
 /// un vistazo mientras el mundo sigue corriendo por debajo.
+/// <para>
+/// <b>La forma vive en <c>ProclamationBand.tscn</c></b> (regla 10 de <c>CLAUDE.md</c>): fondo, filetes y
+/// rótulos son nodos; la trompeta y el lacre de la tirada del destino (<see cref="FateSeal"/>) siguen por
+/// código. Se crea con <see cref="Create"/>.
+/// </para>
 /// </summary>
+[Tool]
 public partial class ProclamationBand : Control
 {
     public const float DesignHeight = 100f;
+
+    private const string ScenePath = "res://Ui/Broadcast/ProclamationBand.tscn";
 
     private string _header = string.Empty;
     private string _body = string.Empty;
@@ -21,11 +29,42 @@ public partial class ProclamationBand : Control
     private float _sealAngle;
     private FateOutcome _outcome;
 
+    private bool _bound;
+    private Label _headerLabel = null!;
+    private Label _bodyLabel = null!;
+    private Control _seal = null!;
+    private FateSeal _sealDraw = null!;
+    private Label _sealPercent = null!;
+    private Label _sealResult = null!;
+
+    /// <summary>La banda con su escena. La única forma correcta de crearla.</summary>
+    public static ProclamationBand Create() => GD.Load<PackedScene>(ScenePath).Instantiate<ProclamationBand>();
+
     public override void _Ready()
     {
-        CustomMinimumSize = new Vector2(0f, DesignHeight);
-        MouseFilter = MouseFilterEnum.Ignore;
-        Visible = false;
+        var header = GetNodeOrNull<Label>("%Cabecera");
+        if (header is null)
+        {
+            GD.PushError("ProclamationBand sin su escena: créala con ProclamationBand.Create(), no con new.");
+            return;
+        }
+
+        _headerLabel = header;
+        _bodyLabel = GetNode<Label>("%Texto");
+        _seal = GetNode<Control>("%Sello");
+        _sealDraw = GetNode<FateSeal>("%Lacre");
+        _sealPercent = GetNode<Label>("%Porcentaje");
+        _sealResult = GetNode<Label>("%Resultado");
+        _bound = true;
+
+        if (Engine.IsEditorHint())
+        {
+            ShowFate(UiText.Get("ui.pregon.fate.header"), "La muerte tira los dados · 23 %", "23 %", 1f, FateOutcome.Saved);
+        }
+        else
+        {
+            Visible = false;
+        }
     }
 
     /// <summary>Cómo acabó la tirada del destino que enseña el sello.</summary>
@@ -47,7 +86,7 @@ public partial class ProclamationBand : Control
         _body = body;
         _fate = false;
         Visible = true;
-        QueueRedraw();
+        Refresh();
     }
 
     /// <summary>
@@ -66,72 +105,31 @@ public partial class ProclamationBand : Control
         _sealAngle = eased * Mathf.Tau * 3.5f;
         _outcome = outcome;
         Visible = true;
-        QueueRedraw();
+        Refresh();
     }
 
-    public override void _Draw()
+    private void Refresh()
     {
-        float w = Size.X;
-        var pts = new[]
+        if (!_bound)
         {
-            new Vector2(0, 0), new Vector2(w, 0), new Vector2(w - 30f, 50f), new Vector2(w, 100f),
-            new Vector2(0, 100f), new Vector2(30f, 50f),
-        };
-        var shadow = new Vector2[pts.Length];
-        for (int i = 0; i < pts.Length; i++)
-        {
-            shadow[i] = pts[i] + new Vector2(0f, 6f);
+            return;
         }
 
-        DrawColoredPolygon(shadow, new Color(0f, 0f, 0f, 0.25f));
-        DrawColoredPolygon(pts, Pregon.Vellum);
-        var closed = new Vector2[pts.Length + 1];
-        System.Array.Copy(pts, closed, pts.Length);
-        closed[pts.Length] = pts[0];
-        DrawPolyline(closed, Pregon.VellumEdge, 2f, true);
-        DrawLine(new Vector2(40f, 12f), new Vector2(w - 40f, 12f), Pregon.Gules, 2f);
-        DrawLine(new Vector2(40f, 88f), new Vector2(w - 40f, 88f), Pregon.Gules, 2f);
-
-        Pregon.DrawTrumpet(this, new Vector2(48f, 46f), 240f, 2f);
-
-        Style.DrawText(this, Pregon.Titular, new Vector2(380f, 14f), _header, Pregon.SizeHeader, Pregon.Sable, maxWidth: w - 760f);
-        Style.DrawText(this, Pregon.SerifItalic, new Vector2(380f, 56f), _body, Pregon.SizeBody, Pregon.Gules, maxWidth: w - 760f);
-
-        if (_fate)
+        _headerLabel.Text = _header;
+        _bodyLabel.Text = _body;
+        _seal.Visible = _fate;
+        if (!_fate)
         {
-            DrawSeal(new Vector2(w - 190f, 50f));
-        }
-    }
-
-    /// <summary>
-    /// El lacre: disco de cera con el porcentaje y un asa que gira alrededor (color y forma juntos, UI-002: el
-    /// resultado se lee también por la marca, no sólo por el tono).
-    /// </summary>
-    private void DrawSeal(Vector2 centre)
-    {
-        const float radius = 40f;
-        DrawCircle(centre + new Vector2(0f, 4f), radius, new Color(0f, 0f, 0f, 0.25f));
-        var wax = _outcome == FateOutcome.Saved ? new Color("4f6b2a") : Pregon.Wax;
-        DrawCircle(centre, radius, wax);
-        DrawArc(centre, radius - 6f, 0f, Mathf.Tau, 48, Pregon.Vellum, 2f, true);
-
-        // Las 8 muescas del canto giran con el sello mientras rueda; al parar quedan quietas.
-        for (int i = 0; i < 8; i++)
-        {
-            float a = _sealAngle + (i * Mathf.Tau / 8f);
-            var dir = new Vector2(Mathf.Cos(a), Mathf.Sin(a));
-            DrawLine(centre + (dir * (radius - 4f)), centre + (dir * (radius + 6f)), Pregon.Sable, 3f);
+            return;
         }
 
-        string glyph = _outcome switch
-        {
-            FateOutcome.Saved => "✓",
-            FateOutcome.Hit => "✗",
-            _ => _sealText,
-        };
-        int size = _outcome == FateOutcome.Rolling ? Pregon.SizeHeader : Pregon.SizeHeader + 8;
-        var font = Pregon.Titular;
-        var textSize = font.GetStringSize(glyph, HorizontalAlignment.Left, -1, size);
-        Style.DrawText(this, font, centre - new Vector2(textSize.X / 2f, size / 2f), glyph, size, Pregon.Vellum);
+        _sealDraw.SetState(_sealAngle, _outcome);
+
+        // Rodando enseña el porcentaje; al parar, la marca de «a salvo» (✓) o de desgracia (✗), más grande.
+        bool rolling = _outcome == FateOutcome.Rolling;
+        _sealPercent.Visible = rolling;
+        _sealResult.Visible = !rolling;
+        _sealPercent.Text = _sealText;
+        _sealResult.Text = _outcome == FateOutcome.Saved ? "✓" : "✗";
     }
 }

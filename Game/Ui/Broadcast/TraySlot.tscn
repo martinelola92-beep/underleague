@@ -1,0 +1,194 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Ui/Broadcast/InkStyleBox.cs" id="ink"]
+[ext_resource type="Script" path="res://Ui/Broadcast/TraySlot.cs" id="main"]
+[ext_resource type="Script" path="res://Ui/Broadcast/InkShield.cs" id="shield"]
+[ext_resource type="FontFile" path="res://Fonts/BarlowCondensed-Bold.ttf" id="f_bold"]
+[ext_resource type="FontFile" path="res://Fonts/BarlowCondensed-SemiBold.ttf" id="f_semi"]
+
+[sub_resource type="StyleBox" id="ink1"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.9059, 0.7647, 0.7216, 1)
+Edge = Color(0.7216, 0.6118, 0.4078, 1)
+Seed = 802
+Amplitude = 1.5
+EdgeWidth = 1.5
+
+[sub_resource type="StyleBox" id="ink2"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.9373, 0.8863, 0.7529, 1)
+Edge = Color(0.7216, 0.6118, 0.4078, 1)
+Seed = 802
+Amplitude = 1.5
+EdgeWidth = 1.5
+
+[sub_resource type="StyleBox" id="ink3"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.8706, 0.8235, 0.7529, 1)
+Edge = Color(0.7216, 0.6118, 0.4078, 1)
+Seed = 802
+Amplitude = 1.5
+EdgeWidth = 1.5
+
+[sub_resource type="StyleBox" id="ink4"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.0000, 0.0000, 0.0000, 0)
+Edge = Color(0.7882, 0.5961, 0.1843, 1)
+Seed = 802
+Amplitude = 1.5
+EdgeWidth = 3.5
+ShadowColor = Color(0, 0, 0, 0)
+
+[node name="Casilla" type="Control"]
+layout_mode = 3
+offset_right = 260.0
+offset_bottom = 76.0
+custom_minimum_size = Vector2(120.0, 76.0)
+mouse_filter = 0
+script = ExtResource("main")
+
+[node name="FondoSaliente" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+unique_name_in_owner = true
+mouse_filter = 2
+visible = false
+theme_override_styles/panel = SubResource("ink1")
+
+[node name="FondoCandidato" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink2")
+
+[node name="FondoOpcion" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+unique_name_in_owner = true
+mouse_filter = 2
+visible = false
+theme_override_styles/panel = SubResource("ink3")
+
+[node name="Seleccion" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+unique_name_in_owner = true
+mouse_filter = 2
+visible = false
+theme_override_styles/panel = SubResource("ink4")
+
+[node name="Fila" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 0.0
+offset_right = -8.0
+offset_bottom = 0.0
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Escudo" type="Control" parent="Fila"]
+layout_mode = 2
+custom_minimum_size = Vector2(40, 0)
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="Dibujo" type="Control" parent="Fila/Escudo"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 10.0
+offset_right = 40.0
+offset_bottom = 60.0
+mouse_filter = 2
+script = ExtResource("shield")
+Ours = true
+
+[node name="Textos" type="Control" parent="Fila"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="Nombre" type="Label" parent="Fila/Textos"]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 4.0
+offset_bottom = 32.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.1059, 0.0902, 0.0706, 1)
+theme_override_fonts/font = ExtResource("f_bold")
+theme_override_font_sizes/font_size = 22
+text = "Brakk"
+text_overrun_behavior = 3
+
+[node name="Subtitulo" type="Label" parent="Fila/Textos"]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 32.0
+offset_bottom = 56.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.2275, 0.1647, 0.1020, 1)
+theme_override_fonts/font = ExtResource("f_semi")
+theme_override_font_sizes/font_size = 20
+text = "delantero · sano"
+text_overrun_behavior = 3
+
+[node name="SubtituloRecomendado" type="Label" parent="Fila/Textos"]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 32.0
+offset_bottom = 56.0
+unique_name_in_owner = true
+visible = false
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.1176, 0.2275, 0.4314, 1)
+theme_override_fonts/font = ExtResource("f_semi")
+theme_override_font_sizes/font_size = 20
+text = "delantero · sano · recomendado"
+text_overrun_behavior = 3
+
+[node name="Riesgo" type="Label" parent="Fila/Textos"]
+layout_mode = 1
+anchor_right = 1.0
+offset_top = 54.0
+offset_bottom = 76.0
+unique_name_in_owner = true
+visible = false
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.5569, 0.1216, 0.1216, 1)
+theme_override_fonts/font = ExtResource("f_semi")
+theme_override_font_sizes/font_size = 20
+text = "si le entran, muere: 1,4 %"
+text_overrun_behavior = 3

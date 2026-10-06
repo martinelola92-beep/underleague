@@ -10,13 +10,16 @@ namespace Underleague.Game.Ui.Broadcast;
 /// corona pequeña al pie. «Se hace saber», título («GOL», dominando la composición), cuerpo en cursiva y
 /// pie. Cubre gol, roja y lesión grave — los tres comparten formato, solo cambian el color de las cintas y
 /// los cuatro textos, que llegan ya resueltos por quien lo muestra (RT-035: nada de texto de efecto
-/// escrito a mano aquí). Todo dibujado por código (regla 10 de <c>CLAUDE.md</c>): nada de arte importado.
+/// escrito a mano aquí). Su forma vive en <c>HeraldBanner.tscn</c> (regla 10 de <c>CLAUDE.md</c>): el código solo rellena los textos y enseña el grupo del equipo protagonista (<c>%Propio</c> o <c>%Rival</c>: cintas, escudo, corona y títulos de su color). Se crea con <see cref="Create"/>.
 /// La posición (lado contrario al suceso) la decide <c>BroadcastScreen.PositionBanner</c>, sin cambios.
 /// </summary>
+[Tool]
 public partial class HeraldBanner : Control
 {
     public const float DesignWidth = 500f;
     public const float DesignHeight = 640f;
+
+    private const string ScenePath = "res://Ui/Broadcast/HeraldBanner.tscn";
 
     private bool _ours;
     private string _header = string.Empty;
@@ -24,11 +27,40 @@ public partial class HeraldBanner : Control
     private string _body = string.Empty;
     private string _footer = string.Empty;
 
+    private bool _bound;
+    private Control _oursGroup = null!;
+    private Control _rivalGroup = null!;
+    private Label _headerLabel = null!;
+    private Label _bodyLabel = null!;
+    private Label _footerLabel = null!;
+
+    /// <summary>El estandarte con su escena. La única forma correcta de crearlo.</summary>
+    public static HeraldBanner Create() => GD.Load<PackedScene>(ScenePath).Instantiate<HeraldBanner>();
+
     public override void _Ready()
     {
-        CustomMinimumSize = new Vector2(DesignWidth, DesignHeight);
-        MouseFilter = MouseFilterEnum.Ignore;
-        Visible = false;
+        var ours = GetNodeOrNull<Control>("%Propio");
+        if (ours is null)
+        {
+            GD.PushError("HeraldBanner sin su escena: créalo con HeraldBanner.Create(), no con new.");
+            return;
+        }
+
+        _oursGroup = ours;
+        _rivalGroup = GetNode<Control>("%Rival");
+        _headerLabel = GetNode<Label>("%Cabecera");
+        _bodyLabel = GetNode<Label>("%Texto");
+        _footerLabel = GetNode<Label>("%Pie");
+        _bound = true;
+
+        if (Engine.IsEditorHint())
+        {
+            Show(ours: true, UiText.Get("ui.pregon.banner.said"), "Gol", "de Mazka Comecráneos,\nal minuto sesenta y tres", "¡Viva Nuestro F. C.!");
+        }
+        else
+        {
+            Visible = false;
+        }
     }
 
     public void Show(bool ours, string header, string title, string body, string footer)
@@ -39,112 +71,39 @@ public partial class HeraldBanner : Control
         _body = body;
         _footer = footer;
         Visible = true;
-        QueueRedraw();
+        Refresh();
     }
 
-    public override void _Draw()
+    private void Refresh()
     {
-        var primary = _ours ? Pregon.Azur : Pregon.Gules;
-        var secondary = _ours ? Pregon.Or : Pregon.Sable;
-        var wood = new Color("6b4a2a");
-        var woodDark = new Color("46301a");
-
-        const float RollHeight = 32f;
-        const float BodyMarginX = 44f;
-        float bodyW = DesignWidth - (2f * BodyMarginX);
-        float bodyY = RollHeight - 6f;
-        float bodyH = DesignHeight - (2f * RollHeight) + 12f;
-        var bodyTopLeft = new Vector2(BodyMarginX, bodyY);
-
-        // Sombra del conjunto, antes que nada (debajo de todo lo demás).
-        DrawRect(new Rect2(bodyTopLeft + new Vector2(9f, 10f), new Vector2(bodyW, bodyH)), new Color(0f, 0f, 0f, 0.28f));
-        DrawScrollRoll(new Vector2((DesignWidth / 2f) + 6f, RollHeight / 2f + 7f), new Color(0f, 0f, 0f, 0.28f), new Color(0f, 0f, 0f, 0.28f));
-        DrawScrollRoll(new Vector2((DesignWidth / 2f) + 6f, DesignHeight - (RollHeight / 2f) + 7f), new Color(0f, 0f, 0f, 0.28f), new Color(0f, 0f, 0f, 0.28f));
-
-        // Cuerpo de pergamino: borde irregular determinista (papel, no tela) — el filete del contorno ya
-        // lleva el color secundario del equipo (Or/Sable), la identidad de verdad va en las cintas.
-        Pregon.DrawParchment(this, bodyTopLeft, bodyW, bodyH, Pregon.Vellum, secondary, seed: 30, amplitude: 1.4f, edgeWidth: 2f, shadowOffset: Vector2.Zero);
-
-        // Cintas del equipo protagonista, a los dos lados del pergamino, con un filete más fino por dentro.
-        const float RibbonWidth = 15f;
-        DrawRect(new Rect2(bodyTopLeft, new Vector2(RibbonWidth, bodyH)), primary);
-        DrawRect(new Rect2(bodyTopLeft + new Vector2(bodyW - RibbonWidth, 0f), new Vector2(RibbonWidth, bodyH)), primary);
-        DrawLine(bodyTopLeft + new Vector2(RibbonWidth, 0f), bodyTopLeft + new Vector2(RibbonWidth, bodyH), secondary, 1.5f);
-        DrawLine(bodyTopLeft + new Vector2(bodyW - RibbonWidth, 0f), bodyTopLeft + new Vector2(bodyW - RibbonWidth, bodyH), secondary, 1.5f);
-
-        // Rollos de verdad, encima de la sombra y del cuerpo: los dos varales de los que cuelga el pergamino.
-        DrawScrollRoll(new Vector2(DesignWidth / 2f, RollHeight / 2f), wood, woodDark);
-        DrawScrollRoll(new Vector2(DesignWidth / 2f, DesignHeight - (RollHeight / 2f)), wood, woodDark);
-
-        // Escudo en la cabecera, solo el escudo (revisión del revisor, 20 sep 2026: las trompetas cruzadas
-        // no salían legibles a este tamaño — dos trazos finos superpuestos leían como un zigzag roto — así
-        // que se deja solo el escudo, más grande, que sí se lee).
-        var shieldCenter = new Vector2(DesignWidth / 2f, bodyY + 46f);
-        Pregon.DrawShield(this, shieldCenter - new Vector2(32f, 36f), 64f, 80f, _ours);
-
-        // Margen interior: el texto no se pega a las cintas.
-        float tx = bodyTopLeft.X + RibbonWidth + 14f;
-        float tw = bodyW - (2f * (RibbonWidth + 14f));
-
-        // El bloque de texto ocupa la mayor parte del pergamino (revisión del revisor: «el texto nada en
-        // el centro», hoy menos margen y letra más grande): de bodyY+100 a bodyY+bodyH-70, ~76% del alto
-        // del cuerpo.
-        Pregon.DrawFittedTitle(this, Pregon.Titular, new Vector2(tx, bodyY + 102f), _header, Pregon.SizeHeader, Pregon.InkBrown, tw);
-
-        // «GOL» con el mismo peso visual que el boceto del revisor: ~55% del ancho del pergamino, no del
-        // ancho de la columna de texto — se centra dentro de tw con su propio ancho más estrecho.
-        int titlePreferred = _title.Length > 4 ? Pregon.SizeTitleSmall : 340;
-        float titleMaxWidth = _title.Length > 4 ? tw : bodyW * 0.55f;
-        float titleX = tx + ((tw - titleMaxWidth) / 2f);
-        Pregon.DrawFittedTitle(this, Pregon.Titular, new Vector2(titleX, bodyY + 156f), _title, titlePreferred, primary, titleMaxWidth);
-
-        Pregon.DrawWrappedText(this, Pregon.SerifItalic, new Vector2(tx, bodyY + 372f), _body, Pregon.SizeBody, Pregon.InkBrown, tw, centered: true);
-        Pregon.DrawFittedTitle(this, Pregon.Titular, new Vector2(tx, bodyY + 452f), _footer, Pregon.SizeHeader, Pregon.InkBrown, tw);
-
-        // Corona al pie, cerrando la proclama: puntas separadas, no una mancha (revisión del revisor).
-        DrawCrown(new Vector2(DesignWidth / 2f, bodyY + bodyH - 44f), secondary);
-    }
-
-    /// <summary>Un varal de madera (píldora) con los dos cabos redondeados sobresaliendo — nunca una tela plana.</summary>
-    private void DrawScrollRoll(Vector2 center, Color fill, Color edge)
-    {
-        const float RollWidth = DesignWidth - 6f;
-        const float RollThickness = 24f;
-        var poly = Pregon.StadiumPoly(RollWidth, RollThickness);
-        var topLeft = center - new Vector2(RollWidth / 2f, RollThickness / 2f);
-        var shifted = new Vector2[poly.Length];
-        for (int i = 0; i < poly.Length; i++)
+        if (!_bound)
         {
-            shifted[i] = poly[i] + topLeft;
+            return;
         }
 
-        DrawColoredPolygon(shifted, fill);
-        var closed = new Vector2[poly.Length + 1];
-        System.Array.Copy(shifted, closed, poly.Length);
-        closed[poly.Length] = shifted[0];
-        DrawPolyline(closed, edge, 2f, true);
+        // El grupo del equipo protagonista: cintas, filete, escudo, corona y títulos en su color.
+        _oursGroup.Visible = _ours;
+        _rivalGroup.Visible = !_ours;
+        var group = _ours ? _oursGroup : _rivalGroup;
 
-        // Los cabos del varal, sobresaliendo un poco a cada lado del pergamino.
-        DrawCircle(topLeft + new Vector2(2f, RollThickness / 2f), RollThickness * 0.42f, edge);
-        DrawCircle(topLeft + new Vector2(RollWidth - 2f, RollThickness / 2f), RollThickness * 0.42f, edge);
-    }
-
-    /// <summary>Corona de tres puntas separadas, el pie de la proclama — nunca una mancha.</summary>
-    private void DrawCrown(Vector2 center, Color color)
-    {
-        const float W = 56f, H = 34f;
-        var poly = Pregon.CrownPoly(W, H);
-        var topLeft = center - new Vector2(W / 2f, H * 0.82f);
-        var shifted = new Vector2[poly.Length];
-        for (int i = 0; i < poly.Length; i++)
+        // «GOL» con el peso del boceto del revisor: ~55% del ancho del pergamino y a tamaño grande; los
+        // títulos de más de 4 letras usan el rótulo pequeño y todo el ancho de la columna de texto.
+        bool shortTitle = _title.Length <= 4;
+        var big = group.GetNode<Label>("Titulo");
+        var small = group.GetNode<Label>("TituloLargo");
+        big.Visible = shortTitle;
+        small.Visible = !shortTitle;
+        if (shortTitle)
         {
-            shifted[i] = poly[i] + topLeft;
+            FitText.Fit(big, _title, group.GetNode<Control>("Cuerpo").Size.X * 0.55f);
+        }
+        else
+        {
+            FitText.Fit(small, _title);
         }
 
-        DrawColoredPolygon(shifted, color);
-        var closed = new Vector2[poly.Length + 1];
-        System.Array.Copy(shifted, closed, poly.Length);
-        closed[poly.Length] = shifted[0];
-        DrawPolyline(closed, Pregon.InkBrown, 1.6f, true);
+        FitText.Fit(_headerLabel, _header);
+        _bodyLabel.Text = _body;
+        FitText.Fit(_footerLabel, _footer);
     }
 }

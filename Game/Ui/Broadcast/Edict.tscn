@@ -1,0 +1,126 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Ui/Broadcast/InkStyleBox.cs" id="ink"]
+[ext_resource type="Script" path="res://Ui/Broadcast/Edict.cs" id="main"]
+[ext_resource type="Script" path="res://Ui/Broadcast/InkTrumpet.cs" id="trumpet"]
+[ext_resource type="Script" path="res://Ui/Broadcast/InkBurst.cs" id="burst"]
+[ext_resource type="FontFile" path="res://Fonts/GrenzeGotisch-Variable.ttf" id="f_titular"]
+[ext_resource type="FontFile" path="res://Fonts/Grenze-Italic-Variable.ttf" id="f_italic"]
+
+[sub_resource type="StyleBox" id="ink1"]
+script = ExtResource("ink")
+Shape = 0
+Fill = Color(0.9373, 0.8863, 0.7529, 1)
+Edge = Color(0.7216, 0.6118, 0.4078, 1)
+Seed = 900
+Amplitude = 3.0
+EdgeWidth = 2.0
+
+[node name="Bando" type="Control"]
+layout_mode = 3
+offset_right = 600.0
+offset_bottom = 700.0
+custom_minimum_size = Vector2(600.0, 700.0)
+mouse_filter = 2
+script = ExtResource("main")
+
+[node name="Trompeta" type="Control" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 60.0
+offset_right = 520.0
+offset_bottom = 120.0
+mouse_filter = 2
+script = ExtResource("trumpet")
+Length = 440.0
+Degrees = -5.0
+
+[node name="Hoja" type="Panel" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 120.0
+offset_right = 580.0
+offset_bottom = 560.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("ink1")
+
+[node name="LineaGruesa" type="Line2D" parent="Hoja"]
+points = PackedVector2Array(40, 64, 520, 64)
+width = 1.5
+default_color = Color(0.2275, 0.1647, 0.1020, 1)
+antialiased = true
+
+[node name="LineaFina" type="Line2D" parent="Hoja"]
+points = PackedVector2Array(40, 70, 520, 70)
+width = 1.0
+default_color = Color(0.2275, 0.1647, 0.1020, 1)
+antialiased = true
+
+[node name="SeHaceSaber" type="Label" parent="Hoja"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 10.0
+offset_right = 540.0
+offset_bottom = 50.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.2275, 0.1647, 0.1020, 1)
+theme_override_fonts/font = ExtResource("f_titular")
+theme_override_font_sizes/font_size = 26
+text = "Se hace saber el fallecimiento de"
+text_overrun_behavior = 3
+
+[node name="ElFallecimientoDe" type="Label" parent="Hoja"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 72.0
+offset_right = 540.0
+offset_bottom = 108.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.2275, 0.1647, 0.1020, 1)
+theme_override_fonts/font = ExtResource("f_italic")
+theme_override_font_sizes/font_size = 26
+text = "el fallecimiento de"
+text_overrun_behavior = 3
+
+[node name="Nombre" type="Label" parent="Hoja"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 118.0
+offset_right = 540.0
+offset_bottom = 198.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.1059, 0.0902, 0.0706, 1)
+theme_override_fonts/font = ExtResource("f_titular")
+theme_override_font_sizes/font_size = 52
+text = "Mazka Comecráneos"
+text_overrun_behavior = 3
+
+[node name="Texto" type="Label" parent="Hoja"]
+layout_mode = 0
+offset_left = 20.0
+offset_top = 206.0
+offset_right = 540.0
+offset_bottom = 406.0
+unique_name_in_owner = true
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.2275, 0.1647, 0.1020, 1)
+theme_override_fonts/font = ExtResource("f_italic")
+theme_override_font_sizes/font_size = 24
+theme_override_constants/line_spacing = 6
+text = "delantero, n.º 7, orco"
+autowrap_mode = 3
+
+[node name="Lacre" type="Control" parent="."]
+layout_mode = 0
+offset_left = 402.0
+offset_top = 412.0
+offset_right = 498.0
+offset_bottom = 508.0
+mouse_filter = 2
+script = ExtResource("burst")
+Outer = 48.0
+Inner = 43.0
+Points = 22

@@ -29,6 +29,12 @@ public partial class InkStyleBox : StyleBox
 
         /// <summary>Pendón con cola de golondrina abajo (paños de equipo).</summary>
         Swallowtail,
+
+        /// <summary>Píldora (rectángulo de extremos semicirculares): varales de madera. Con ancho = alto, un círculo.</summary>
+        Pill,
+
+        /// <summary>Banda con muesca en V a cada lado (banda de pregón); la profundidad de la muesca es <see cref="Notch"/>.</summary>
+        Pennant,
     }
 
     private InkShape _shape = InkShape.Parchment;
@@ -74,7 +80,7 @@ public partial class InkStyleBox : StyleBox
     [Export]
     public Color ShadowColor { get => _shadowColor; set { _shadowColor = value; EmitChanged(); } }
 
-    /// <summary>Profundidad de la cola de golondrina (solo <see cref="InkShape.Swallowtail"/>).</summary>
+    /// <summary>Profundidad de la cola de golondrina (<see cref="InkShape.Swallowtail"/>) o de la muesca (<see cref="InkShape.Pennant"/>).</summary>
     [Export]
     public float Notch { get => _notch; set { _notch = value; EmitChanged(); } }
 
@@ -104,9 +110,17 @@ public partial class InkStyleBox : StyleBox
             return;
         }
 
-        var local = _shape == InkShape.Swallowtail
-            ? Pregon.Swallowtail(w, h, _notch)
-            : Pregon.RoughRect(w, h, _amplitude, _seed);
+        var local = _shape switch
+        {
+            InkShape.Swallowtail => Pregon.Swallowtail(w, h, _notch),
+            InkShape.Pill => Pregon.StadiumPoly(w, h),
+            InkShape.Pennant => new[]
+            {
+                new Vector2(0f, 0f), new Vector2(w, 0f), new Vector2(w - _notch, h / 2f),
+                new Vector2(w, h), new Vector2(0f, h), new Vector2(_notch, h / 2f),
+            },
+            _ => Pregon.RoughRect(w, h, _amplitude, _seed),
+        };
 
         if (_shadowColor.A > 0f)
         {

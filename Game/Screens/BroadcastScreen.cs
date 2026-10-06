@@ -440,43 +440,43 @@ public partial class BroadcastScreen : Control
         float x0 = (CanvasWidth - ((7 * 232f) + (6 * 12f) + 24f + 150f)) / 2f;
         for (int i = 0; i < 7; i++)
         {
-            var strip = new PlayerStrip();
+            var strip = PlayerStrip.Create();
             AddChild(strip);
             strip.Position = new Vector2(x0 + (i * 244f), _stripY);
             strip.Size = new Vector2(PlayerStrip.DesignWidth, PlayerStrip.DesignHeight);
             _strips.Add(strip);
         }
 
-        _bench = new BenchPlaque();
+        _bench = BenchPlaque.Create();
         AddChild(_bench);
         _bench.Position = new Vector2(x0 + (7 * 244f) + 12f, _stripY);
         _bench.Size = new Vector2(BenchPlaque.DesignWidth, BenchPlaque.DesignHeight);
 
-        _stamp = new Stamp();
+        _stamp = Stamp.Create();
         AddChild(_stamp);
         _stamp.Position = new Vector2(980f, 165f);
 
-        _banner = new HeraldBanner();
+        _banner = HeraldBanner.Create();
         AddChild(_banner);
         _banner.Position = new Vector2(0f, 150f);
         _banner.Size = new Vector2(HeraldBanner.DesignWidth, HeraldBanner.DesignHeight);
 
-        _band = new ProclamationBand();
+        _band = ProclamationBand.Create();
         AddChild(_band);
         _band.Position = new Vector2(0f, 150f);
         _band.Size = new Vector2(CanvasWidth, ProclamationBand.DesignHeight);
 
-        _edict = new Edict();
+        _edict = Edict.Create();
         AddChild(_edict);
         _edict.Position = new Vector2(0f, 150f);
         _edict.Size = new Vector2(Edict.DesignWidth, Edict.DesignHeight);
 
-        _record = new MatchRecord();
+        _record = MatchRecord.Create();
         AddChild(_record);
         _record.Position = Vector2.Zero;
         _record.Size = new Vector2(CanvasWidth, _canvasHeight);
 
-        _tray = new DecisionTray();
+        _tray = DecisionTray.Create();
         AddChild(_tray);
         _tray.Position = new Vector2(0f, _canvasHeight - 12f - DecisionTray.DesignHeight);
         _tray.Size = new Vector2(CanvasWidth, DecisionTray.DesignHeight);
