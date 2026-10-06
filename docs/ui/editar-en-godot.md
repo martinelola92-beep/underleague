@@ -19,7 +19,15 @@
 | Botón de consumible del tablero | `Game/Ui/Broadcast/ConsumableButton.tscn` | Listo |
 | Etiqueta de grito del tablero | `Game/Ui/Broadcast/ShoutTag.tscn` | Listo |
 | Estilos comunes de los botones del tablero | `Game/Ui/Broadcast/Tablero.tres` (tema) | Listo |
-| Tiras de jugadores, banquillo, sello, estandarte, banda, edicto, acta, bandeja | — | Pendiente: siguen dibujadas por código |
+| Tira de jugador (escudo, dorsal, nombre, perks, estado, fatiga, destello) | `Game/Ui/Broadcast/PlayerStrip.tscn` | Listo. Por código: la marca de estado físico (`MarcaEstado`) y el escudo (`Escudo`) |
+| Placa de banquillo | `Game/Ui/Broadcast/BenchPlaque.tscn` | Listo |
+| Sello torcido (falta, amarilla, lesión, perk, consumible, anulado) | `Game/Ui/Broadcast/Stamp.tscn` | Listo. Cada tono tiene sus marcas (`MarcaFalta`, `MarcaAmarilla`, `MarcaCruz`, `MarcaAnulado`) y el código enseña las que tocan |
+| Estandarte de gol, roja y lesión | `Game/Ui/Broadcast/HeraldBanner.tscn` | Listo. Dos grupos, `Propio` y `Rival`, con cintas, escudo, corona y títulos de su color. Por código: escudos y coronas (`Escudo`, `Corona`) |
+| Banda de pregón y tirada del destino | `Game/Ui/Broadcast/ProclamationBand.tscn` | Listo. Por código: la trompeta (`Trompeta`) y el lacre que gira (`Lacre`); el porcentaje y el ✓/✗ son rótulos |
+| Bando de muerte | `Game/Ui/Broadcast/Edict.tscn` | Listo. Por código: la trompeta (`Trompeta`) y el lacre en estrella (`Lacre`) |
+| Acta del encuentro | `Game/Ui/Broadcast/MatchRecord.tscn` | Listo. Por código: los dos escudos (`EscudoPropio`, `EscudoRival`) |
+| Bandeja de sustitución | `Game/Ui/Broadcast/DecisionTray.tscn` | Listo. Cada casilla es la escena `TraySlot.tscn` |
+| Casilla de la bandeja (el que sale, candidato, respuesta) | `Game/Ui/Broadcast/TraySlot.tscn` | Listo. Por código: el escudo (`Escudo/Dibujo`) |
 | Resto de pantallas | — | Pendiente, solo si se piden |
 
 ## Cómo está hecha una pieza
@@ -69,3 +77,17 @@ un `TextureRect` con tu escudo.
   sus botones y etiquetas en `ConsumableButton.tscn` y `ShoutTag.tscn`.
 - La pista del medidor de criterio (`PistaCriterio`) sigue dibujada por código porque se mueve con el
   dato; la placa y el rótulo que la rodean sí son editables.
+- **Lo que sigue dibujado por código** va siempre en su propio nodo pequeño (`InkShield`, `InkTrumpet`,
+  `InkBurst`, `InkCrown`, `FateSeal`, `StripStateMark`, `BiasTrack`). Para poner un sprite se oculta ese
+  nodo (ojo en el árbol) y se añade un `TextureRect` al lado; el código no lo toca.
+- **Piezas con variantes por dato** (estandarte propio/rival, tono del sello, casilla de la bandeja, barra
+  de fatiga verde/oro/sangre, fondo normal/apagado de la tira): la escena lleva **todas las variantes** como
+  nodos hermanos y el código enseña solo la que toca. Para cambiar el aspecto de una variante, se edita su
+  nodo; las que no se ven en ese momento se ven apagando el ojo de las demás.
+- **Excepciones de color o tamaño que pone el código**, porque dependen del dato: la tinta del texto del
+  sello (un color por tono) y el tamaño de letra de los títulos del estandarte, del bando y del acta,
+  que baja hasta que el texto cabe en el ancho del nodo (parte de la fuente y del tamaño de la escena).
+  Las tiras atenuadas (muerto o expulsado) bajan la opacidad de sus textos, no su color.
+- Al sello lo tuerce el código (giro determinista según el orden de creación); el giro no se guarda en la
+  escena.
+- En la bandeja, el ancho de cada casilla lo reparte el código a partir del ancho del nodo `Fila`.
