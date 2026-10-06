@@ -62,20 +62,14 @@ public partial class BroadcastScreen : Control
 
     private const float CanvasWidth = 1920f;
 
-    /// <summary>Margen entre el borde inferior de las tiras de jugador y el borde del lienzo.</summary>
-    private const float StripBottomMargin = 23f;
-
     /// <summary>
     /// Alto del lienzo lógico. <b>No</b> es una constante (RA-027, tarea 16:9): sale de
     /// <see cref="CanvasWidth"/> por el aspecto real del área lógica (<c>GetViewport().GetVisibleRect()</c>)
     /// en cada <see cref="Build"/> — 1200 a 16:10 (el de siempre, sin cambios), 1080 a 16:9. Todo lo
-    /// anclado al fondo del lienzo (tiras, bandeja) se calcula relativo a este valor, nunca a un número
+    /// anclado al fondo del lienzo (tiras, bandeja: anclas de Retransmision.tscn) queda relativo a este valor, nunca a un número
     /// fijo, para que la composición no se corte cuando el aspecto cambia.
     /// </summary>
     private float _canvasHeight = 1200f;
-
-    /// <summary>Y de las tiras de jugador y la banqueta, pegadas al borde inferior del lienzo real.</summary>
-    private float _stripY;
 
     /// <summary>Ticks lógicos por segundo (RT-020).</summary>
     private const float TicksPerSecond = 15f;
@@ -341,7 +335,6 @@ public partial class BroadcastScreen : Control
         // a 16:10, 1080 a 16:9—, nunca un número fijo. Se lee antes de nada que dependa de ella.
         var viewport = GetViewport().GetVisibleRect().Size;
         _canvasHeight = viewport is { X: > 0f, Y: > 0f } ? CanvasWidth * (viewport.Y / viewport.X) : 1200f;
-        _stripY = _canvasHeight - PlayerStrip.DesignHeight - StripBottomMargin;
 
         Size = new Vector2(CanvasWidth, _canvasHeight);
         Position = Vector2.Zero;
@@ -351,7 +344,10 @@ public partial class BroadcastScreen : Control
         float scale = viewport.X > 0f ? viewport.X / CanvasWidth : 1f;
         Scale = new Vector2(scale, scale);
 
-        Widgets.Panel(this, new Rect2(Vector2.Zero, new Vector2(CanvasWidth, _canvasHeight)), new Color("2a2418"));
+        // El fondo, el campo y el velo se crean aquí y van por DEBAJO de las piezas del pregón, que ya están
+        // en el árbol porque viven en Retransmision.tscn (editables en Godot, CLAUDE.md regla 10): índices 0, 1 y 2.
+        var background = Widgets.Panel(this, new Rect2(Vector2.Zero, new Vector2(CanvasWidth, _canvasHeight)), new Color("2a2418"));
+        MoveChild(background, 0);
 
         BindPlayback();
 
@@ -396,12 +392,13 @@ public partial class BroadcastScreen : Control
             Stadium = (variant ?? DefaultVariant).Stadium,
         };
         AddChild(_pitch3d);
+        MoveChild(_pitch3d, 1);
         _pitch3d.Bind(_trace, _playback.Setup, _catalog, _playback.Result.Events);
         _pitch3d.Marks = _moments.Marks;
         BuildBloodMarks();
 
         // ADR 0151: el velo va justo encima del campo, así que funde el partido y deja a la vista el
-        // tablero y las tiras, que se añaden después.
+        // tablero y las tiras.
         _veil = new ColorRect
         {
             Position = Vector2.Zero,
@@ -411,12 +408,10 @@ public partial class BroadcastScreen : Control
             Visible = false,
         };
         AddChild(_veil);
+        MoveChild(_veil, 2);
         _cut.Bind(_playback.Result.Events, _trace);
 
-        _board = BroadcastBoard.Create();
-        AddChild(_board);
-        _board.Position = new Vector2(0f, 8f);
-        _board.Size = new Vector2(CanvasWidth, BroadcastBoard.DesignHeight);
+        _board = GetNode<BroadcastBoard>("%Tablero");
         _board.SpeedChosen += OnSpeedChosen;
         _board.OrderChosen += OnOrderChosen;
         _board.ConsumableChosen += OnConsumableChosen;
@@ -436,50 +431,20 @@ public partial class BroadcastScreen : Control
         _replayNotice.AddThemeColorOverride("font_outline_color", Pregon.Sable);
         _replayNotice.AddThemeConstantOverride("outline_size", 6);
         AddChild(_replayNotice);
+        MoveChild(_replayNotice, _board.GetIndex() + 1);
 
-        float x0 = (CanvasWidth - ((7 * 232f) + (6 * 12f) + 24f + 150f)) / 2f;
-        for (int i = 0; i < 7; i++)
+        for (int i = 1; i <= 7; i++)
         {
-            var strip = PlayerStrip.Create();
-            AddChild(strip);
-            strip.Position = new Vector2(x0 + (i * 244f), _stripY);
-            strip.Size = new Vector2(PlayerStrip.DesignWidth, PlayerStrip.DesignHeight);
-            _strips.Add(strip);
+            _strips.Add(GetNode<PlayerStrip>($"%Tira{i}"));
         }
 
-        _bench = BenchPlaque.Create();
-        AddChild(_bench);
-        _bench.Position = new Vector2(x0 + (7 * 244f) + 12f, _stripY);
-        _bench.Size = new Vector2(BenchPlaque.DesignWidth, BenchPlaque.DesignHeight);
-
-        _stamp = Stamp.Create();
-        AddChild(_stamp);
-        _stamp.Position = new Vector2(980f, 165f);
-
-        _banner = HeraldBanner.Create();
-        AddChild(_banner);
-        _banner.Position = new Vector2(0f, 150f);
-        _banner.Size = new Vector2(HeraldBanner.DesignWidth, HeraldBanner.DesignHeight);
-
-        _band = ProclamationBand.Create();
-        AddChild(_band);
-        _band.Position = new Vector2(0f, 150f);
-        _band.Size = new Vector2(CanvasWidth, ProclamationBand.DesignHeight);
-
-        _edict = Edict.Create();
-        AddChild(_edict);
-        _edict.Position = new Vector2(0f, 150f);
-        _edict.Size = new Vector2(Edict.DesignWidth, Edict.DesignHeight);
-
-        _record = MatchRecord.Create();
-        AddChild(_record);
-        _record.Position = Vector2.Zero;
-        _record.Size = new Vector2(CanvasWidth, _canvasHeight);
-
-        _tray = DecisionTray.Create();
-        AddChild(_tray);
-        _tray.Position = new Vector2(0f, _canvasHeight - 12f - DecisionTray.DesignHeight);
-        _tray.Size = new Vector2(CanvasWidth, DecisionTray.DesignHeight);
+        _bench = GetNode<BenchPlaque>("%Banquillo");
+        _stamp = GetNode<Stamp>("%Sello");
+        _banner = GetNode<HeraldBanner>("%Estandarte");
+        _band = GetNode<ProclamationBand>("%Banda");
+        _edict = GetNode<Edict>("%Bando");
+        _record = GetNode<MatchRecord>("%Acta");
+        _tray = GetNode<DecisionTray>("%Bandeja");
         _tray.Chosen += OnSubstituteChosen;
         _tray.OptionChosen += OnOptionChosen;
 
@@ -977,7 +942,7 @@ public partial class BroadcastScreen : Control
     private void PositionBanner(Cell cell)
     {
         bool leftHalf = cell.Column < Pitch.Columns / 2f;
-        _banner.Position = new Vector2(leftHalf ? CanvasWidth - HeraldBanner.DesignWidth : 0f, 150f);
+        _banner.Position = new Vector2(leftHalf ? CanvasWidth - _banner.Size.X : 0f, _banner.Position.Y);
     }
 
     /// <summary>
@@ -1004,7 +969,7 @@ public partial class BroadcastScreen : Control
 
     private void ShowKickoffBanner()
     {
-        _banner.Position = new Vector2(0f, 150f);
+        _banner.Position = new Vector2(0f, _banner.Position.Y);
         _banner.Show(
             true,
             UiText.Get("ui.pregon.banner.said"),
