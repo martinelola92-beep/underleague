@@ -294,6 +294,7 @@ public partial class BroadcastScreen : Control
         _residueMoment = result.Frozen ? result.Voice ?? result.Held : null;
 
         ApplyPresentation(result);
+        UpdateCrowd(result);
         UpdateFateBand(result);
         UpdateFateWheel(result);
         UpdateMomentTags(result);
@@ -1168,6 +1169,29 @@ public partial class BroadcastScreen : Control
             roll.Tick,
             result.FateSpin,
             result.FateSettled);
+    }
+
+    private float _crowdExcitement = -1f;
+
+    /// <summary>
+    /// La grada renderizada reacciona a lo que se está contando (pase de arte, 9 oct): brazos en alto en un gol, quieta
+    /// en una muerte, revuelta en la turba. Lee la voz del director, no decide nada (RT-014).
+    /// </summary>
+    private void UpdateCrowd(DirectorFrame result)
+    {
+        float excitement = result.Voice switch
+        {
+            { HasGoal: true } => 0.95f,
+            { Kind: MomentKind.Death } => 0.03f,
+            { Kind: MomentKind.Mob or MomentKind.RefereeLeaves } => 0.75f,
+            { Kind: MomentKind.Fate } => 0.12f,
+            _ => 0.3f,
+        };
+        if (!Mathf.IsEqualApprox(excitement, _crowdExcitement))
+        {
+            _crowdExcitement = excitement;
+            _pitch3d.SetCrowdExcitement(excitement);
+        }
     }
 
     /// <summary>

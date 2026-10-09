@@ -42,44 +42,29 @@ fuente queda anotada aquí.
   `Pregon.DrawParchment`, `WoodTable`, `InkStyleBox`, `InkIcons.Draw`) piden ahí la textura y, si no existe, pintan
   como antes. Ninguna pantalla sabe que hay arte.
 
-## Hecho
+## Hecho (9 oct 2026)
 
-- **Pase de materiales (9 oct)**: papel, madera y brochazo en todas las primitivas; siluetas de game-icons en
-  atributos, puestos, rasgos, estado y pestañas. Capturas `equipo-*.png` (antes en `out/arte/antes/`).
-
-- **Razas en el partido 3D (9 oct)**: las cinco razas con modelo de Quaternius animado con los clips de Mixamo.
-  Antes/después en `out/arte/razas/`; sonda de cerca `Scenes/SondaRazas.tscn` (`Game/screenshots/razas/`).
-
-### Razas: cómo está montado
-
-- **Retargeting de importación** (no en código): `Game/models/retarget/{mixamo,ual}_bone_map.tres` son `BoneMap` a
-  `SkeletonProfileHumanoid`; los `.import` de los clips (`models/soccer/*.fbx.import`) y de los modelos
-  (`models/races/*.gltf.import`) los usan con renombrado de huesos, esqueleto único `GeneralSkeleton`, ejes del perfil
-  (`retarget_method` 1), silueta en T y pistas de posición normalizadas. Las pistas quedan `%GeneralSkeleton:Hips`… en
-  todos; `PlayerModel` usa nombres del perfil (`Hips`, `LeftToes`, `Head`, `LeftHand`, `UpperChest`, `LeftUpperLeg`…).
-- **Preparación** (`out/arte-venv/bin/python tools/arte/razas.py`, determinista): copia los glTF sin normales/ORM, color
-  a ≤1024 px, del cuerpo base sólo cabeza y cuello (el traje tapa el resto), sin la maza del Imp, y pinta en el **alfa**
-  de la textura de ropa la máscara de lo que se tiñe: la camisa del campesino (región UV de `*_Body`), el paño verde del
-  explorador (por tono) y los calzones, collar y cadenas del Imp. Tras regenerar: `godot --headless --path Game --import`
-  y la trampa de los tabuladores.
-- **Material**: `models/races/team_tint.gdshader` (máscara → color de equipo de la cápsula, `Style.TeamOwn/TeamRival`;
-  piel del no-muerto; opacidad BA-K por tramado). En modo silueta el modelo usa el material negro como antes.
-
-| Raza | Piezas | Ancho X/Z | Notas |
-|---|---|---|---|
-| Humano | campesino + cabeza + pelo (rapado / raya / largo, por dorsal) | 1 | pelo teñido por dorsal (castaño, negro, caoba, rubio) |
-| Elfo | explorador (capucha) + cabeza | 0,92 | capucha, capa y túnica del color del equipo |
-| Enano | campesino + cabeza + barba + rapado | 1,15 | pelo y barba pelirrojos/castaños |
-| Orco | Imp, textura verde (`T_Imp_BaseColor_2`) oscurecida | 1,15 | calzones, collar y cadenas del equipo |
-| No-muerto | campesino + cabeza, piel gris verdosa desaturada | 1 | sin pelo |
-
-El alto sigue saliendo de la raza (`bodyRadius` + proporciones de la vista); los anchos y tonos son **provisionales, a
-ojo**. Pendiente: retratos con estos mismos modelos; variante femenina; el portero sólo se distingue por su postura
-(como antes).
+- **Pase de materiales**: papel, madera y brochazo en todas las primitivas; siluetas de game-icons en atributos,
+  puestos, rasgos, estado y pestañas; las pantallas antiguas (Mapa, Ojeo, Mercado, Informe…) con el lenguaje de tinta de
+  Equipo desde los widgets compartidos.
+- **Razas en el partido** (retargeting humanoide de los clips de Mixamo a Quaternius; recetas arriba), figuras a escala
+  de miniatura (×1,45, sólo presentación) y árbitro con figura.
+- **Estilo cómic** (el revisor: «grease pencil, cómic… Cult of the Lamb, Lucky Tower»): luz en tres bandas en modelos y
+  grada (`team_tint.gdshader`, `DiffuseMode.Toon`) y contorno de tinta de pantalla completa por saltos de profundidad
+  que se redibuja a 8 fps (`Game/Art/Shaders/ink_outline.gdshader`).
+- **Estadio**: césped y tierra con grano (ambientCG), grada y muro de madera, banderolas heráldicas, torres.
+- **Público renderizado** (el revisor: «que el público sean renders y no pastillas»): 30 figuras × 3 posturas en un
+  atlas (`Scenes/PublicoRender.tscn` → `tools/arte/publico.py` → `Game/Art/Crowd/`), dibujadas como cuadrados con
+  `crowd.gdshader`; la grada levanta los brazos en los goles y se calla en las muertes.
+- **Retratos renderizados**: 40 bustos (5 razas × 8) de los mismos modelos (`Scenes/RetratosRender.tscn` →
+  `tools/arte/retratos.py` → `Game/Art/Portraits/`), en `Portrait.Draw` con el dibujo por código de reserva.
 
 ## Siguiente
 
-1. **Retratos** renderizados de esos mismos modelos (busto, luz de tres cuartos, contorno de tinta), para que la cara
-   de la plantilla sea la del campo.
-2. **Estadio**: grada de madera, torres, banderolas, césped con textura.
-3. **Objetos** ilustrados y tipografía de titulares más cercana a la de las referencias.
+1. **Que el revisor lo vea**: el salto de lo plano por código a modelos con sombreado de cómic es grande; las caras de
+   Quaternius son de dibujo animado «semirrealista», no de Cult of the Lamb. Si no convencen, la palanca es otra
+   fuente de modelos más «chunky» o pintar a mano encima de los renders.
+2. Dorsal y anillo del suelo todavía pesan más que la figura en el plano general; probar anillo fino y dorsal sólo al
+   seleccionar.
+3. Objetos ilustrados (la bota del berserker de la referencia) y portero con equipación propia.
+4. El no-muerto es un humano gris: falta un modelo propio (KayKit Skeletons, CC0, otro esqueleto).

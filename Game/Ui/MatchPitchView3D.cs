@@ -254,6 +254,14 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// </summary>
     private const string InkOutlinePath = "res://Art/Shaders/ink_outline.gdshader";
 
+    private const string CrowdShaderPath = "res://Art/Shaders/crowd.gdshader";
+
+    /// <summary>El material de la grada renderizada; la pantalla le sube la euforia en los goles (null sin atlas).</summary>
+    private ShaderMaterial? _crowdMaterial;
+
+    /// <summary>Euforia de la grada, 0..1: la proporción de espectadores con los brazos en alto.</summary>
+    public void SetCrowdExcitement(float excitement) => _crowdMaterial?.SetShaderParameter("excitement", Mathf.Clamp(excitement, 0f, 1f));
+
     /// <summary>El contorno de tinta de pantalla completa; null sin el shader.</summary>
     private MeshInstance3D? _inkOutline;
 
@@ -3358,11 +3366,45 @@ public partial class MatchPitchView3D : SubViewportContainer
             DiffuseMode = BaseMaterial3D.DiffuseModeEnum.Toon,
         };
 
+        // Pase de arte (9 oct; el revisor: «quiero que el público sean renders y no pastillas»): con el atlas de figuras
+        // renderizadas (tools/arte/publico.py) cada espectador es un cuadrado con su figura, inclinado hacia la cámara.
+        // Sin el atlas, las pastillas de siempre.
+        var crowdAtlas = Art.Crowd;
+        ShaderMaterial? crowdShader = crowdAtlas is not null && ResourceLoader.Exists(CrowdShaderPath)
+            ? new ShaderMaterial { Shader = GD.Load<Shader>(CrowdShaderPath) }
+            : null;
+        crowdShader?.SetShaderParameter("atlas", crowdAtlas);
+        _crowdMaterial = crowdShader;
+        var figureQuad = new QuadMesh { Size = new Vector2(0.54f, 0.9f), CenterOffset = new Vector3(0f, 0.45f, 0f) };
+
         for (int tier = 0; tier < 5; tier++)
         {
             float z = -1.05f - (tier * 0.62f);
             float y = 0.18f + (tier * 0.36f);
             AddWoodBox(new Vector3(8f, y / 2f, z), new Vector3(StandWidth, y, 0.62f), tier % 2 == 0 ? new Color("8a6a4a") : new Color("9c7a55"));
+
+            if (crowdShader is not null)
+            {
+                int count = (int)(StandWidth / 0.3f);
+                var people = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseCustomData = true, Mesh = figureQuad, InstanceCount = count };
+                for (int k = 0; k < count; k++)
+                {
+                    float x = (8f - (StandWidth / 2f)) + 0.3f + (k * 0.3f) + rng.RandfRange(-0.06f, 0.06f);
+                    float scale = rng.RandfRange(0.9f, 1.08f);
+                    var basis = Basis.FromEuler(new Vector3(Mathf.DegToRad(-35f), 0f, 0f)).Scaled(new Vector3(scale, scale, scale));
+                    people.SetInstanceTransform(k, new Transform3D(basis, new Vector3(x, y, z + rng.RandfRange(-0.1f, 0.1f))));
+
+                    // Figura: raza al azar; color 45 % afición propia, 40 % rival, 15 % neutral.
+                    int race = rng.RandiRange(0, 4);
+                    int variant = rng.RandiRange(0, 1);
+                    float pick = rng.Randf();
+                    int color = pick < 0.45f ? 0 : pick < 0.85f ? 1 : 2;
+                    people.SetInstanceCustomData(k, new Color(((race * 2) + variant) * 3 + color, rng.Randf(), 0f, 0f));
+                }
+
+                _world.AddChild(new MultiMeshInstance3D { Multimesh = people, MaterialOverride = crowdShader, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+                continue;
+            }
 
             var multiMesh = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = body, InstanceCount = (int)(StandWidth / 0.305f) };
             for (int k = 0; k < multiMesh.InstanceCount; k++)
