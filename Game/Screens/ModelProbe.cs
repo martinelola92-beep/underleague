@@ -21,15 +21,18 @@ namespace Underleague.Game.Screens;
 /// </summary>
 public partial class ModelProbe : Node
 {
-    /// <summary>Carpeta a sondear. Todo lo que Godot haya importado como escena.</summary>
-    private const string Folder = "res://models/soccer";
+    /// <summary>Carpeta a sondear por omisión. Todo lo que Godot haya importado como escena.</summary>
+    private const string DefaultFolder = "res://models/soccer";
 
     public override void _Ready()
     {
-        using var dir = DirAccess.Open(Folder);
+        // Otra carpeta como argumento de usuario: `-- res://models/races`.
+        var args = OS.GetCmdlineUserArgs();
+        string folder = args.Length > 0 ? args[0] : DefaultFolder;
+        using var dir = DirAccess.Open(folder);
         if (dir is null)
         {
-            GD.Print($"[sonda] no existe {Folder}");
+            GD.Print($"[sonda] no existe {folder}");
             GetTree().Quit(1);
             return;
         }
@@ -47,7 +50,7 @@ public partial class ModelProbe : Node
         names.Sort();
         foreach (string name in new HashSet<string>(names))
         {
-            Probe($"{Folder}/{name}");
+            Probe($"{folder}/{name}");
         }
 
         GetTree().Quit();
@@ -70,7 +73,7 @@ public partial class ModelProbe : Node
             switch (node)
             {
                 case Skeleton3D skeleton:
-                    GD.Print($"  huesos: {skeleton.GetBoneCount()} (primero '{skeleton.GetBoneName(0)}')");
+                    GD.Print($"  huesos: {skeleton.GetBoneCount()} (primero '{skeleton.GetBoneName(0)}'), motion_scale {skeleton.MotionScale:0.###}, ruta {root.GetPathTo(skeleton)}");
                     break;
 
                 case MeshInstance3D mesh:

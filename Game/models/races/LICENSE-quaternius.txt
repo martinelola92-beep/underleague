@@ -1,0 +1,15 @@
+Modelos de las razas del partido 3D (Game/models/races/), derivados por tools/arte/razas.py de:
+
+  - Universal Base Characters [Standard]            (cabeza del cuerpo base, pelo, barba)
+  - Modular Character Outfits - Fantasy [Standard]  (campesino, explorador)
+  - Bestiary - Dungeon Monsters Kit [Standard]      (Imp)
+
+Autor: Quaternius (https://quaternius.com, https://www.patreon.com/quaternius)
+
+License:
+CC0 1.0 Universal (CC0 1.0)
+Public Domain Dedication
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Cambios: texturas de color reducidas a <= 1024 px, sin mapas de normales/ORM/rugosidad, el cuerpo base recortado
+a cabeza y cuello, la maza del Imp quitada, y la máscara de teñido del equipo en el alfa de las texturas de ropa.

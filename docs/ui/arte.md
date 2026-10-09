@@ -27,7 +27,8 @@ fuente queda anotada aquí.
 |---|---|---|---|
 | Generado (`tools/arte/materiales.py`) | propio | papel, madera, 4 brochazos | `Game/Art/Textures/` |
 | game-icons.net (`tools/arte/iconos.py`) | CC BY 3.0 | 35 siluetas | `Game/Art/Icons/` (+ `CREDITS.md`) |
-| Quaternius: Bestiary (Imp, Puglin), Modular Outfits Fantasy (campesino, explorador), Universal Base Characters (cuerpos, pelo, barba) — tiers *Standard* gratuitos | CC0 | modelos para las razas del partido y retratos | descargado en `out/arte/q/` (sin integrar) |
+| Quaternius: Bestiary (Imp), Modular Outfits Fantasy (`Male_Peasant`, `Male_Ranger`), Universal Base Characters (cabeza de `Superhero_Male`, `Hair_*`, `Hair_Beard`) — tiers *Standard* gratuitos, zips en `out/arte/q/` | CC0 | las cinco razas del partido 3D (`tools/arte/razas.py`) | `Game/models/races/` (8,3 MB, + `LICENSE-quaternius.txt`) |
+| Mixamo «Soccer Game Pack» (clips) | licencia de Mixamo (uso en juegos) | correr, chutar, entrada, caída, portero… para todas las razas | `Game/models/soccer/` |
 
 ## Pipeline
 
@@ -46,13 +47,39 @@ fuente queda anotada aquí.
 - **Pase de materiales (9 oct)**: papel, madera y brochazo en todas las primitivas; siluetas de game-icons en
   atributos, puestos, rasgos, estado y pestañas. Capturas `equipo-*.png` (antes en `out/arte/antes/`).
 
+- **Razas en el partido 3D (9 oct)**: las cinco razas con modelo de Quaternius animado con los clips de Mixamo.
+  Antes/después en `out/arte/razas/`; sonda de cerca `Scenes/SondaRazas.tscn` (`Game/screenshots/razas/`).
+
+### Razas: cómo está montado
+
+- **Retargeting de importación** (no en código): `Game/models/retarget/{mixamo,ual}_bone_map.tres` son `BoneMap` a
+  `SkeletonProfileHumanoid`; los `.import` de los clips (`models/soccer/*.fbx.import`) y de los modelos
+  (`models/races/*.gltf.import`) los usan con renombrado de huesos, esqueleto único `GeneralSkeleton`, ejes del perfil
+  (`retarget_method` 1), silueta en T y pistas de posición normalizadas. Las pistas quedan `%GeneralSkeleton:Hips`… en
+  todos; `PlayerModel` usa nombres del perfil (`Hips`, `LeftToes`, `Head`, `LeftHand`, `UpperChest`, `LeftUpperLeg`…).
+- **Preparación** (`out/arte-venv/bin/python tools/arte/razas.py`, determinista): copia los glTF sin normales/ORM, color
+  a ≤1024 px, del cuerpo base sólo cabeza y cuello (el traje tapa el resto), sin la maza del Imp, y pinta en el **alfa**
+  de la textura de ropa la máscara de lo que se tiñe: la camisa del campesino (región UV de `*_Body`), el paño verde del
+  explorador (por tono) y los calzones, collar y cadenas del Imp. Tras regenerar: `godot --headless --path Game --import`
+  y la trampa de los tabuladores.
+- **Material**: `models/races/team_tint.gdshader` (máscara → color de equipo de la cápsula, `Style.TeamOwn/TeamRival`;
+  piel del no-muerto; opacidad BA-K por tramado). En modo silueta el modelo usa el material negro como antes.
+
+| Raza | Piezas | Ancho X/Z | Notas |
+|---|---|---|---|
+| Humano | campesino + cabeza + pelo (rapado / raya / largo, por dorsal) | 1 | pelo teñido por dorsal (castaño, negro, caoba, rubio) |
+| Elfo | explorador (capucha) + cabeza | 0,92 | capucha, capa y túnica del color del equipo |
+| Enano | campesino + cabeza + barba + rapado | 1,15 | pelo y barba pelirrojos/castaños |
+| Orco | Imp, textura verde (`T_Imp_BaseColor_2`) oscurecida | 1,15 | calzones, collar y cadenas del equipo |
+| No-muerto | campesino + cabeza, piel gris verdosa desaturada | 1 | sin pelo |
+
+El alto sigue saliendo de la raza (`bodyRadius` + proporciones de la vista); los anchos y tonos son **provisionales, a
+ojo**. Pendiente: retratos con estos mismos modelos; variante femenina; el portero sólo se distingue por su postura
+(como antes).
+
 ## Siguiente
 
-1. **Razas en el partido** con los modelos de Quaternius: retargeting por `SkeletonProfileHumanoid` para que los clips
-   de fútbol de Mixamo animen el esqueleto UAL (hoy sólo los humanos tienen modelo, el resto son cápsulas). Recetas:
-   humano = cuerpo base + campesino; elfo = explorador con capucha, más esbelto; enano = cuerpo base achatado + barba;
-   orco = Imp verde, más ancho; no-muerto = cuerpo base gris verdoso. Camiseta teñida del color del equipo.
-2. **Retratos** renderizados de esos mismos modelos (busto, luz de tres cuartos, contorno de tinta), para que la cara
+1. **Retratos** renderizados de esos mismos modelos (busto, luz de tres cuartos, contorno de tinta), para que la cara
    de la plantilla sea la del campo.
-3. **Estadio**: grada de madera, torres, banderolas, césped con textura.
-4. **Objetos** ilustrados y tipografía de titulares más cercana a la de las referencias.
+2. **Estadio**: grada de madera, torres, banderolas, césped con textura.
+3. **Objetos** ilustrados y tipografía de titulares más cercana a la de las referencias.
