@@ -41,5 +41,19 @@ No hizo falta Tripo ni Mixamo: todo se hace desde WSL con herramientas gratuitas
 - **`PlayerModel`**: cualquier raza con `Game/models/races/<raza>_gen.glb` lo usa (receta `gen_<raza>`), sin escalar
   los huesos por raza, porque las proporciones ya vienen dibujadas. El rival lleva `<textura>_rival.png`
   (`rival_textura.py`).
-- **Pendiente**: rehacer el humano con cuota limpia (motas del panel), las carreras demasiado agachadas (pose de
-  reposo frente a la de los clips) y el árbitro.
+- **Material** (`Game/Art/Shaders/generated_figure.gdshader`): la textura ya trae el dibujo, así que se pinta sin luz de
+  escena. Con la cámara cenital de la retransmisión, los humanos salían casi negros con la luz normal. Lleva dos tonos
+  planos con una luz fija, tinta en los bordes interiores y algo de luz y color en los oscuros. El árbitro es el humano
+  generado con `<textura>_referee.png` (`rival_textura.py … arbitro`).
+- **«Corren agachados»** (medido el 9 oct, con `Running.fbx` sobre el humano generado y sobre `peasant_male`):
+  - **REJECTED** — pose de reposo en zigzag. Se probaron `straight_legs`/`straight_spine` en `rig_blender.py`: apenas
+    cambia, y en el orco y el no-muerto estropea los pesos. Queda como opción, apagada por defecto, y los modelos
+    siguen con el rig anterior.
+  - **REJECTED** — ejes de reposo. Tras reasignar coinciden con los de Quaternius.
+  - **CONFIRMED** — la animación es la misma: la cadera baja a 0,88 de su altura de reposo frente a 0,86, y la rodilla
+    pasa por 53°/80°/125° frente a 46°/74°/118°.
+  - Lo que cambia son las **proporciones**: la cadera está al 28 % de la altura en el humano generado y al 53 % en
+    Quaternius. La misma flexión sobre piernas cortas y un torso grande se lee como agachado.
+  - Remedio posible, sin decidir: suavizar la flexión de piernas o la inclinación del clip en las razas de piernas
+    cortas.
+- **Pendiente**: rehacer el humano con cuota limpia (motas del panel).

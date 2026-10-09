@@ -20,7 +20,8 @@ HEIGHT = 1.8
 # Fracciones del alto por defecto (orco de la hoja de modelo: piernas cortas, brazos largos). Se pasan como
 # "clave=valor,..." en el tercer argumento para otras razas.
 F = dict(head_top=1.0, neck=0.80, shoulder=0.76, chest=0.66, spine=0.56, hips=0.46, elbow=0.56, wrist=0.40,
-         fingertip=0.33, knee=0.25, ankle=0.06, straight_legs=0)
+         fingertip=0.33, knee=0.25, ankle=0.06, straight_legs=0,
+         straight_spine=0)
 if len(argv) > 2:
     for pair in argv[2].split(","):
         k, v = pair.split("=")
@@ -86,6 +87,11 @@ joints = {
     "Head": center(z(F["neck"] + 0.04)),
     "HeadTop": center(z(F["head_top"] - 0.005)),
 }
+if F.get("straight_spine", 0):
+    # Columna recta de la cadera a la cabeza: el centroide de cada banda va adelante y atrás con la barriga, la barba
+    # o la joroba, y una columna en zigzag en reposo se lleva la animación hacia delante.
+    for name in ("Hips", "Spine", "Chest", "UpperChest", "Neck", "Head", "HeadTop"):
+        joints[name] = Vector((0.0, joints["Hips"].y, joints[name].z))
 for side, sign in (("Left", 1), ("Right", -1)):
     # Ojo: en Blender, con el personaje mirando a -Y, su izquierda está en +X.
     sh = side_centroid(z(F["shoulder"]), sign, outer=True)
@@ -101,8 +107,11 @@ for side, sign in (("Left", 1), ("Right", -1)):
         # centroide hacia fuera o hacia dentro y dejan la pierna en zigzag (enano agachado hasta en reposo, 9 oct).
         # El tobillo es lo único que hay a su altura, así que manda la línea de la pierna.
         knee = side_centroid(z(F["knee"]), sign)
-        joints[f"{side}UpperLeg"] = Vector((ankle.x * 0.9, joints["Hips"].y, z(F["hips"] - 0.03)))
-        joints[f"{side}LowerLeg"] = Vector((ankle.x * 0.95, knee.y, z(F["knee"])))
+        # Y en línea recta de la cadera al tobillo también de perfil: con la rodilla atrasada (el centroide de la banda)
+        # la pierna de reposo ya va flexionada y la animación suma su flexión encima (carrera agachada, 9 oct).
+        hip_y = ankle.y
+        joints[f"{side}UpperLeg"] = Vector((ankle.x * 0.9, hip_y, z(F["hips"] - 0.03)))
+        joints[f"{side}LowerLeg"] = Vector((ankle.x * 0.95, hip_y, z(F["knee"])))
     else:
         hip = side_centroid(z(F["hips"] - 0.04), sign)
         joints[f"{side}UpperLeg"] = Vector((hip.x * 0.8, joints["Hips"].y, z(F["hips"] - 0.03)))
