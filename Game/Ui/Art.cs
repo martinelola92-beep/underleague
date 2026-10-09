@@ -34,6 +34,9 @@ public static class Art
     /// <summary>El icono de silueta de un glifo (blanco con alfa), o null si ese glifo sigue dibujándose por código.</summary>
     public static Texture2D? Icon(string glyph) => Load($"res://Art/Icons/{glyph}.png");
 
+    /// <summary>Busto renderizado de una raza (<c>tools/arte/retratos.py</c>), o null si no está.</summary>
+    public static Texture2D? Portrait(string race, int variant) => Load($"res://Art/Portraits/{race}_{variant}.png");
+
     private static Texture2D? Load(string path)
     {
         if (!Cache.TryGetValue(path, out var texture))

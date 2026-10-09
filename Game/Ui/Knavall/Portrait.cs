@@ -57,8 +57,18 @@ public static class Portrait
         float scale = side / 100f;
         t.DrawSetTransform(square.Position, 0f, new Vector2(scale, scale));
         Backdrop(t, race, playerId);
-        Shoulders(t, position, race);
-        Face(t, race, playerId);
+
+        // Pase de arte (9 oct): el busto renderizado del mismo modelo que juega en el campo (tools/arte/retratos.py),
+        // con su contorno de tinta. Sin el fichero, el dibujo por código de siempre.
+        if (Rendered(race, playerId) is { } bust)
+        {
+            t.DrawTextureRect(bust, new Rect2(0f, 0f, 100f, 100f), false);
+        }
+        else
+        {
+            Shoulders(t, position, race);
+            Face(t, race, playerId);
+        }
 
         if (dimmed)
         {
@@ -94,6 +104,23 @@ public static class Portrait
         float badgeRadius = radius * 0.4f;
         Ink.Disc(t, badge, badgeRadius, ring, 1.6f);
         InkIcons.Draw(t, InkIcons.Of(position), badge, badgeRadius * 1.5f);
+    }
+
+    private const int RenderedVariants = 8;
+
+    /// <summary>El busto renderizado de esta raza para este jugador (variante por id), o null si no hay arte.</summary>
+    private static Texture2D? Rendered(Race race, int playerId)
+    {
+        string? key = race switch
+        {
+            Race.Human => "human",
+            Race.Elf => "elf",
+            Race.Dwarf => "dwarf",
+            Race.Orc => "orc",
+            Race.Undead => "undead",
+            _ => null,
+        };
+        return key is null ? null : Art.Portrait(key, ((playerId % RenderedVariants) + RenderedVariants) % RenderedVariants);
     }
 
     /// <summary>La cabeza de la raza con las variaciones del individuo, en la caja de 100x100.</summary>

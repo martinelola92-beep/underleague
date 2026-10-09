@@ -252,6 +252,11 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// decide nada del partido (RT-014): sigue el balón a distancia y reacciona SOLO a
     /// <see cref="EventType.Foul"/> y <see cref="EventType.RefereeLeaves"/>.
     /// </summary>
+    private const string InkOutlinePath = "res://Art/Shaders/ink_outline.gdshader";
+
+    /// <summary>El contorno de tinta de pantalla completa; null sin el shader.</summary>
+    private MeshInstance3D? _inkOutline;
+
     private MeshInstance3D _referee = null!;
 
     /// <summary>Pase de arte (9 oct): el árbitro con figura de humano vestido de negro; null si falta el modelo.</summary>
@@ -544,6 +549,7 @@ public partial class MatchPitchView3D : SubViewportContainer
             VertexColorUseAsAlbedo = true,
             Roughness = 1f,
             SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled,
+            DiffuseMode = BaseMaterial3D.DiffuseModeEnum.Toon,
         };
 
         for (int side = 0; side < 2; side++)
@@ -943,6 +949,21 @@ public partial class MatchPitchView3D : SubViewportContainer
             Current = true,
         };
         _world.AddChild(_camera);
+
+        // Pase de arte (9 oct): contorno de tinta que hierve (Game/Art/Shaders/ink_outline.gdshader), un cuadrado de
+        // pantalla completa colgado de la cámara. Sin el shader en disco, la vista de siempre.
+        if (ResourceLoader.Exists(InkOutlinePath))
+        {
+            _inkOutline = new MeshInstance3D
+            {
+                Mesh = new QuadMesh { Size = new Vector2(2f, 2f) },
+                MaterialOverride = new ShaderMaterial { Shader = GD.Load<Shader>(InkOutlinePath) },
+                ExtraCullMargin = 16384f,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                Position = new Vector3(0f, 0f, -1f),
+            };
+            _camera.AddChild(_inkOutline);
+        }
 
         // RA-005: la luz viene de arriba a la izquierda y no se mueve. La sombra en el suelo es lo que
         // dice en qué casilla está cada jugador (RA-008), así que es parte del entregable.
@@ -1931,6 +1952,12 @@ public partial class MatchPitchView3D : SubViewportContainer
         }
 
         _appliedSilhouette = SilhouetteMode;
+        if (_inkOutline is not null)
+        {
+            // La silueta (RA-002) es una prueba de forma en blanco y negro: sin tinta añadida.
+            _inkOutline.Visible = !SilhouetteMode;
+        }
+
         _environment.Environment = BuildEnvironment(SilhouetteMode);
         _sun.LightEnergy = SilhouetteMode ? 0.5f : 0.85f;
 
@@ -3328,6 +3355,7 @@ public partial class MatchPitchView3D : SubViewportContainer
             VertexColorUseAsAlbedo = true,
             Roughness = 1f,
             SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled,
+            DiffuseMode = BaseMaterial3D.DiffuseModeEnum.Toon,
         };
 
         for (int tier = 0; tier < 5; tier++)
@@ -3419,6 +3447,7 @@ public partial class MatchPitchView3D : SubViewportContainer
                 Uv1Scale = new Vector3(0.35f, 0.35f, 0.35f),
                 Roughness = 1f,
                 SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled,
+                DiffuseMode = BaseMaterial3D.DiffuseModeEnum.Toon,
             },
             Position = center,
             CastShadow = GeometryInstance3D.ShadowCastingSetting.On,
@@ -3598,7 +3627,7 @@ public partial class MatchPitchView3D : SubViewportContainer
         _world.AddChild(new MeshInstance3D
         {
             Mesh = new BoxMesh { Size = size },
-            MaterialOverride = new StandardMaterial3D { AlbedoColor = color, Roughness = 1f, SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled },
+            MaterialOverride = new StandardMaterial3D { AlbedoColor = color, Roughness = 1f, SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled, DiffuseMode = BaseMaterial3D.DiffuseModeEnum.Toon },
             Position = center,
             CastShadow = shadow ? GeometryInstance3D.ShadowCastingSetting.On : GeometryInstance3D.ShadowCastingSetting.Off,
         });

@@ -35,7 +35,7 @@ fuente queda anotada aquí.
 - `out/arte-venv/bin/python tools/arte/materiales.py` — mapas de detalle en gris (media ~0,93) que la interfaz
   multiplica por el color de la paleta: el tono lo decide el código, el grano la textura. Deterministas.
 - `out/arte-venv/bin/python tools/arte/iconos.py` — rasteriza los glifos de silueta a 128 px blancos (se tiñen).
-- `godot --headless --path Game --import` tras añadir ficheros, antes de capturar. **Trampa (9 oct):** abre el editor y
+- `tools/arte/importar.sh` tras añadir ficheros, antes de capturar (importa y deshace lo de abajo). **Trampa (9 oct):** el import abre el editor y
   re-guarda `.cs` cambiando espacios por tabuladores (se coló `MatchPitchView3D.cs` entero en un commit). Después de
   importar, `git diff -w --stat` y `git checkout -- <ruta>` de todo `.cs` que sólo cambie en blanco.
 - **Un único punto de entrada en el código**: `Game/Ui/Art.cs`. Las primitivas (`Ink.Slab/Sheet/Plank/Brush`,

@@ -4,6 +4,8 @@
 // - La piel del no-muerto: desaturada y multiplicada por un gris verdoso.
 // - La atenuación del corte de teletransporte (BA-K) va por tramado (alpha hash): sigue siendo opaco, sin ordenar.
 // PlayerModel crea una variante con cull_disabled (sustituyendo el texto) para el pelo y las piezas de doble cara.
+// - Pase de arte (9 oct, «estilo grease pencil, cómic… Cult of the Lamb, Lucky Tower»): luz en tres bandas planas y un
+//   filo de luz en el contorno, en vez del degradado de un render. El contorno de tinta lo pone la vista (InkOutline).
 shader_type spatial;
 render_mode cull_back, specular_disabled, shadows_disabled;
 
@@ -37,3 +39,14 @@ void fragment() {
 	ALPHA = opacity;
 	ALPHA_HASH_SCALE = 1.0;
 }
+
+// Sombreado de cómic: tres bandas (luz, media, sombra) con el borde entre ellas un poco suave para que no rasque, y la
+// sombra proyectada respetada (ATTENUATION). Más un filo de contraluz cálido en el borde de la silueta.
+void light() {
+	float ndl = dot(NORMAL, LIGHT) * ATTENUATION;
+	float band = smoothstep(0.28, 0.34, ndl) * 0.6 + smoothstep(-0.12, -0.06, ndl) * 0.4;
+	DIFFUSE_LIGHT += LIGHT_COLOR * band;
+	float rim = smoothstep(0.62, 0.7, 1.0 - dot(NORMAL, VIEW)) * smoothstep(-0.2, 0.2, ndl);
+	DIFFUSE_LIGHT += LIGHT_COLOR * rim * 0.25;
+}
+
