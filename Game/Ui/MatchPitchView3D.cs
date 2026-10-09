@@ -299,8 +299,25 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// <summary>A cuántas casillas del balón se coloca, por el lado de la banda más cercana (ADR 0158 §6).</summary>
     private const float RefereeOffsetCells = 3f;
 
-    /// <summary>Suavizado exponencial del seguimiento, por segundo real: cuanto más alto, más pegado al balón.</summary>
+    /// <summary>Suavizado exponencial del seguimiento, por segundo de PARTIDO: cuanto más alto, más pegado al balón.</summary>
     private const float RefereeSmoothing = 5f;
+
+    // BX-12 («el árbitro se teletransporta demasiado»). Medido con 40 partidos de referencia (sonda desechable, 9 oct):
+    // sin esto el objetivo cambiaba de banda 28,5 veces por partido (cada vez que el balón cruzaba la fila central, un
+    // salto de seis filas) y el árbitro iba más rápido que el p99 de los jugadores (2,81 c/s) el 32 % del tiempo, con
+    // p95 de 13 c/s y máximo de 52, porque perseguía también pases y tiros. Con las tres cifras de abajo: 9,5 cambios
+    // de banda, nunca más rápido que un jugador, mediana de 1 c/s (anda) y a 2,6 casillas del balón de mediana (p95 4,2).
+
+    /// <summary>Cuántas filas tiene que meterse el balón en la otra mitad para que el árbitro cambie de banda.</summary>
+    private const float RefereeSideMargin = 2f;
+
+    /// <summary>Velocidad máxima del árbitro, en casillas por segundo de partido: el p99 medido de los jugadores.</summary>
+    private const float RefereeMaxSpeed = 2.8f;
+
+    /// <summary>A menos de esto de su sitio no se mueve: no sigue cada toque del balón.</summary>
+    private const float RefereeDeadZone = 1f;
+
+    private float _refereeSide;
 
     private Vector2 _refereePosition;
     private bool _refereePositionSet;
@@ -2199,7 +2216,17 @@ public partial class MatchPitchView3D : SubViewportContainer
         _referee.RotationDegrees = Vector3.Zero;
 
         var ball = trace.BallAt(frame);
-        var target = RefereeTargetFor(ball);
+        const float CenterRow = (Pitch.Rows - 1) / 2f;
+        if (!_refereePositionSet || snap || _refereeSide == 0f)
+        {
+            _refereeSide = ball.Y <= CenterRow ? -1f : 1f;
+        }
+        else if (_refereeSide < 0f ? ball.Y > CenterRow + RefereeSideMargin : ball.Y < CenterRow - RefereeSideMargin)
+        {
+            _refereeSide = -_refereeSide;
+        }
+
+        var target = RefereeTargetFor(ball, _refereeSide);
 
         if (!_refereePositionSet || snap)
         {
@@ -2208,8 +2235,16 @@ public partial class MatchPitchView3D : SubViewportContainer
         }
         else
         {
-            float t = 1f - Mathf.Exp(-RefereeSmoothing * Mathf.Max(delta, 0f));
-            _refereePosition = _refereePosition.Lerp(target, t);
+            // Con el reloj del PARTIDO (H6): congelada la imagen, quieto; a x4, cuatro veces más rápido, como los jugadores.
+            float simDelta = Mathf.Max(delta, 0f) * _playbackRate;
+            var toTarget = target - _refereePosition;
+            float distance = toTarget.Length();
+            if (distance > RefereeDeadZone && simDelta > 0f)
+            {
+                var step = toTarget * (1f - (RefereeDeadZone / distance)) * (1f - Mathf.Exp(-RefereeSmoothing * simDelta));
+                float maxStep = RefereeMaxSpeed * simDelta;
+                _refereePosition += step.Length() > maxStep ? step.Normalized() * maxStep : step;
+            }
         }
 
         ApplyRefereeCue(trace, frame, delta);
@@ -2225,7 +2260,8 @@ public partial class MatchPitchView3D : SubViewportContainer
             return;
         }
 
-        var velocity = snap || delta <= 0f ? Vector2.Zero : (_refereePosition - _refereeLastDrawn) / delta;
+        // Casillas por segundo de PARTIDO, que es lo que espera Pose (a x4 el paso real es cuatro veces mayor).
+        var velocity = snap || delta <= 0f || _playbackRate <= 0f ? Vector2.Zero : (_refereePosition - _refereeLastDrawn) / (delta * _playbackRate);
         _refereeLastDrawn = _refereePosition;
         var toBall = new Vector2(ball.X, ball.Y) - _refereePosition;
         var facing = velocity.LengthSquared() > 0.04f ? velocity : toBall;
@@ -2234,13 +2270,11 @@ public partial class MatchPitchView3D : SubViewportContainer
 
     /// <summary>
     /// A qué casilla se coloca el árbitro para un balón dado: a la altura del balón en la columna, y
-    /// <see cref="RefereeOffsetCells"/> filas hacia la banda más cercana -la mitad del campo en la que ya
-    /// está el balón, ADR 0158 §6-, acotado dentro del campo.
+    /// <see cref="RefereeOffsetCells"/> filas hacia su banda (<paramref name="side"/>, −1 o 1: la mitad del campo en la
+    /// que está el balón, ADR 0158 §6, con la histéresis de BX-12), acotado dentro del campo.
     /// </summary>
-    private static Vector2 RefereeTargetFor(Vec2 ball)
+    private static Vector2 RefereeTargetFor(Vec2 ball, float side)
     {
-        const float CenterRow = (Pitch.Rows - 1) / 2f;
-        float side = ball.Y <= CenterRow ? -1f : 1f;
         float row = Mathf.Clamp(ball.Y + (side * RefereeOffsetCells), 0f, Pitch.Rows - 1);
         float column = Mathf.Clamp(ball.X, 0f, Pitch.Columns - 1);
         return new Vector2(column, row);

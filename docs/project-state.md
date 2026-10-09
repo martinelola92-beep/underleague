@@ -14,7 +14,7 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Decisión del revisor (9 oct):** Claude crea o descarga arte de mayor calidad (`CLAUDE.md` regla 10, nueva) con
 referencias pintadas y este estilo: *«grease pencil, cómic… Cult of the Lamb, Lucky Tower»*; y *«que el público sean
 renders y no pastillas»*. Todo lo hecho, las fuentes y licencias, el pipeline (`tools/arte/`) y lo pendiente:
-**`docs/ui/arte.md`**. `main` en `40066f6`.
+**`docs/ui/arte.md`**.
 
 - **Hecho, arte**: materiales (papel, madera, brocha) e iconos de game-icons en todas las pantallas; las cinco razas
   con modelo animado en el partido (Quaternius CC0, retargeting de los clips de Mixamo); sombreado de cómic y tinta que
@@ -22,6 +22,13 @@ renders y no pastillas»*. Todo lo hecho, las fuentes y licencias, el pipeline (
 - **Hecho, BX** (`docs/pendientes/BX-playtest-3oct.md`): BX-14 reloj de 90' (la barra iba ~30 s por delante del
   pitido, CONFIRMED); BX-15..18 por la **ADR 0192** (pausa tras la caída con carteles de quién es quién, ruleta del
   destino, sellos y pausas más largos, mezcla de gritos), con revisión independiente y sus 8 arreglos; 1.965 tests.
+- **Hecho, arte (tarde y noche del 9 oct)**:
+  - Retratos ilustrados con Nano Banana (~2,2 € de los 10 € del revisor; **no gastar más sin su permiso**).
+  - Las cinco razas del partido son **modelos generados desde sus hojas de modelo**: TRELLIS y Hunyuan3D-2 (Spaces
+    gratuitos de Hugging Face) con rig automático en Blender sin interfaz.
+  - Material propio para esos modelos (`generated_figure.gdshader`) y árbitro humano generado vestido de negro.
+  - Detalle, cifras y lo medido sobre la «carrera agachada» (es de proporciones, CONFIRMED): **`docs/ui/modelos-3d.md`**.
+  - El prototipo 2D de figuras de papel queda apagado, de reserva.
 - **Trampa nueva**: importar recursos abre el editor, que re-sangra los `.cs` con tabuladores. Usa
   `tools/arte/importar.sh`, nunca `godot --import` a pelo.
 - **Siguiente paso**: que el revisor juegue una build (`tools/export-windows.sh`) y diga (1) si el estilo 3D le vale o

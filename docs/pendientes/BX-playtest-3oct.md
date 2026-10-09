@@ -21,6 +21,22 @@ Capturas: `capturas/playtest-3oct-saque-portero.png` (saque de puerta al centro,
 - **BX-10** A menudo el balón pasa al lado de un jugador solo y no lo coge (probabilidad de captura o intercepción).
 - **BX-11** ¿Puede lesionarse gravemente un jugador en el minuto 0?
 - **BX-12** El árbitro se teletransporta demasiado; no debería molestar tanto.
+  **Cerrada (9 oct), sólo `/Game`.** El árbitro no existe en `/Sim`: `MatchPitchView3D.ApplyReferee` lo pone 3 filas
+  hacia la banda más cercana al balón, con un suavizado exponencial. Hipótesis:
+  - (H1) **CONFIRMED** — el objetivo cambia de banda cada vez que el balón cruza la fila central, un salto de seis filas.
+  - (H2) **CONFIRMED** — el seguimiento no tiene tope de velocidad.
+  - (H3) colocación sin suavizar al saltar en la repetición: no medida, no hizo falta.
+
+  Medición: sonda desechable sobre 40 partidos de referencia, que repite el seguimiento a 60 fps.
+  - Antes: **28,5 cambios de banda por partido**; el árbitro más rápido que el p99 de los jugadores (2,81 c/s) el
+    **32 %** del tiempo, con p95 de 13 c/s y máximo de 52, porque también perseguía pases y tiros.
+  - Arreglo: histéresis (cambia de banda si el balón entra 2 filas en la otra mitad), tope de 2,8 c/s (el p99 de los
+    jugadores) y zona muerta de 1 casilla, todo con el reloj del partido. Antes iba con el real y se movía con la
+    imagen congelada.
+  - Después: 9,5 cambios por partido, nunca más rápido que un jugador, mediana de 1 c/s y a 2,6 casillas del balón
+    (p95 4,2).
+  - Variantes medidas y descartadas: margen 1,5 con tope 3 o 3,5 (12,6 cambios, corre a tope casi siempre); zona
+    muerta 1,5 (se queda más lejos, p95 4,4).
 - **BX-13** Sigue habiendo stutter, sobre todo cuando los jugadores reculan tras un ataque y pasan a defender.
 
 ## Paquete 3 — Sensación del partido: timing, lectura, sonido (`/Game`, diseño)
