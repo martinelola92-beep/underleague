@@ -470,6 +470,9 @@ public sealed partial class PlayerModel : Node3D
         {
             Race.Elf => ("elf", new[] { P("ranger_male"), P("head_male") }, 0.92f, null),
             Race.Dwarf => ("dwarf", new[] { P("peasant_male"), P("head_male"), P("hair_beard"), P("hair_buzzed") }, 1.15f, null),
+            // 9 oct: el orco generado desde su hoja de modelo (TRELLIS + rig automático en Blender, docs/ui/modelos-3d.md);
+            // si no está, el Imp de Quaternius.
+            Race.Orc when ResourceLoader.Exists($"{RacesFolder}/orc_gen.glb") => ("gen_orc", new[] { $"{RacesFolder}/orc_gen.glb" }, 1f, null),
             Race.Orc => ("orc", new[] { P("imp") }, 1.15f, null),
             Race.Undead => ("undead", new[] { P("peasant_male"), P("head_male") }, 1f, new Color(0.36f, 0.45f, 0.33f)),
             _ => ("human_" + (variant % hairs.Length), new[] { P("peasant_male"), P("head_male"), P(hairs[Math.Abs(variant) % hairs.Length]) }, 1f, null),
@@ -710,6 +713,15 @@ public sealed partial class PlayerModel : Node3D
         }
 
         _dressed.Clear();
+        // Modelos generados desde la ilustración (9 oct): su propio material (la luz por bandas los quemaba) y, en el rival, la textura
+        // con la camiseta ya virada a rojo (tools/arte/rival_textura.py). No pasan por el shader de teñido: su textura ya
+        // trae el sombreado pintado y el teñido por máscara no aplica.
+        if (_rig.Key.StartsWith("gen_", StringComparison.Ordinal))
+        {
+            DressGenerated(team);
+            return;
+        }
+
         foreach (var mesh in Meshes(this))
         {
             mesh.MaterialOverride = null;
@@ -721,6 +733,7 @@ public sealed partial class PlayerModel : Node3D
             for (int surface = 0; surface < mesh.Mesh.GetSurfaceCount(); surface++)
             {
                 var source = mesh.Mesh.SurfaceGetMaterial(surface) as BaseMaterial3D;
+
                 string name = source?.ResourceName ?? string.Empty;
                 bool twoSided = source is not null && source.CullMode == BaseMaterial3D.CullModeEnum.Disabled;
                 var material = new ShaderMaterial { Shader = twoSided ? _tintShaderTwoSided : _tintShader };
@@ -740,6 +753,11 @@ public sealed partial class PlayerModel : Node3D
                 }
 
                 material.SetShaderParameter("tint_mask", Array.IndexOf(DyedMaterials, name) >= 0);
+
+                // Modelo generado desde la ilustración: trae la camiseta azul pintada; el rival la vira a rojo por tono.
+                bool generated = _rig.Key.StartsWith("gen_", StringComparison.Ordinal);
+                material.SetShaderParameter("hue_team", generated && team.R > team.B);
+                material.SetShaderParameter("baked", generated);
                 material.SetShaderParameter("team_color", team);
                 bool skin = _rig.Skin is not null && Array.IndexOf(SkinMaterials, name) >= 0;
                 material.SetShaderParameter("skin", skin);
@@ -751,6 +769,42 @@ public sealed partial class PlayerModel : Node3D
                 material.SetShaderParameter("opacity", _opacity);
                 mesh.SetSurfaceOverrideMaterial(surface, material);
                 _dressed.Add(material);
+            }
+        }
+    }
+
+    private void DressGenerated(Color team)
+    {
+        bool rival = team.R > team.B;
+        foreach (var mesh in Meshes(this))
+        {
+            mesh.MaterialOverride = null;
+            if (mesh.Mesh is null)
+            {
+                continue;
+            }
+
+            for (int surface = 0; surface < mesh.Mesh.GetSurfaceCount(); surface++)
+            {
+                if (mesh.Mesh.SurfaceGetMaterial(surface) is not BaseMaterial3D source)
+                {
+                    continue;
+                }
+
+                var material = (BaseMaterial3D)source.Duplicate();
+                material.SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled;
+                material.Roughness = 1f;
+                material.Metallic = 0f;
+                if (rival && source.AlbedoTexture?.ResourcePath is { Length: > 0 } path)
+                {
+                    string rivalPath = path[..^4] + "_rival.png";
+                    if (ResourceLoader.Exists(rivalPath))
+                    {
+                        material.AlbedoTexture = GD.Load<Texture2D>(rivalPath);
+                    }
+                }
+
+                mesh.SetSurfaceOverrideMaterial(surface, material);
             }
         }
     }
