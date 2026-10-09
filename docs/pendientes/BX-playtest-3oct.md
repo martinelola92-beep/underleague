@@ -17,6 +17,13 @@ Capturas: `capturas/playtest-3oct-saque-portero.png` (saque de puerta al centro,
 ## Paquete 2 — Conducta en el campo (`/Sim`)
 - **BX-7** En una turba, el delantero se queda «bloqueado» sin poder volver a su campo porque el saque tarda mucho.
 - **BX-8** El portero saca de puerta sin criterio: lanza el balón al centro, hacia los rivales, en vez de buscar a un compañero abierto. Captura.
+  **Ficha: [BX-8](BX-8.md). Diagnosticada (10 oct), arreglo en la rama `bx8-saque-de-puerta`, pendiente de decisión del
+  revisor.** El portero despejaba el 89 % de los saques y el rival se quedaba el 92 %. Dos causas CONFIRMED:
+  - el bono de peligro del despeje (+620) se cobraba con el balón muerto;
+  - su «pase corto» no tenía alcance.
+
+  Con el arreglo conserva el 38 %, pero el jefe final se endurece (puerta roja, dos semillas). Falta decidir el tope
+  del pase largo del portero.
 - **BX-9** Al portero a veces le cuesta coger el balón con las manos: se queda unos ticks con él en los pies.
 - **BX-10** A menudo el balón pasa al lado de un jugador solo y no lo coge (probabilidad de captura o intercepción).
 - **BX-11** ¿Puede lesionarse gravemente un jugador en el minuto 0?
