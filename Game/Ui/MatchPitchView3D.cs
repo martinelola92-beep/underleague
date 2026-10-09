@@ -174,7 +174,7 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// Prototipo 2D (9 oct 2026): los jugadores como figuras de papel ilustradas en lugar de modelos 3D. Activado por
     /// defecto para que el revisor lo vea; a <c>false</c>, la vista de antes.
     /// </summary>
-    public static bool PaperFigures { get; set; } = true;
+    public static bool PaperFigures { get; set; } = false;
 
     /// <summary>Las ilustraciones llevan la cabeza grande: algo más altas que el modelo para leerse igual de lejos.</summary>
     private const float PaperHeightScale = 1.15f;
@@ -265,6 +265,10 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// <see cref="EventType.Foul"/> y <see cref="EventType.RefereeLeaves"/>.
     /// </summary>
     private const string InkOutlinePath = "res://Art/Shaders/ink_outline.gdshader";
+
+    private const string GreasePencilPath = "res://Art/Shaders/grease_pencil.gdshader";
+
+    private MeshInstance3D? _greasePencil;
 
     private const string CrowdShaderPath = "res://Art/Shaders/crowd.gdshader";
 
@@ -983,6 +987,22 @@ public partial class MatchPitchView3D : SubViewportContainer
 
         // Pase de arte (9 oct): contorno de tinta que hierve (Game/Art/Shaders/ink_outline.gdshader), un cuadrado de
         // pantalla completa colgado de la cámara. Sin el shader en disco, la vista de siempre.
+        // Debajo del contorno, el acabado de lápiz (rayado en sombra, papel, paleta terrosa): grease_pencil.gdshader.
+        if (ResourceLoader.Exists(GreasePencilPath))
+        {
+            var pencil = new ShaderMaterial { Shader = GD.Load<Shader>(GreasePencilPath), RenderPriority = -1 };
+            pencil.SetShaderParameter("paper_tex", Art.Parchment);
+            _greasePencil = new MeshInstance3D
+            {
+                Mesh = new QuadMesh { Size = new Vector2(2f, 2f) },
+                MaterialOverride = pencil,
+                ExtraCullMargin = 16384f,
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+                Position = new Vector3(0f, 0f, -1f),
+            };
+            _camera.AddChild(_greasePencil);
+        }
+
         if (ResourceLoader.Exists(InkOutlinePath))
         {
             _inkOutline = new MeshInstance3D
@@ -1987,6 +2007,11 @@ public partial class MatchPitchView3D : SubViewportContainer
         {
             // La silueta (RA-002) es una prueba de forma en blanco y negro: sin tinta añadida.
             _inkOutline.Visible = !SilhouetteMode;
+        }
+
+        if (_greasePencil is not null)
+        {
+            _greasePencil.Visible = !SilhouetteMode;
         }
 
         _environment.Environment = BuildEnvironment(SilhouetteMode);
