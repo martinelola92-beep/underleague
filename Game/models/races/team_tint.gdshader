@@ -26,7 +26,7 @@ void fragment() {
 	float lum = dot(c, vec3(0.299, 0.587, 0.114));
 	if (tint_mask) {
 		// El tono es el del equipo; la textura sólo aporta el pliegue (su luminancia, recentrada).
-		vec3 dyed = team_color.rgb * clamp(0.55 + 1.1 * (lum - 0.3), 0.35, 1.25);
+		vec3 dyed = team_color.rgb * 0.8 * clamp(0.55 + 1.1 * (lum - 0.3), 0.35, 1.15);
 		c = mix(c, dyed, t.a);
 	}
 	if (skin) {
@@ -44,7 +44,7 @@ void fragment() {
 // sombra proyectada respetada (ATTENUATION). Más un filo de contraluz cálido en el borde de la silueta.
 void light() {
 	float ndl = dot(NORMAL, LIGHT) * ATTENUATION;
-	float band = smoothstep(0.28, 0.34, ndl) * 0.6 + smoothstep(-0.12, -0.06, ndl) * 0.4;
+	float band = smoothstep(0.28, 0.34, ndl) * 0.5 + smoothstep(-0.12, -0.06, ndl) * 0.32;
 	DIFFUSE_LIGHT += LIGHT_COLOR * band;
 	float rim = smoothstep(0.62, 0.7, 1.0 - dot(NORMAL, VIEW)) * smoothstep(-0.2, 0.2, ndl);
 	DIFFUSE_LIGHT += LIGHT_COLOR * rim * 0.25;

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 using Underleague.Sim.Engine;
 using Underleague.Sim.Model;
@@ -470,7 +471,7 @@ public sealed partial class PlayerModel : Node3D
             Race.Elf => ("elf", new[] { P("ranger_male"), P("head_male") }, 0.92f, null),
             Race.Dwarf => ("dwarf", new[] { P("peasant_male"), P("head_male"), P("hair_beard"), P("hair_buzzed") }, 1.15f, null),
             Race.Orc => ("orc", new[] { P("imp") }, 1.15f, null),
-            Race.Undead => ("undead", new[] { P("peasant_male"), P("head_male") }, 1f, new Color(0.62f, 0.74f, 0.6f)),
+            Race.Undead => ("undead", new[] { P("peasant_male"), P("head_male") }, 1f, new Color(0.36f, 0.45f, 0.33f)),
             _ => ("human_" + (variant % hairs.Length), new[] { P("peasant_male"), P("head_male"), P(hairs[Math.Abs(variant) % hairs.Length]) }, 1f, null),
         };
 
@@ -639,6 +640,7 @@ public sealed partial class PlayerModel : Node3D
         model._instance = instance;
         model._anim = FindAnimationPlayer(instance);
         model._skeleton = FindSkeleton(instance);
+        ApplyProportions(model._skeleton, race);
         model.ResolveContactBones();
         if (model._anim is not null && _library is not null && !model._anim.HasAnimationLibrary(Library))
         {
@@ -779,7 +781,7 @@ public sealed partial class PlayerModel : Node3D
     /// El pelo de Quaternius viene en gris (el color se pone en el motor). Uno por dorsal, determinista: castaño, negro,
     /// caoba, rubio; el enano, de los pelirrojos y castaños. Los tonos son <b>provisionales</b> (a ojo sobre la captura).
     /// </summary>
-    private static readonly Color OrcSkin = new(0.55f, 0.78f, 0.5f);
+    private static readonly Color OrcSkin = new(0.40f, 0.56f, 0.30f);
 
     private Color HairColor()
     {
@@ -2042,6 +2044,43 @@ public sealed partial class PlayerModel : Node3D
     /// dentro de una escena propia, así que hay que instanciarla para sacarla; el recurso de animación
     /// sobrevive a liberar la escena porque la biblioteca se queda con la referencia.
     /// </summary>
+    /// <summary>
+    /// Proporciones de cómic por raza, sacadas de las hojas de modelo (<c>docs/ui/referencias/hojas-de-modelo/</c>, 9 oct
+    /// 2026): cabeza, manos y tronco a escala sobre el modelo de Quaternius. Escalas <b>uniformes</b> y sólo en huesos
+    /// que no estiran nada que pise el suelo (las piernas no se tocan: el pie del IK y el contacto con el balón siguen
+    /// midiendo lo mismo). El tronco arrastra brazos y cabeza; la cabeza se compensa para quedar en su escala. Provisional.
+    /// </summary>
+    private static readonly Dictionary<Race, (float Chest, float Head, float Hands)> Proportions = new()
+    {
+        [Race.Orc] = (1.24f, 1.12f, 1.4f),
+        [Race.Dwarf] = (1.16f, 1.25f, 1.35f),
+        [Race.Human] = (1.04f, 1.15f, 1.20f),
+        [Race.Elf] = (0.96f, 1.08f, 1.10f),
+        [Race.Undead] = (0.94f, 1.20f, 1.25f),
+    };
+
+    private static void ApplyProportions(Skeleton3D? skeleton, Race race)
+    {
+        if (skeleton is null || !Proportions.TryGetValue(race, out var p))
+        {
+            return;
+        }
+
+        void Scale(string bone, float k)
+        {
+            int index = skeleton.FindBone(bone);
+            if (index >= 0)
+            {
+                skeleton.SetBonePoseScale(index, new Vector3(k, k, k));
+            }
+        }
+
+        Scale("UpperChest", p.Chest);
+        Scale("Head", p.Head / p.Chest);
+        Scale("LeftHand", p.Hands / p.Chest);
+        Scale("RightHand", p.Hands / p.Chest);
+    }
+
     private static AnimationLibrary BuildLibrary()
     {
         var library = new AnimationLibrary();
@@ -2059,6 +2098,17 @@ public sealed partial class PlayerModel : Node3D
             if (player is not null && names.Length > 0)
             {
                 var clip = player.GetAnimation(names[0]);
+
+                // Sin pistas de escala: las proporciones de raza (ApplyProportions) son una escala de hueso fija que
+                // ninguna animación debe pisar.
+                for (int track = clip.GetTrackCount() - 1; track >= 0; track--)
+                {
+                    if (clip.TrackGetType(track) == Animation.TrackType.Scale3D)
+                    {
+                        clip.RemoveTrack(track);
+                    }
+                }
+
                 clip.LoopMode = loop ? Animation.LoopModeEnum.Linear : Animation.LoopModeEnum.None;
                 NaturalSkeletonSpeed[key] = NetRootTravel(clip) / Math.Max(clip.Length, 0.001f);
                 float drift = PinInPlace(clip);

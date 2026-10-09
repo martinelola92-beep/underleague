@@ -167,6 +167,18 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// </summary>
     private readonly List<PlayerModel?> _models = new();
 
+    /// <summary>Las figuras de papel del prototipo 2D, paralelas a <see cref="_models"/> (null donde hay modelo 3D).</summary>
+    private readonly List<PaperFigure?> _papers = new();
+
+    /// <summary>
+    /// Prototipo 2D (9 oct 2026): los jugadores como figuras de papel ilustradas en lugar de modelos 3D. Activado por
+    /// defecto para que el revisor lo vea; a <c>false</c>, la vista de antes.
+    /// </summary>
+    public static bool PaperFigures { get; set; } = true;
+
+    /// <summary>Las ilustraciones llevan la cabeza grande: algo más altas que el modelo para leerse igual de lejos.</summary>
+    private const float PaperHeightScale = 1.15f;
+
     private readonly List<MeshInstance3D> _rings = new();
     private readonly List<Label3D> _numbers = new();
     private readonly List<float> _heights = new();
@@ -663,6 +675,7 @@ public partial class MatchPitchView3D : SubViewportContainer
 
         _bodies.Clear();
         _models.Clear();
+        _papers.Clear();
         _rings.Clear();
         _numbers.Clear();
         _heights.Clear();
@@ -723,7 +736,17 @@ public partial class MatchPitchView3D : SubViewportContainer
             // Las cinco razas llevan modelo desde el 9 oct 2026 (antes, solo los humanos: la maqueta del 23 sep).
             // Si el modelo no está, TryCreate devuelve null y el jugador se queda con su cápsula: el arte no
             // puede romper la vista.
-            var model = PlayerModel.TryCreate(height, IsKeeper(setup, player), race, _models.Count);
+            // Prototipo 2D (9 oct): figura de papel ilustrada si la raza la tiene y el modo está activo; el modelo 3D
+            // queda de reserva.
+            var paper = PaperFigures ? PaperFigure.TryCreate(race, height * PaperHeightScale, player.Team, _models.Count) : null;
+            _papers.Add(paper);
+            var model = paper is null ? PlayerModel.TryCreate(height, IsKeeper(setup, player), race, _models.Count) : null;
+            if (paper is not null)
+            {
+                body.Mesh = null;
+                body.AddChild(paper);
+            }
+
             if (model is not null)
             {
                 // La cápsula se queda sin malla y pasa a ser solo el hueso que transforma al modelo:
@@ -2364,6 +2387,15 @@ public partial class MatchPitchView3D : SubViewportContainer
             // grises la postura es lo único que dice de un vistazo quién sigue jugando (UI-002 en 3D).
             bool down = Style.IsDown(trace.StateAt(frame, i));
             var model = _models[i];
+
+            if (i < _papers.Count && _papers[i] is { } paperFigure)
+            {
+                body.Transform = new Transform3D(Basis.Identity, new Vector3(at.X, 0f, at.Y));
+                float paperDelta = IsTeleportCut(trace, frame, i) ? 0f : poseDelta;
+                paperFigure.SetSilhouette(SilhouetteMode);
+                paperFigure.Pose(SmoothedVelocity(trace, frame, i), FacingOf(trace, frame, i), trace.StateAt(frame, i), _camera, paperDelta);
+                continue;
+            }
 
             if (model is null)
             {
