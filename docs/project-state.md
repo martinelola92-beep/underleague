@@ -9,6 +9,26 @@ PC (Steam), premium, sin online. **Estado (8 sep 2026): fases 0 y 1 cerradas; fa
 **Campo de siete filas (14 sep 2026, decisión del revisor, BA-C):** 16×7 en vez de 16×6 —con seis filas el centro geométrico cae *entre* dos filas y no existe fila central—, con guardado v4. Añadir la fila cuesta ~1,0 tiro y ~0,45 goles por partido y **ninguna palanca local lo recupera**, así que la **ADR 0109** recalibra la banda de tiros a la geometría vigente (8-16 → 7-15) en vez de tocar el motor, y deja escrito que ensanchar la formación o las zonas de acción destruye la profundidad de colocación. Nueve auditorías de la IA de jugadores (`docs/auditoria-ia-jugadores-1..9.md`) dejan **un solo cambio aplicado**, la **ADR 0110**: `Shoot` del defensa 77 → 154 y del centrocampista 188 → 237, porque con 77 un defensa colocado arriba nunca remataba —perdía contra su propio `ShortPass` de 500— y jugar fuera de posición costaba dos tercios del ataque (100/48/38 → 100/68/55). Rechazados y documentados: `ChaseBall pen` en todas las dosis (degrada la diferenciación de builds), el desfase de fase entre equipos (no replica entre semillas) y la histéresis. Queda **abierto** el papel del centrocampista: dispara el 6,5 % de los tiros siendo el 43 % de los jugadores de campo.
 ---
 
+## ARTE POR CLAUDE Y PAQUETE 3 DE LA PARTIDA DEL 3 OCT (9 oct 2026) — lee esto primero
+
+**Decisión del revisor (9 oct):** Claude crea o descarga arte de mayor calidad (`CLAUDE.md` regla 10, nueva) con
+referencias pintadas y este estilo: *«grease pencil, cómic… Cult of the Lamb, Lucky Tower»*; y *«que el público sean
+renders y no pastillas»*. Todo lo hecho, las fuentes y licencias, el pipeline (`tools/arte/`) y lo pendiente:
+**`docs/ui/arte.md`**. `main` en `40066f6`.
+
+- **Hecho, arte**: materiales (papel, madera, brocha) e iconos de game-icons en todas las pantallas; las cinco razas
+  con modelo animado en el partido (Quaternius CC0, retargeting de los clips de Mixamo); sombreado de cómic y tinta que
+  hierve; estadio con textura; público renderizado que celebra; retratos renderizados de los mismos modelos.
+- **Hecho, BX** (`docs/pendientes/BX-playtest-3oct.md`): BX-14 reloj de 90' (la barra iba ~30 s por delante del
+  pitido, CONFIRMED); BX-15..18 por la **ADR 0192** (pausa tras la caída con carteles de quién es quién, ruleta del
+  destino, sellos y pausas más largos, mezcla de gritos), con revisión independiente y sus 8 arreglos; 1.965 tests.
+- **Trampa nueva**: importar recursos abre el editor, que re-sangra los `.cs` con tabuladores. Usa
+  `tools/arte/importar.sh`, nunca `godot --import` a pelo.
+- **Siguiente paso**: que el revisor juegue una build (`tools/export-windows.sh`) y diga (1) si el estilo 3D le vale o
+  quiere modelos más «chunky» (`docs/ui/arte.md` §Siguiente), (2) si la pausa y la ruleta tienen el ritmo bueno (cifras
+  provisionales de la ADR 0192). Sin su respuesta: paquete 2 de BX (conducta en el campo, `/Sim`, BX-7..BX-13) con
+  `gameplay-debug`, o los pendientes de arte 2-4 de `docs/ui/arte.md`.
+
 ## UI EDITABLE EN GODOT PARA LOS SPRITES DEL REVISOR (4 oct 2026)
 
 Decisión del revisor: el arte de la interfaz lo produce él, sustituyendo poco a poco el dibujo por código
