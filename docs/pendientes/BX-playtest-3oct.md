@@ -25,6 +25,16 @@ Capturas: `capturas/playtest-3oct-saque-portero.png` (saque de puerta al centro,
 
 ## Paquete 3 — Sensación del partido: timing, lectura, sonido (`/Game`, diseño)
 - **BX-14** La barra de tiempo se llena y el partido no acaba. Mejor un reloj de 90 minutos como en el fútbol, y luego la prórroga sin reloj o algo así.
+  **Cerrada (9 oct).** Hipótesis: (H1) la barra avanza con el tick del motor y el reglamentario lo cierra el reloj
+  del partido, que se para mientras el equipo vuelve a sacar de centro (BC-A); (H2) el empate va a la turba con gol
+  de oro, sin tope visible. Sonda de 120 partidos de referencia (test desechable, `SimConfig.Trace`): reglamentario
+  1.200 ticks, partido medio 1.658; **en 120/120 la barra se llena antes del final**, 458 fotogramas de media
+  (~30 s a 1×); 41/120 van a la turba (561 fotogramas de media tras el reglamentario). **H1 y H2 CONFIRMED**, las
+  dos a la vez. Hermano por la Regla G: el estandarte del gol y el bando de la muerte ponían el minuto con el tick
+  del motor (hasta «minuto 123», el mismo fallo que `MatchLogView.Minute` ya advertía), el aviso de repetición
+  bloqueada y la marca del final del reglamentario en la pantalla de depuración. Arreglo, sólo `/Game`: reloj
+  «26'» en el tablero (`%Reloj`, pieza editable) y barra con el reloj del partido; en la turba el reloj dice «Gol
+  de oro». Captura `pausa-1-congelada.png`.
 - **BX-15** Las faltas deberían pitarse DESPUÉS de la entrada. Hoy se pita, se para, se ven jugadores cayendo, pero no queda claro quién ha caído ni quién ha hecho la falta. Es lo que menos se percibe como jugador.
 - **BX-16** La tirada del destino al lesionarse alguien tiene que ser algo gráfico, aunque pare el partido: por ejemplo, una ruleta verde y roja con una aguja que gira. Tiene que ser un evento curioso; hoy se siente atropellado.
 - **BX-17** Timing y pausa (cita): «Una de las mayores virtudes del humor es el timing y la pausa. Pasan cosas demasiado rápido, no tengo tiempo a procesar, sale un cartel 1 segundo, escucho un grito, no sé quién es, no me divierto, no me entero, es frustrante. Busca pausas, zooms… No tiene por qué ser excesivo, pero hay que buscar algo.» Esto corrige la tendencia a evitar parones a toda costa.

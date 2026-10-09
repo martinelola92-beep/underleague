@@ -783,6 +783,11 @@ public static class UiText
         // Criterio del árbitro, SIEMPRE visible en el tablero (RF-062, ADR 0158 §6): el medidor de
         // BroadcastBoard.DrawCriterionMeter lee esta etiqueta con el signo ya puesto (UiText.Signed).
         ["ui.pregon.board.bias"] = "CRITERIO {0}",
+
+        // BX-14: el reloj del tablero cuenta minutos del reloj del partido (se para en los saques); en la turba
+        // no hay reloj, hay gol de oro.
+        ["ui.pregon.board.clock"] = "{0}'",
+        ["ui.pregon.board.clockMob"] = "Gol de oro",
         // El pergamino sobre la cabeza del árbitro en el campo 3D (ADR 0158 §6, RF-061, RF-119):
         // MatchPitchView3D.DrawRefereeGesture, falta pitada / falta no señalada.
         ["ui.pregon.referee.foul"] = "¡Falta!",

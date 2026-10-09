@@ -800,12 +800,21 @@ public partial class MatchScreen : Control
     /// <summary>Fotograma del final del reglamentario, o -1 si el partido no pasó de ahí.</summary>
     private int RegulationFrame()
     {
-        if (_trace is not { FrameCount: > 0 } trace || trace.TickAt(trace.FrameCount - 1) <= trace.RegulationTicks)
+        // BX-14: el reglamentario lo cierra el RELOJ del partido (se para en los saques, BC-A), no el tick del motor.
+        if (_trace is not { FrameCount: > 0 } trace || trace.ClockTickAt(trace.FrameCount - 1) <= trace.RegulationTicks)
         {
             return -1;
         }
 
-        return trace.FrameOfTick(trace.RegulationTicks);
+        for (int frame = 0; frame < trace.FrameCount; frame++)
+        {
+            if (trace.ClockTickAt(frame) >= trace.RegulationTicks)
+            {
+                return frame;
+            }
+        }
+
+        return -1;
     }
 
     /// <summary>

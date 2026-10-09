@@ -982,7 +982,7 @@ public partial class BroadcastScreen : Control
     {
         bool ours = goal.Team == 0;
         string scorer = NameOf(goal.Actor);
-        int minute = MatchLogView.Minute(goal.Tick, _catalog.Tuning.RegulationTicks);
+        int minute = MatchLogView.Minute(goal.ClockTick, _catalog.Tuning.RegulationTicks);
         string team = ours ? _playback.OwnName : _playback.RivalName;
         PositionBanner(goal.Cell);
         _banner.Show(
@@ -1189,7 +1189,7 @@ public partial class BroadcastScreen : Control
     {
         string name = NameOf(death.Actor);
         string position = UiText.Get("ui.pos." + PositionOf(death.Actor));
-        int minute = MatchLogView.Minute(death.Tick, _catalog.Tuning.RegulationTicks);
+        int minute = MatchLogView.Minute(death.ClockTick, _catalog.Tuning.RegulationTicks);
         string perk = PerkNameFromDetail(death.Detail);
         string body = perk.Length > 0
             ? UiText.Get("ui.pregon.edict.bodyWithCause", position, minute, perk)
@@ -1289,7 +1289,7 @@ public partial class BroadcastScreen : Control
         int end = _trace is { FrameCount: > 0 } t ? t.TickAt(t.FrameCount - 1) : int.MaxValue;
         _replayNotice.Text = floor >= end
             ? UiText.Get("ui.match.replayLockedAll")
-            : UiText.Get("ui.match.replayLocked", MatchLogView.Minute(floor, _catalog.Tuning.RegulationTicks));
+            : UiText.Get("ui.match.replayLocked", _trace!.MinuteAt(_trace.FrameOfTick(floor)));
     }
 
     private void UpdateBoard(int tick)
@@ -1299,8 +1299,15 @@ public partial class BroadcastScreen : Control
         UpdateReplayNotice(tick);
         _board.SetTeams(_playback.OwnName, _playback.RivalName);
         _board.SetScore(own, rival);
-        int regulation = Math.Max(1, _trace!.RegulationTicks);
-        _board.SetProgress(Mathf.Clamp((float)tick / regulation, 0f, 1f));
+        // BX-14: la barra y el minuto siguen el RELOJ del partido, que se para mientras el equipo vuelve a sacar de
+        // centro (BC-A), y no el tick del motor: con el tick la barra se llenaba ~20 s antes del pitido (120/120
+        // partidos medidos). En la turba no hay reloj: gol de oro.
+        var trace = _trace!;
+        int regulation = Math.Max(1, trace.RegulationTicks);
+        int frame = trace.FrameOfTick(tick);
+        int clock = trace.ClockTickAt(frame);
+        _board.SetProgress(Mathf.Clamp((float)clock / regulation, 0f, 1f));
+        _board.SetClock(trace.MinuteAt(frame), clock >= regulation && _playback.Result.Report.WentToGoldenGoal);
         _board.SetRivalResidue(UiText.Get("ui.pregon.board.residue", cards, casualties));
         _board.SetSpeedIndex(_speedIndex);
         _board.SetPaused(_manualPaused);

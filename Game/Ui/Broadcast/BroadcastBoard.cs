@@ -66,6 +66,8 @@ public partial class BroadcastBoard : Control
     private int _ownScore;
     private int _rivalScore;
     private float _progress;
+    private int _minute;
+    private bool _goldenGoal;
     private string _rivalResidue = string.Empty;
     private int _speedIndex;
     private bool _paused;
@@ -86,6 +88,7 @@ public partial class BroadcastBoard : Control
     private Control _residue = null!;
     private Label _residueText = null!;
     private ProgressBar _progressBar = null!;
+    private Label? _clockText;
     private Label _criterion = null!;
     private BiasTrack _biasTrack = null!;
     private readonly Button[] _speedButtons = new Button[3];
@@ -135,6 +138,9 @@ public partial class BroadcastBoard : Control
         _residue = GetNode<Control>("%Residuo");
         _residueText = GetNode<Label>("%ResiduoTexto");
         _progressBar = GetNode<ProgressBar>("%Progreso");
+
+        // BX-14: opcional para no romper una escena del tablero anterior al reloj.
+        _clockText = GetNodeOrNull<Label>("%RelojTexto");
         _criterion = GetNode<Label>("%Criterio");
         _biasTrack = GetNode<BiasTrack>("%PistaCriterio");
         _pauseButton = GetNode<Button>("%Pausa");
@@ -197,6 +203,7 @@ public partial class BroadcastBoard : Control
         _rival = "Yunque Verde";
         _ownScore = 1;
         _progress = 0.45f;
+        _minute = 41;
         _rivalResidue = "−2 · +1";
         _bias = -23;
         _consumables = new[]
@@ -224,6 +231,17 @@ public partial class BroadcastBoard : Control
     public void SetProgress(float t)
     {
         _progress = Mathf.Clamp(t, 0f, 1f);
+        Refresh();
+    }
+
+    /// <summary>
+    /// El reloj del partido (BX-14): el minuto del <b>reloj</b> —el que se para mientras el equipo vuelve para
+    /// sacar de centro (BC-A)— y si el partido está en la turba, que no tiene reloj sino gol de oro.
+    /// </summary>
+    public void SetClock(int minute, bool goldenGoal)
+    {
+        _minute = Mathf.Clamp(minute, 0, 90);
+        _goldenGoal = goldenGoal;
         Refresh();
     }
 
@@ -306,6 +324,12 @@ public partial class BroadcastBoard : Control
         _residue.Visible = !string.IsNullOrEmpty(_rivalResidue);
         _residueText.Text = _rivalResidue;
         _progressBar.Value = _progress;
+        if (_clockText is not null)
+        {
+            _clockText.Text = _goldenGoal
+                ? UiText.Get("ui.pregon.board.clockMob")
+                : UiText.Get("ui.pregon.board.clock", _minute);
+        }
         _criterion.Text = UiText.Get("ui.pregon.board.bias", UiText.Signed(_bias));
         _biasTrack.Bias = _bias;
 
