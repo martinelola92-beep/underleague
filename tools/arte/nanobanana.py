@@ -11,6 +11,11 @@ Uso:
   out/arte-venv/bin/python tools/arte/nanobanana.py --si --forzar --solo orc_3   # rehace una pieza
   opciones: --modelo gemini-3-pro-image-preview  (más calidad, más caro; por defecto gemini-2.5-flash-image)
 
+Gratis, a mano (app de Gemini o AI Studio, con su límite diario):
+  out/arte-venv/bin/python tools/arte/nanobanana.py --hoja      # escribe out/arte/nanobanana/PROMPTS.md para copiar
+  ... generas cada pieza en la app y guardas la imagen como <id>.png (orc_0.png…) en out/arte/nanobanana/entrada/
+  out/arte-venv/bin/python tools/arte/nanobanana.py --importar  # recorta, reduce y coloca lo que haya en entrada/
+
 Cada respuesta se guarda en bruto en out/arte/nanobanana/bruto/<grupo>/<id>.png (no versionado) y la pieza final,
 recortada a cuadrado y reducida, en la ruta de 'salida' del grupo. Se anota la procedencia (modelo, prompt, fecha) en
 Game/Art/nanobanana-procedencia.json.
@@ -86,6 +91,60 @@ def finish(raw: bytes, target: str, side: int | None) -> None:
     im.save(target, optimize=True)
 
 
+ENTRADA = os.path.join(ROOT, "out", "arte", "nanobanana", "entrada")
+
+
+def write_sheet(encargo: dict) -> None:
+    """Una sección por pieza con el prompt completo, para pegarlo en la app de Gemini junto a la referencia."""
+    lines = ["# Prompts para Nano Banana (a mano)", "",
+             "En gemini.google.com (o aistudio.google.com) adjunta la imagen de referencia", "",
+             "    " + ", ".join(os.path.join(ROOT, r) for r in encargo["referencias"]), "",
+             f"pega el prompt de cada pieza y guarda la imagen como `<id>.png` en `{ENTRADA}`.",
+             "Después: `out/arte-venv/bin/python tools/arte/nanobanana.py --importar`.", ""]
+    for grupo in encargo["grupos"]:
+        lines.append(f"## {grupo['id']}")
+        lines.append("")
+        for pieza in grupo["piezas"]:
+            prompt = " ".join(x for x in (encargo["estilo"], grupo.get("estilo_extra", ""), pieza["prompt"]) if x)
+            if grupo.get("aspecto"):
+                prompt += f" Aspect ratio {grupo['aspecto']}."
+            lines += [f"### {pieza['id']}", "", "```", prompt, "```", ""]
+    path = os.path.join(ROOT, "out", "arte", "nanobanana", "PROMPTS.md")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    os.makedirs(ENTRADA, exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+    print("hoja en", path)
+
+
+def import_manual(encargo: dict) -> None:
+    targets = {}
+    for grupo in encargo["grupos"]:
+        for pieza in grupo["piezas"]:
+            targets[pieza["id"]] = (grupo, os.path.join(ROOT, grupo["salida"].format(id=pieza["id"])))
+    procedencia = {}
+    if os.path.exists(PROCEDENCIA):
+        with open(PROCEDENCIA, encoding="utf-8") as f:
+            procedencia = json.load(f)
+    done = 0
+    for name in sorted(os.listdir(ENTRADA)) if os.path.isdir(ENTRADA) else []:
+        stem, ext = os.path.splitext(name)
+        if ext.lower() not in (".png", ".jpg", ".jpeg", ".webp") or stem not in targets:
+            if ext:
+                print(f"  ignoro {name}: no es <id>.png de ninguna pieza")
+            continue
+        grupo, target = targets[stem]
+        with open(os.path.join(ENTRADA, name), "rb") as f:
+            finish(f.read(), target, grupo.get("lado"))
+        if target.startswith(os.path.join(ROOT, "Game")):
+            procedencia[os.path.relpath(target, ROOT)] = {"modelo": "nano banana (app, a mano)", "fecha": datetime.date.today().isoformat()}
+        print(f"  {stem} -> {os.path.relpath(target, ROOT)}")
+        done += 1
+    with open(PROCEDENCIA, "w", encoding="utf-8") as f:
+        json.dump(procedencia, f, ensure_ascii=False, indent=1, sort_keys=True)
+    print(f"{done} importadas")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--si", action="store_true", help="llama de verdad a la API (cuesta dinero)")
@@ -93,10 +152,19 @@ def main() -> None:
     ap.add_argument("--grupo", default=None)
     ap.add_argument("--solo", default=None, help="ids separados por comas")
     ap.add_argument("--modelo", default="gemini-2.5-flash-image")
+    ap.add_argument("--hoja", action="store_true", help="escribe la hoja de prompts para usarlos a mano")
+    ap.add_argument("--importar", action="store_true", help="coloca las imágenes de out/arte/nanobanana/entrada/")
     args = ap.parse_args()
 
     with open(ENCARGO, encoding="utf-8") as f:
         encargo = json.load(f)
+
+    if args.hoja:
+        write_sheet(encargo)
+        return
+    if args.importar:
+        import_manual(encargo)
+        return
     only = set(args.solo.split(",")) if args.solo else None
 
     # Ya generada = anotada en la procedencia (los retratos renderizados de antes ocupan la misma ruta y se sustituyen).

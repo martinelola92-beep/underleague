@@ -44,6 +44,8 @@ hojas de modelo que genera el mismo encargo.
 - Las piezas van directas a su sitio (`Game/Art/Portraits/<raza>_<v>.png`, que `Portrait.Draw` ya usa) y la procedencia
   (modelo, prompt, fecha) a `Game/Art/nanobanana-procedencia.json`. Lo bruto, en `out/arte/nanobanana/bruto/`.
 - Coste: lo paga la clave del revisor; el script avisa del precio aproximado antes de llamar.
+- **Gratis, a mano**: `--hoja` escribe `out/arte/nanobanana/PROMPTS.md` con cada prompt listo para la app de Gemini; las
+  imágenes guardadas como `<id>.png` en `out/arte/nanobanana/entrada/` se colocan con `--importar`.
 
 ## Pipeline
 
