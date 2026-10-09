@@ -1,4 +1,5 @@
 using Godot;
+using Underleague.Game.Ui;
 
 namespace Underleague.Game.Ui.Broadcast;
 
@@ -128,9 +129,32 @@ public partial class InkStyleBox : StyleBox
         }
 
         var outline = Shift(local, rect.Position);
-        RenderingServer.CanvasItemAddPolygon(toCanvasItem, outline, new[] { _fill });
 
-        for (int i = 1; i <= _grainLines; i++)
+        // Pase de materiales: la tabla lleva veta de madera y el resto grano de papel o de paño, multiplicados por
+        // el color de la caja. Sin la textura, relleno plano como siempre.
+        var material = _grainLines > 0 ? Art.Wood : Art.Parchment;
+        if (material is null)
+        {
+            RenderingServer.CanvasItemAddPolygon(toCanvasItem, outline, new[] { _fill });
+        }
+        else
+        {
+            var uvs = new Vector2[outline.Length];
+            var offset = new Vector2(_seed * 131 % 900, _seed * 59 % 900);
+            for (int i = 0; i < outline.Length; i++)
+            {
+                uvs[i] = (outline[i] + offset) / Art.MaterialSize;
+            }
+
+            var tint = new Color(
+                Mathf.Min(_fill.R * Art.DetailCompensation, 1f),
+                Mathf.Min(_fill.G * Art.DetailCompensation, 1f),
+                Mathf.Min(_fill.B * Art.DetailCompensation, 1f),
+                _fill.A);
+            RenderingServer.CanvasItemAddPolygon(toCanvasItem, outline, new[] { tint }, uvs, material.GetRid());
+        }
+
+        for (int i = 1; i <= (material is null ? _grainLines : 0); i++)
         {
             float y = rect.Position.Y + (i * h / (_grainLines + 1));
             var line = new[] { new Vector2(rect.Position.X + 8f, y), new Vector2(rect.End.X - 8f, y + Pregon.Jitter(400 + i, 2f)) };

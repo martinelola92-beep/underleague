@@ -206,7 +206,7 @@ public static class Ink
     /// Placa: relleno plano, contorno de tinta y sombra dura. La pieza de cualquier objeto físico pequeño
     /// (botón, pestaña, etiqueta, casilla).
     /// </summary>
-    public static void Slab(CanvasItem target, Rect2 rect, Color fill, int seed, float amplitude = 1.4f, float outline = 3f, Vector2? shadow = null)
+    public static void Slab(CanvasItem target, Rect2 rect, Color fill, int seed, float amplitude = 1.4f, float outline = 3f, Vector2? shadow = null, Texture2D? material = null)
     {
         var poly = Rough(rect, amplitude, seed, Mathf.Clamp((int)(rect.Size.X / 26f), 6, 24));
         var offset = shadow ?? ShadowOffset;
@@ -215,7 +215,36 @@ public static class Ink
             target.DrawColoredPolygon(Shift(poly, offset), Shadow);
         }
 
-        Poly(target, poly, fill, outline);
+        // Sin material pedido, toda placa lleva grano de papel (o de paño, en las oscuras): el arte de referencia
+        // no tiene ni una superficie plana. Sin textura en disco, el relleno plano de siempre.
+        material ??= Art.Parchment;
+        if (material is null)
+        {
+            Poly(target, poly, fill, outline);
+            return;
+        }
+
+        Art.FillPolygon(target, poly, fill, material, seed);
+        if (outline > 0f)
+        {
+            target.DrawPolyline(Closed(poly), Black, outline, true);
+        }
+    }
+
+    /// <summary>
+    /// Borde envejecido de un papel: tres filetes translúcidos hacia dentro, del más oscuro al más tenue, como el
+    /// tostado que deja el uso en los bordes de una hoja.
+    /// </summary>
+    private static void BurnEdge(CanvasItem target, Rect2 rect, int seed)
+    {
+        float[] depth = { 4f, 9f, 16f };
+        float[] alpha = { 0.30f, 0.16f, 0.07f };
+        float[] width = { 7f, 9f, 12f };
+        for (int i = 0; i < depth.Length; i++)
+        {
+            var ring = Rough(rect.Grow(-depth[i]), 1.6f, seed + 11 + i, Mathf.Clamp((int)(rect.Size.X / 26f), 6, 24));
+            Art.Burn(target, ring, Muted, width[i], alpha[i]);
+        }
     }
 
     /// <summary>
@@ -224,7 +253,16 @@ public static class Ink
     /// </summary>
     public static void Sheet(CanvasItem target, Rect2 rect, int seed, Color? fill = null)
     {
-        Slab(target, rect, fill ?? Ink.Paper, seed, 2f, 3.5f, new Vector2(6f, 7f));
+        var paper = Art.Parchment;
+        Slab(target, rect, fill ?? Ink.Paper, seed, 2f, 3.5f, new Vector2(6f, 7f), paper);
+        if (paper is not null)
+        {
+            // Con material, las manchas y las motas ya vienen en la textura: aquí sólo el borde tostado y el filete.
+            BurnEdge(target, rect, seed);
+            var filet = Rough(rect.Grow(-7f), 1.4f, seed + 3, Mathf.Clamp((int)(rect.Size.X / 26f), 6, 24));
+            target.DrawPolyline(Closed(filet), new Color(PaperDark, 0.45f), 1.6f, true);
+            return;
+        }
 
         // Papel envejecido: un filete interior más oscuro, dos o tres manchas irregulares muy tenues y un
         // puñado de motas. Textura, no ruido: nada de esto compite con lo que se lee encima.
@@ -261,9 +299,11 @@ public static class Ink
     public static void Plank(CanvasItem target, Rect2 rect, int seed, Color? tone = null, bool nails = true)
     {
         var fill = tone ?? Wood;
-        Slab(target, rect, fill, seed, 1.2f, 3f, new Vector2(3f, 5f));
+        var wood = Art.Wood;
+        Slab(target, rect, wood is null ? fill : fill.Lightened(0.12f), seed, 1.2f, 3f, new Vector2(3f, 5f), wood);
 
-        int lines = Mathf.Max(2, (int)(rect.Size.Y / 9f));
+        // Con material la veta viene en la textura; sin él, las vetas de siempre.
+        int lines = wood is null ? Mathf.Max(2, (int)(rect.Size.Y / 9f)) : 0;
         for (int i = 1; i < lines; i++)
         {
             float y = rect.Position.Y + (rect.Size.Y * i / lines);
@@ -300,6 +340,19 @@ public static class Ink
     /// </summary>
     public static void Brush(CanvasItem target, Rect2 rect, Color fill, int seed)
     {
+        // Pase de materiales: un brochazo de verdad (cerdas, cola deshilachada) teñido del color pedido. El trazo
+        // ocupa el 68 % central del alto de la textura y del 2 al 90 % del ancho: esa región es la que se estira
+        // sobre el rectángulo, con un poco de margen para que la cola y los bordes respiren.
+        if (Art.Brush(seed) is { } stroke)
+        {
+            var size = stroke.GetSize();
+            var source = new Rect2(size.X * 0.0f, size.Y * 0.13f, size.X * 0.97f, size.Y * 0.74f);
+            var dest = new Rect2(rect.Position - new Vector2(4f, 1f), rect.Size + new Vector2(14f, 2f));
+            target.DrawTextureRectRegion(stroke, new Rect2(dest.Position + new Vector2(3f, 3f), dest.Size), source, new Color(0f, 0f, 0f, 0.3f));
+            target.DrawTextureRectRegion(stroke, dest, source, fill);
+            return;
+        }
+
         var points = new List<Vector2>();
         int steps = Mathf.Max(6, (int)(rect.Size.X / 14f));
         float top = rect.Position.Y;

@@ -34,8 +34,18 @@ public partial class WoodTable : Control
             return;
         }
 
-        DrawRect(new Rect2(Vector2.Zero, Size), Style.Background);
-        DrawGrain();
+        if (Art.Wood is { } wood)
+        {
+            // Pase de materiales: tablones con veta, oscurecidos para que el fondo no compita con los paneles.
+            var rect = new[] { Vector2.Zero, new Vector2(Size.X, 0f), Size, new Vector2(0f, Size.Y) };
+            Art.FillPolygon(this, rect, Knavall.Ink.WoodDark.Lightened(0.08f), wood, Seed);
+        }
+        else
+        {
+            DrawRect(new Rect2(Vector2.Zero, Size), Style.Background);
+            DrawGrain();
+        }
+
         DrawNails();
     }
 

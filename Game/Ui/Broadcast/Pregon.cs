@@ -253,7 +253,7 @@ public static class Pregon
         var shadow = shadowOffset ?? new Vector2(4f, 5f);
         target.DrawColoredPolygon(Shift(poly, topLeft + shadow), new Color(0f, 0f, 0f, 0.35f));
         var shifted = Shift(poly, topLeft);
-        target.DrawColoredPolygon(shifted, fill);
+        Art.FillPolygon(target, shifted, fill, Art.Parchment, seed);
         if (edgeWidth > 0f)
         {
             target.DrawPolyline(Close(shifted), edge, edgeWidth, true);

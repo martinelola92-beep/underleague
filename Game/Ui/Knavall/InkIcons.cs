@@ -232,6 +232,33 @@ public static class InkIcons
         return Glyph.Amulet;
     }
 
+    private static Color SilhouetteTint(Glyph glyph) => glyph switch
+    {
+        Glyph.Healthy => Ink.Green,
+        Glyph.MinorInjury => Ink.Ochre,
+        Glyph.SevereInjury => Ink.Red,
+        Glyph.Crown => Ink.Ochre,
+        Glyph.Stamina => Ink.Red,
+        _ => Ink.Black,
+    };
+
+    private static void DrawSilhouette(CanvasItem t, Texture2D icon, Vector2 center, float size, Color tint)
+    {
+        var rect = new Rect2(center - new Vector2(size / 2f, size / 2f), new Vector2(size, size));
+        bool dark = tint.Luminance < 0.2f;
+        if (!dark)
+        {
+            float o = Mathf.Max(1.2f, size * 0.045f);
+            for (int i = 0; i < 8; i++)
+            {
+                float a = i * Mathf.Tau / 8f;
+                t.DrawTextureRect(icon, new Rect2(rect.Position + new Vector2(Mathf.Cos(a) * o, Mathf.Sin(a) * o), rect.Size), false, Ink.Black);
+            }
+        }
+
+        t.DrawTextureRect(icon, rect, false, tint);
+    }
+
     private static bool Has(string id, params string[] words)
     {
         foreach (string word in words)
@@ -254,6 +281,14 @@ public static class InkIcons
     {
         if (glyph == Glyph.None)
         {
+            return;
+        }
+
+        // Pase de materiales: los glifos que el arte pinta como silueta de tinta salen de game-icons.net. Los de
+        // color (estado, corona) llevan contorno negro para leerse sobre papel y sobre madera (color y forma, UI-002).
+        if (Art.Icon(glyph.ToString()) is { } icon)
+        {
+            DrawSilhouette(t, icon, center, size, tint ?? SilhouetteTint(glyph));
             return;
         }
 
