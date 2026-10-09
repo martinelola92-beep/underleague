@@ -47,6 +47,9 @@ hojas de modelo que genera el mismo encargo.
 - **Gratis, a mano**: `--hoja` escribe `out/arte/nanobanana/PROMPTS.md` con cada prompt listo para la app de Gemini; las
   imágenes guardadas como `<id>.png` en `out/arte/nanobanana/entrada/` se colocan con `--importar`.
 
+**Generado (9 oct 2026, ~2,2 $ de los 10 € de crédito del revisor):** los 40 retratos (`Game/Art/Portraits/`, ya en
+Equipo, ficha e Inicio) y las 5 hojas de modelo (`docs/ui/referencias/hojas-de-modelo/`), base de la fase 3D.
+
 ## Pipeline
 
 - `out/arte-venv/bin/python tools/arte/materiales.py` — mapas de detalle en gris (media ~0,93) que la interfaz

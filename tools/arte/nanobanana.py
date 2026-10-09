@@ -81,12 +81,14 @@ def call(model: str, key: str, prompt: str, references: list[str], aspect: str |
     raise SystemExit(f"la respuesta no trae imagen: {json.dumps(payload)[:400]}")
 
 
-def finish(raw: bytes, target: str, side: int | None) -> None:
+def finish(raw: bytes, target: str, side: int | None, inset: float = 0.0) -> None:
+    """Recorte cuadrado centrado, quitando `inset` (fracción) de cada borde: el generador deja a veces margen de papel."""
     im = Image.open(io.BytesIO(raw)).convert("RGB")
     if side:
         w, h = im.size
         s = min(w, h)
-        im = im.crop(((w - s) // 2, (h - s) // 2, (w + s) // 2, (h + s) // 2)).resize((side, side), Image.LANCZOS)
+        m = int(s * inset)
+        im = im.crop(((w - s) // 2 + m, (h - s) // 2 + m, (w + s) // 2 - m, (h + s) // 2 - m)).resize((side, side), Image.LANCZOS)
     os.makedirs(os.path.dirname(target), exist_ok=True)
     im.save(target, optimize=True)
 
@@ -135,7 +137,7 @@ def import_manual(encargo: dict) -> None:
             continue
         grupo, target = targets[stem]
         with open(os.path.join(ENTRADA, name), "rb") as f:
-            finish(f.read(), target, grupo.get("lado"))
+            finish(f.read(), target, grupo.get("lado"), grupo.get("recorte", 0.0))
         if target.startswith(os.path.join(ROOT, "Game")):
             procedencia[os.path.relpath(target, ROOT)] = {"modelo": "nano banana (app, a mano)", "fecha": datetime.date.today().isoformat()}
         print(f"  {stem} -> {os.path.relpath(target, ROOT)}")
@@ -154,6 +156,7 @@ def main() -> None:
     ap.add_argument("--modelo", default="gemini-2.5-flash-image")
     ap.add_argument("--hoja", action="store_true", help="escribe la hoja de prompts para usarlos a mano")
     ap.add_argument("--importar", action="store_true", help="coloca las imágenes de out/arte/nanobanana/entrada/")
+    ap.add_argument("--rehacer-recorte", action="store_true", help="vuelve a recortar desde lo bruto, sin llamar a la API")
     args = ap.parse_args()
 
     with open(ENCARGO, encoding="utf-8") as f:
@@ -164,6 +167,15 @@ def main() -> None:
         return
     if args.importar:
         import_manual(encargo)
+        return
+    if args.rehacer_recorte:
+        for grupo in encargo["grupos"]:
+            for pieza in grupo["piezas"]:
+                raw = os.path.join(BRUTO, grupo["id"], pieza["id"] + ".png")
+                if os.path.exists(raw):
+                    with open(raw, "rb") as f:
+                        finish(f.read(), os.path.join(ROOT, grupo["salida"].format(id=pieza["id"])), grupo.get("lado"), grupo.get("recorte", 0.0))
+        print("recortes rehechos")
         return
     only = set(args.solo.split(",")) if args.solo else None
 
@@ -211,7 +223,7 @@ def main() -> None:
         os.makedirs(os.path.dirname(raw_path), exist_ok=True)
         with open(raw_path, "wb") as f:
             f.write(raw)
-        finish(raw, target, grupo.get("lado"))
+        finish(raw, target, grupo.get("lado"), grupo.get("recorte", 0.0))
         if target.startswith(os.path.join(ROOT, "Game")):
             procedencia[os.path.relpath(target, ROOT)] = {
                 "modelo": args.modelo, "prompt": prompt, "fecha": datetime.date.today().isoformat()}
