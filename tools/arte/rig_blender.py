@@ -20,7 +20,7 @@ HEIGHT = 1.8
 # Fracciones del alto por defecto (orco de la hoja de modelo: piernas cortas, brazos largos). Se pasan como
 # "clave=valor,..." en el tercer argumento para otras razas.
 F = dict(head_top=1.0, neck=0.80, shoulder=0.76, chest=0.66, spine=0.56, hips=0.46, elbow=0.56, wrist=0.40,
-         fingertip=0.33, knee=0.25, ankle=0.06)
+         fingertip=0.33, knee=0.25, ankle=0.06, straight_legs=0)
 if len(argv) > 2:
     for pair in argv[2].split(","):
         k, v = pair.split("=")
@@ -95,10 +95,18 @@ for side, sign in (("Left", 1), ("Right", -1)):
     joints[f"{side}LowerArm"] = side_centroid(z(F["elbow"]), sign, outer=True)
     joints[f"{side}Hand"] = side_centroid(z(F["wrist"]), sign, outer=True)
     joints[f"{side}HandTip"] = side_centroid(z(F["fingertip"]), sign, outer=True)
-    hip = side_centroid(z(F["hips"] - 0.04), sign)
-    joints[f"{side}UpperLeg"] = Vector((hip.x * 0.8, joints["Hips"].y, z(F["hips"] - 0.03)))
-    joints[f"{side}LowerLeg"] = side_centroid(z(F["knee"]), sign)
     ankle = side_centroid(z(F["ankle"]), sign)
+    if F.get("straight_legs", 0):
+        # Pierna recta sobre el pie: a la altura de la cadera y la rodilla cuelgan manos, barba o faldón que tiran del
+        # centroide hacia fuera o hacia dentro y dejan la pierna en zigzag (enano agachado hasta en reposo, 9 oct).
+        # El tobillo es lo único que hay a su altura, así que manda la línea de la pierna.
+        knee = side_centroid(z(F["knee"]), sign)
+        joints[f"{side}UpperLeg"] = Vector((ankle.x * 0.9, joints["Hips"].y, z(F["hips"] - 0.03)))
+        joints[f"{side}LowerLeg"] = Vector((ankle.x * 0.95, knee.y, z(F["knee"])))
+    else:
+        hip = side_centroid(z(F["hips"] - 0.04), sign)
+        joints[f"{side}UpperLeg"] = Vector((hip.x * 0.8, joints["Hips"].y, z(F["hips"] - 0.03)))
+        joints[f"{side}LowerLeg"] = side_centroid(z(F["knee"]), sign)
     joints[f"{side}Foot"] = ankle
     toe_pts = [v for v in verts if v.z < 0.04 * HEIGHT and v.x * sign > 0]
     front = min(toe_pts, key=lambda p: p.y) if toe_pts else ankle + Vector((0, -0.12, 0))
@@ -179,6 +187,30 @@ mesh.select_set(True)
 bpy.context.view_layer.objects.active = mesh
 bpy.ops.object.modifier_apply(modifier="transfer")
 bpy.data.objects.remove(proxy, do_unlink=True)
+
+weighted = sum(1 for v in mesh.data.vertices if len(v.groups) > 0)
+if weighted < 0.9 * len(mesh.data.vertices):
+    # La difusión de calor no encuentra solución en algunas mallas (humano y enano generados). Respaldo: peso por
+    # distancia al segmento de cada hueso, repartido entre los tres más cercanos (1/d⁴). Más tosco en las axilas,
+    # pero nunca deja la malla sin piel.
+    print(f"[rig] calor falló ({weighted} con peso): pesos por distancia a los huesos")
+    segs = [(b.name, b.head_local.copy(), b.tail_local.copy()) for b in arm_data.bones
+            if not b.name.endswith("Shoulder") and b.name != "UpperChest"]
+    for g in list(mesh.vertex_groups):
+        mesh.vertex_groups.remove(g)
+    groups = {name: mesh.vertex_groups.new(name=name) for name, _, _ in segs}
+
+    def seg_dist(p, a, b):
+        ab = b - a
+        t = max(0.0, min(1.0, (p - a).dot(ab) / max(ab.length_squared, 1e-9)))
+        return (a + ab * t - p).length
+
+    for v in mesh.data.vertices:
+        ds = sorted((seg_dist(v.co, a, b), name) for name, a, b in segs)[:3]
+        ws = [(1.0 / max(d, 0.01) ** 4, name) for d, name in ds]
+        total = sum(w for w, _ in ws)
+        for w, name in ws:
+            groups[name].add([v.index], w / total, "REPLACE")
 
 mod = mesh.modifiers.new("Armature", "ARMATURE")
 mod.object = arm

@@ -466,13 +466,14 @@ public sealed partial class PlayerModel : Node3D
     {
         string P(string name) => $"{RacesFolder}/{name}.gltf";
         string[] hairs = { "hair_buzzed", "hair_simpleparted", "hair_long" };
+        // 9 oct: cada raza con modelo generado desde su hoja de modelo (TRELLIS o Hunyuan3D-2 + rig automático en
+        // Blender, docs/ui/modelos-3d.md) lo usa; sin él, las piezas de Quaternius.
+        string generated = $"{RacesFolder}/{race.ToString().ToLowerInvariant()}_gen.glb";
         (string key, string[] parts, float width, Color? skin) recipe = race switch
         {
+            _ when ResourceLoader.Exists(generated) => ("gen_" + race.ToString().ToLowerInvariant(), new[] { generated }, 1f, null),
             Race.Elf => ("elf", new[] { P("ranger_male"), P("head_male") }, 0.92f, null),
             Race.Dwarf => ("dwarf", new[] { P("peasant_male"), P("head_male"), P("hair_beard"), P("hair_buzzed") }, 1.15f, null),
-            // 9 oct: el orco generado desde su hoja de modelo (TRELLIS + rig automático en Blender, docs/ui/modelos-3d.md);
-            // si no está, el Imp de Quaternius.
-            Race.Orc when ResourceLoader.Exists($"{RacesFolder}/orc_gen.glb") => ("gen_orc", new[] { $"{RacesFolder}/orc_gen.glb" }, 1f, null),
             Race.Orc => ("orc", new[] { P("imp") }, 1.15f, null),
             Race.Undead => ("undead", new[] { P("peasant_male"), P("head_male") }, 1f, new Color(0.36f, 0.45f, 0.33f)),
             _ => ("human_" + (variant % hairs.Length), new[] { P("peasant_male"), P("head_male"), P(hairs[Math.Abs(variant) % hairs.Length]) }, 1f, null),
@@ -643,7 +644,13 @@ public sealed partial class PlayerModel : Node3D
         model._instance = instance;
         model._anim = FindAnimationPlayer(instance);
         model._skeleton = FindSkeleton(instance);
-        ApplyProportions(model._skeleton, race);
+        // El modelo generado ya trae dibujadas las proporciones de su raza (cabeza, manos): escalar los huesos encima las
+        // exageraría.
+        if (!rig.Key.StartsWith("gen_", StringComparison.Ordinal))
+        {
+            ApplyProportions(model._skeleton, race);
+        }
+
         model.ResolveContactBones();
         if (model._anim is not null && _library is not null && !model._anim.HasAnimationLibrary(Library))
         {
