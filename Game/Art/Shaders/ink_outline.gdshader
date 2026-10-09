@@ -6,11 +6,11 @@ shader_type spatial;
 render_mode unshaded, depth_test_disabled, depth_draw_never, cull_disabled, blend_mix, fog_disabled;
 
 uniform sampler2D depth_tex : hint_depth_texture, filter_nearest, repeat_disable;
-uniform vec4 ink : source_color = vec4(0.106, 0.082, 0.063, 1.0);
-uniform float thickness = 2.6;
-uniform float threshold = 0.025;
+uniform vec4 ink : source_color = vec4(0.106, 0.082, 0.063, 0.55);
+uniform float thickness = 1.2;
+uniform float threshold = 0.06;
 uniform float boil_fps = 8.0;
-uniform float boil_pixels = 1.4;
+uniform float boil_pixels = 0.8;
 uniform float boil_scale = 34.0;
 
 float hash(vec2 p) {
