@@ -3319,6 +3319,10 @@ public partial class MatchPitchView3D : SubViewportContainer
             new Color("c9b48a"), new Color("6b5a3e"), new Color("e8dcc0"),
         };
         var body = new CapsuleMesh { Radius = 0.12f, Height = 0.42f, RadialSegments = 8, Rings = 2 };
+        var head = new SphereMesh { Radius = 0.075f, Height = 0.15f, RadialSegments = 8, Rings = 4 };
+
+        // Pieles de las cinco razas que llenan una grada: humana, enana, élfica, orca y la del no-muerto.
+        var skins = new[] { new Color("e0b48c"), new Color("c8936a"), new Color("f1d6bc"), new Color("6f8f3c"), new Color("9aa596") };
         var crowdMaterial = new StandardMaterial3D
         {
             VertexColorUseAsAlbedo = true,
@@ -3330,7 +3334,7 @@ public partial class MatchPitchView3D : SubViewportContainer
         {
             float z = -1.05f - (tier * 0.62f);
             float y = 0.18f + (tier * 0.36f);
-            AddBox(new Vector3(8f, y / 2f, z), new Vector3(StandWidth, y, 0.62f), tier % 2 == 0 ? new Color("5c4632") : new Color("6e5640"));
+            AddWoodBox(new Vector3(8f, y / 2f, z), new Vector3(StandWidth, y, 0.62f), tier % 2 == 0 ? new Color("8a6a4a") : new Color("9c7a55"));
 
             var multiMesh = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = body, InstanceCount = (int)(StandWidth / 0.305f) };
             for (int k = 0; k < multiMesh.InstanceCount; k++)
@@ -3345,17 +3349,80 @@ public partial class MatchPitchView3D : SubViewportContainer
             }
 
             _world.AddChild(new MultiMeshInstance3D { Multimesh = multiMesh, MaterialOverride = crowdMaterial, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
+
+            // Pase de arte (9 oct): una cabeza encima de cada cuerpo, para que la grada se lea como gente y no como
+            // una fila de pastillas.
+            var heads = new MultiMesh { TransformFormat = MultiMesh.TransformFormatEnum.Transform3D, UseColors = true, Mesh = head, InstanceCount = multiMesh.InstanceCount };
+            for (int k = 0; k < heads.InstanceCount; k++)
+            {
+                var bodyAt = multiMesh.GetInstanceTransform(k);
+                heads.SetInstanceTransform(k, new Transform3D(Basis.Identity, bodyAt.Origin + new Vector3(0f, 0.29f * bodyAt.Basis.Scale.Y, 0f)));
+                heads.SetInstanceColor(k, skins[rng.RandiRange(0, skins.Length - 1)]);
+            }
+
+            _world.AddChild(new MultiMeshInstance3D { Multimesh = heads, MaterialOverride = crowdMaterial, CastShadow = GeometryInstance3D.ShadowCastingSetting.Off });
         }
 
-        // Remate de la grada: una viga con banderolas alternando los dos equipos.
-        AddBox(new Vector3(8f, 2.05f, -4.2f), new Vector3(StandWidth, 0.12f, 0.12f), new Color("3a2a1a"));
-        int flags = (int)(StandWidth / 1.6f);
-        float firstFlag = 8f - ((flags - 1) * 1.6f / 2f);
+        // Remate de la grada: un muro de tablones con una viga, banderolas heráldicas triangulares alternando los dos
+        // equipos (azur y oro, gules y sable) y dos torres de madera con tejado rojo en los extremos — la grada de las
+        // referencias del revisor (pase de arte, 9 oct).
+        AddWoodBox(new Vector3(8f, 1.6f, -4.45f), new Vector3(StandWidth, 3.2f, 0.25f), new Color("6b4a2e"));
+        AddWoodBox(new Vector3(8f, 2.05f, -4.2f), new Vector3(StandWidth, 0.14f, 0.14f), new Color("4a3220"));
+        var flagColors = new[] { new Color("1e3a6e"), new Color("c9982f"), new Color("8e1f1f"), new Color("1b1712") };
+        var flag = new PrismMesh { Size = new Vector3(0.62f, 0.9f, 0.02f), LeftToRight = 0.5f };
+        int flags = (int)(StandWidth / 0.9f);
+        float firstFlag = 8f - ((flags - 1) * 0.9f / 2f);
         for (int f = 0; f < flags; f++)
         {
-            var flagColor = f % 2 == 0 ? new Color("2f6fd6") : new Color("d63a2f");
-            AddBox(new Vector3(firstFlag + (f * 1.6f), 1.8f, -4.15f), new Vector3(0.5f, 0.45f, 0.03f), flagColor);
+            _world.AddChild(new MeshInstance3D
+            {
+                Mesh = flag,
+                MaterialOverride = new StandardMaterial3D
+                {
+                    AlbedoColor = flagColors[f % flagColors.Length],
+                    AlbedoTexture = Art.Parchment,
+                    Uv1Triplanar = true,
+                    Uv1Scale = new Vector3(0.6f, 0.6f, 0.6f),
+                    ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                },
+                Position = new Vector3(firstFlag + (f * 0.9f), 2.6f, -4.28f),
+                RotationDegrees = new Vector3(0f, 0f, 180f),
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+            });
         }
+
+        foreach (float towerX in new[] { 0.2f, 15.8f })
+        {
+            AddWoodBox(new Vector3(towerX, 2.3f, -4.9f), new Vector3(1.3f, 4.6f, 1.3f), new Color("7a5838"));
+            _world.AddChild(new MeshInstance3D
+            {
+                Mesh = new CylinderMesh { TopRadius = 0f, BottomRadius = 1.05f, Height = 1.3f, RadialSegments = 4, Rings = 1 },
+                MaterialOverride = new StandardMaterial3D { AlbedoColor = new Color("8e1f1f"), Roughness = 1f },
+                Position = new Vector3(towerX, 5.25f, -4.9f),
+                RotationDegrees = new Vector3(0f, 45f, 0f),
+                CastShadow = GeometryInstance3D.ShadowCastingSetting.On,
+            });
+        }
+    }
+
+    /// <summary>Caja con veta de madera (pase de arte, 9 oct): el mapa de detalle multiplicado por el color.</summary>
+    private void AddWoodBox(Vector3 center, Vector3 size, Color color)
+    {
+        _world.AddChild(new MeshInstance3D
+        {
+            Mesh = new BoxMesh { Size = size },
+            MaterialOverride = new StandardMaterial3D
+            {
+                AlbedoColor = color,
+                AlbedoTexture = Art.Wood,
+                Uv1Triplanar = true,
+                Uv1Scale = new Vector3(0.35f, 0.35f, 0.35f),
+                Roughness = 1f,
+                SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled,
+            },
+            Position = center,
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.On,
+        });
     }
 
     /// <summary>Los mismos rótulos de parodia para las dos vallas (la del fondo lejano y las de las dos porterías): «reutiliza las que ya existen» (revisión del revisor, 20 sep 2026), un solo sitio, no dos catálogos.</summary>
@@ -3558,6 +3625,12 @@ public partial class MatchPitchView3D : SubViewportContainer
         var dirt = new Color("7a5f3e");
         var burnt = new Color("2e2a1c");
 
+        // Pase de arte (9 oct): grano de hierba y de tierra de fotografía (ambientCG, CC0) por debajo del desgaste
+        // procedural; el tono lo siguen poniendo las franjas y las calvas de aquí. Sin fichero, liso como antes.
+        var grassGrain = GrainImage("res://Art/Textures/grass_color.jpg");
+        var dirtGrain = GrainImage("res://Art/Textures/dirt_color.jpg");
+        const int GrainScale = 4;
+
         for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)
@@ -3593,6 +3666,15 @@ public partial class MatchPitchView3D : SubViewportContainer
                 }
 
                 c = c.Lerp(Colors.Black, (f - 0.5f) * 0.08f);
+                if (grassGrain is { } grassMap)
+                {
+                    float grain = GrainAt(grassMap, x * GrainScale, y * GrainScale);
+                    float soil = dirtGrain is { } dirtMap ? GrainAt(dirtMap, x * GrainScale, y * GrainScale) : grain;
+                    float baldness = Mathf.Clamp((bald - 0.45f) / 0.2f, 0f, 1f);
+                    float detail = Mathf.Lerp(grain, soil, baldness);
+                    c = new Color(c.R * detail, c.G * detail, c.B * detail);
+                }
+
                 image.SetPixel(x, y, c);
             }
         }
@@ -3621,6 +3703,50 @@ public partial class MatchPitchView3D : SubViewportContainer
         image.GenerateMipmaps();
         return ImageTexture.CreateFromImage(image);
     }
+
+    /// <summary>
+    /// Una textura de fotografía convertida en mapa de grano: luminancia relativa a su media (≈1), para multiplicar un
+    /// color sin cambiarle el tono. Null si el fichero no está.
+    /// </summary>
+    private static (float[] Values, int Width, int Height)? GrainImage(string path)
+    {
+        if (!ResourceLoader.Exists(path))
+        {
+            return null;
+        }
+
+        var image = GD.Load<Texture2D>(path).GetImage();
+        if (image.IsCompressed())
+        {
+            image.Decompress();
+        }
+
+        int w = image.GetWidth();
+        int h = image.GetHeight();
+        var values = new float[w * h];
+        double sum = 0d;
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                float lum = image.GetPixel(x, y).Luminance;
+                values[(y * w) + x] = lum;
+                sum += lum;
+            }
+        }
+
+        float mean = (float)(sum / values.Length);
+        for (int i = 0; i < values.Length; i++)
+        {
+            // Contraste suavizado: el grano se nota sin ensuciar las franjas de siega.
+            values[i] = Mathf.Clamp(1f + (((values[i] / Mathf.Max(mean, 0.01f)) - 1f) * 0.55f), 0.7f, 1.25f);
+        }
+
+        return (values, w, h);
+    }
+
+    private static float GrainAt((float[] Values, int Width, int Height) grain, int x, int y) =>
+        grain.Values[((y % grain.Height) * grain.Width) + (x % grain.Width)];
 
     /// <summary>Mezcla alfa sobre lo que ya hay en la imagen, en coordenadas de casilla: para líneas semitransparentes sobre el césped gastado.</summary>
     private static void Blend(Image image, float x0, float y0, float x1, float y1, Color color)
