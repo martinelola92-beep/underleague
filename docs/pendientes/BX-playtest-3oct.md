@@ -20,6 +20,18 @@ Capturas: `capturas/playtest-3oct-saque-portero.png` (saque de puerta al centro,
 - **BX-9** Al portero a veces le cuesta coger el balón con las manos: se queda unos ticks con él en los pies.
 - **BX-10** A menudo el balón pasa al lado de un jugador solo y no lo coge (probabilidad de captura o intercepción).
 - **BX-11** ¿Puede lesionarse gravemente un jugador en el minuto 0?
+  **Respondida (9 oct), sin cambio de código.**
+  - Dentro del partido, una lesión grave sólo sale de una entrada o una falta. Los únicos perks con efecto `injure`
+    son `ankle_bite` (`TACKLE`) y `dirty_play` (`FOUL`); `blood_tithe` (`MATCH_START`) sólo modifica probabilidades.
+  - Sonda desechable sobre 1.000 partidos de referencia, por minuto del reloj del partido:
+    - el minuto 0 tiene 18 entradas en total, frente a 164 de media en los minutos 5-89 (el saque acaba de empezar);
+    - **0 lesiones graves en el minuto 0** (ni en el 1), frente a 1,6 de media por minuto;
+    - 0 muertes en todo el lote: los equipos de referencia no llevan perks letales.
+  - Así que es posible en principio, por una entrada justo tras el saque, pero el minuto 0 es el **menos** probable.
+  - Fuera del partido, las cartas de evento del mapa (`locker_room_brawl`, `blood_pit`, `fighting_pit`…) sí lesionan
+    antes de jugar, con aviso en la carta. Un jugador así entra al partido ya lesionado.
+  - **LIKELY**, sin poder comprobarlo sin la partida: eso es lo que vio el revisor. Pregunta abierta: ¿qué pantalla lo
+    mostraba (log, informe o estandarte) y venía de una carta de evento?
 - **BX-12** El árbitro se teletransporta demasiado; no debería molestar tanto.
   **Cerrada (9 oct), sólo `/Game`.** El árbitro no existe en `/Sim`: `MatchPitchView3D.ApplyReferee` lo pone 3 filas
   hacia la banda más cercana al balón, con un suavizado exponencial. Hipótesis:
