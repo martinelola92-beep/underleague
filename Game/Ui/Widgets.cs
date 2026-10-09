@@ -25,7 +25,7 @@ namespace Underleague.Game.Ui;
 /// una llamada a <see cref="Button"/> no.
 /// </para>
 /// </summary>
-public static class Widgets
+public static partial class Widgets
 {
     /// <summary>Alto de la cabecera de todas las pantallas (misma que Equipo).</summary>
     public const int HeaderHeight = 52;
@@ -36,16 +36,13 @@ public static class Widgets
     private static Theme? _legacyTheme;
 
     /// <summary>Fondo de pantalla completo: madera oscura, la estructura persistente del marco.</summary>
-    public static ColorRect Background(Control parent)
+    public static Control Background(Control parent)
     {
-        var rect = new ColorRect
-        {
-            Color = Style.Background,
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-        };
-        rect.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-        parent.AddChild(rect);
-        return rect;
+        // Pase de arte (9 oct): la misma mesa de tablones que Equipo, con veta (WoodTable pinta plano si falta la textura).
+        var table = new WoodTable { MouseFilter = Control.MouseFilterEnum.Ignore };
+        table.SetAnchorsPreset(Control.LayoutPreset.FullRect);
+        parent.AddChild(table);
+        return table;
     }
 
     /// <summary>
@@ -102,8 +99,34 @@ public static class Widgets
     /// que un manuscrito destaca sus cabeceras—, que se lee mejor sobre pergamino que el dorado de
     /// <see cref="Style.Accent"/>.
     /// </summary>
-    public static Label Section(Control parent, string text, Vector2 at, float width = 600f) =>
-        Label(parent, text, at, width, Style.TextSmall, Pregon.Wax, Pregon.Serif);
+    public static Label Section(Control parent, string text, Vector2 at, float width = 600f)
+    {
+        // Pase de arte (9 oct): la cabecera de bloque es un brochazo rojo con la letra en papel, como TITULARES en
+        // Equipo y en las referencias. El brochazo va detrás, a la medida del texto, y la etiqueta sigue midiendo lo
+        // mismo para quien apila debajo.
+        var label = Label(parent, text.ToUpperInvariant(), at + new Vector2(10f, 0f), width - 10f, Style.TextSmall, Knavall.Ink.Paper, Knavall.Ink.Heavy);
+        label.AddThemeColorOverride("font_outline_color", Knavall.Ink.Black);
+        label.AddThemeConstantOverride("outline_size", 4);
+        float textWidth = Knavall.Ink.Width(Knavall.Ink.Heavy, label.Text, Style.TextSmall);
+        var brush = new BrushBack
+        {
+            Position = at + new Vector2(0f, -3f),
+            Size = new Vector2(Mathf.Min(textWidth + 34f, width), label.Size.Y + 6f),
+            Seed = (int)(at.X * 3f + at.Y * 7f),
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+        };
+        parent.AddChild(brush);
+        parent.MoveChild(brush, label.GetIndex());
+        return label;
+    }
+
+    /// <summary>El brochazo de detrás de una cabecera de bloque (<see cref="Section"/>).</summary>
+    private sealed partial class BrushBack : Control
+    {
+        public int Seed { get; set; }
+
+        public override void _Draw() => Knavall.Ink.Brush(this, new Rect2(Vector2.Zero, Size), Knavall.Ink.Red, Seed);
+    }
 
     private static Label Label(Control parent, string text, Vector2 at, float width, int size, Color color, Font font)
     {
@@ -158,19 +181,25 @@ public static class Widgets
     /// </summary>
     public static Label Header(Control parent, string title, string subtitle)
     {
-        Panel(parent, new Rect2(0f, 0f, Layout.LegacySize.X, HeaderHeight), Style.Background, parchment: false);
-        var seam = new ColorRect
+        // Pase de arte (9 oct): tablón de cabecera con veta y clavos, como el de Equipo.
+        parent.AddChild(new HeaderPlank
         {
-            Color = Style.Line,
-            Position = new Vector2(0f, HeaderHeight - 2f),
-            Size = new Vector2(Layout.LegacySize.X, 2f),
+            Position = Vector2.Zero,
+            Size = new Vector2(Layout.LegacySize.X, HeaderHeight),
             MouseFilter = Control.MouseFilterEnum.Ignore,
-        };
-        parent.AddChild(seam);
+        });
 
-        Title(parent, title, new Vector2(16f, 12f), 300f, Style.Accent);
+        var heading = Title(parent, title, new Vector2(16f, 10f), 300f, Knavall.Ink.Ochre);
+        heading.AddThemeColorOverride("font_outline_color", Knavall.Ink.Black);
+        heading.AddThemeConstantOverride("outline_size", 6);
         var label = Body(parent, subtitle, new Vector2(200f, 18f), 1060f, Style.OnWood);
         return label;
+    }
+
+    /// <summary>El tablón de la cabecera común (<see cref="Header"/>).</summary>
+    private sealed partial class HeaderPlank : Control
+    {
+        public override void _Draw() => Knavall.Ink.Plank(this, new Rect2(-6f, -6f, Size.X + 12f, Size.Y + 4f), 901, Knavall.Ink.Wood, nails: false);
     }
 
     /// <summary>
@@ -215,12 +244,11 @@ public static class Widgets
         theme.SetColor("font_disabled_color", "Button", new Color(Style.Text, 0.55f));
 
         theme.SetStylebox("normal", "Button", PlaqueBox(Style.Panel));
-        theme.SetStylebox("hover", "Button", PlaqueBox(Style.PanelSoft));
-        theme.SetStylebox("pressed", "Button", PlaqueBox(Style.Panel.Darkened(0.12f)));
+        theme.SetStylebox("hover", "Button", PlaqueBox(Knavall.Ink.PaperWarm));
+        theme.SetStylebox("pressed", "Button", PlaqueBox(Knavall.Ink.Ochre));
         theme.SetStylebox("disabled", "Button", PlaqueBox(new Color(Style.Panel, 0.55f)));
 
-        var focus = PlaqueBox(Style.Panel);
-        focus.BorderColor = Style.Accent;
+        var focus = PlaqueBox(Knavall.Ink.Ochre);
         theme.SetStylebox("focus", "Button", focus);
 
         // El cuadro de semilla de Inicio es el único LineEdit de las pantallas viejas: sin esto se queda
@@ -237,25 +265,26 @@ public static class Widgets
         return theme;
     }
 
-    /// <summary>Placa de pergamino de un botón: relleno plano, orla de borde y una sombra corta.</summary>
-    private static StyleBoxFlat PlaqueBox(Color fill) => new()
+    /// <summary>
+    /// Placa de un botón. Pase de arte (9 oct): la de Equipo —papel con grano, contorno de tinta grueso y sombra dura—
+    /// en vez del rectángulo de borde fino.
+    /// </summary>
+    private static StyleBox PlaqueBox(Color fill)
     {
-        BgColor = fill,
-        BorderColor = Style.Line,
-        BorderWidthTop = 2,
-        BorderWidthBottom = 2,
-        BorderWidthLeft = 2,
-        BorderWidthRight = 2,
-        CornerRadiusTopLeft = 3,
-        CornerRadiusTopRight = 3,
-        CornerRadiusBottomLeft = 3,
-        CornerRadiusBottomRight = 3,
-        ShadowSize = 3,
-        ShadowColor = new Color(0f, 0f, 0f, 0.35f),
-        ShadowOffset = new Vector2(2f, 3f),
-        ContentMarginLeft = 8f,
-        ContentMarginRight = 8f,
-        ContentMarginTop = 4f,
-        ContentMarginBottom = 4f,
-    };
+        var box = new InkStyleBox
+        {
+            Fill = fill,
+            Edge = Knavall.Ink.Black,
+            EdgeWidth = 2.6f,
+            Amplitude = 1.2f,
+            Seed = 17,
+            ShadowColor = Knavall.Ink.Shadow,
+            ShadowOffset = new Vector2(3f, 4f),
+        };
+        box.ContentMarginLeft = 8f;
+        box.ContentMarginRight = 8f;
+        box.ContentMarginTop = 4f;
+        box.ContentMarginBottom = 4f;
+        return box;
+    }
 }

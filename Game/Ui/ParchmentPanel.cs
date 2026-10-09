@@ -39,6 +39,14 @@ public partial class ParchmentPanel : Control
             return;
         }
 
-        Underleague.Game.Ui.Broadcast.Pregon.DrawParchment(this, Vector2.Zero, Size.X, Size.Y, _fill, _edge, _seed);
+        // Pase de arte (9 oct): la hoja de Equipo —grano, borde tostado, contorno de tinta y sombra dura—, la misma
+        // en todas las pantallas. Un panel muy fino (separadores) se queda con el pergamino de siempre.
+        if (Size.Y < 24f || Size.X < 24f)
+        {
+            Underleague.Game.Ui.Broadcast.Pregon.DrawParchment(this, Vector2.Zero, Size.X, Size.Y, _fill, _edge, _seed);
+            return;
+        }
+
+        Knavall.Ink.Sheet(this, new Rect2(Vector2.Zero, Size), _seed, _fill);
     }
 }
