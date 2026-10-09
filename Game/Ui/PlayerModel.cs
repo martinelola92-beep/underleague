@@ -697,6 +697,8 @@ public sealed partial class PlayerModel : Node3D
     }
 
     private BaseMaterial3D? _capsuleMaterial;
+    private const string GeneratedShaderPath = "res://Art/Shaders/generated_figure.gdshader";
+    private static Shader? _generatedShader;
     private readonly System.Collections.Generic.List<ShaderMaterial> _dressed = new();
     private float _opacity = 1f;
 
@@ -720,9 +722,9 @@ public sealed partial class PlayerModel : Node3D
         }
 
         _dressed.Clear();
-        // Modelos generados desde la ilustración (9 oct): su propio material (la luz por bandas los quemaba) y, en el rival, la textura
-        // con la camiseta ya virada a rojo (tools/arte/rival_textura.py). No pasan por el shader de teñido: su textura ya
-        // trae el sombreado pintado y el teñido por máscara no aplica.
+        // Modelos generados desde la ilustración (9 oct): su propio material (generated_figure.gdshader: el dibujo de la
+        // textura sin luz de escena encima) y, en el rival, la textura con la camiseta ya virada a rojo
+        // (tools/arte/rival_textura.py). No pasan por el shader de teñido: el teñido por máscara no aplica.
         if (_rig.Key.StartsWith("gen_", StringComparison.Ordinal))
         {
             DressGenerated(team);
@@ -782,7 +784,9 @@ public sealed partial class PlayerModel : Node3D
 
     private void DressGenerated(Color team)
     {
-        bool rival = team.R > team.B;
+        _generatedShader ??= ResourceLoader.Load<Shader>(GeneratedShaderPath);
+        // Casi negro = el árbitro (MatchPitchView3D lo viste de 15130f): camiseta negra. Si no, rojo = rival.
+        string? variant = team.V < 0.15f ? "_referee.png" : team.R > team.B ? "_rival.png" : null;
         foreach (var mesh in Meshes(this))
         {
             mesh.MaterialOverride = null;
@@ -793,25 +797,21 @@ public sealed partial class PlayerModel : Node3D
 
             for (int surface = 0; surface < mesh.Mesh.GetSurfaceCount(); surface++)
             {
-                if (mesh.Mesh.SurfaceGetMaterial(surface) is not BaseMaterial3D source)
+                if (mesh.Mesh.SurfaceGetMaterial(surface) is not BaseMaterial3D { AlbedoTexture: { } texture })
                 {
                     continue;
                 }
 
-                var material = (BaseMaterial3D)source.Duplicate();
-                material.SpecularMode = BaseMaterial3D.SpecularModeEnum.Disabled;
-                material.Roughness = 1f;
-                material.Metallic = 0f;
-                if (rival && source.AlbedoTexture?.ResourcePath is { Length: > 0 } path)
+                if (variant is not null && texture.ResourcePath is { Length: > 0 } path && ResourceLoader.Exists(path[..^4] + variant))
                 {
-                    string rivalPath = path[..^4] + "_rival.png";
-                    if (ResourceLoader.Exists(rivalPath))
-                    {
-                        material.AlbedoTexture = GD.Load<Texture2D>(rivalPath);
-                    }
+                    texture = GD.Load<Texture2D>(path[..^4] + variant);
                 }
 
+                var material = new ShaderMaterial { Shader = _generatedShader };
+                material.SetShaderParameter("albedo_tex", texture);
+                material.SetShaderParameter("opacity", _opacity);
                 mesh.SetSurfaceOverrideMaterial(surface, material);
+                _dressed.Add(material);
             }
         }
     }
