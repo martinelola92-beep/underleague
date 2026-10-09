@@ -1,33 +1,33 @@
 using System;
 using Godot;
 using Underleague.Sim.Engine;
+using Underleague.Sim.Model;
 
 namespace Underleague.Game.Ui;
 
 /// <summary>
-/// <b>Maqueta</b> (23 sep 2026): un modelo humanoide animado en el sitio de la cápsula, solo para los
-/// humanos, para ver qué cambia. No es el sistema de personajes del juego y no pretende serlo — la regla 10
-/// del proyecto dice que no se produce arte hasta cerrar el diseño de la fase 2, así que esto es material
-/// provisional puesto para <b>decidir con una imagen delante</b>, no para quedarse.
+/// El jugador del partido 3D: un modelo animado en el sitio de la cápsula. Nació como <b>maqueta</b> (23 sep 2026,
+/// solo los humanos, con el maniquí «X Bot» de Mixamo); desde el 9 oct 2026 las <b>cinco razas</b> llevan modelo propio
+/// de Quaternius (CC0), animado con los mismos clips de fútbol de Mixamo. Recetas en <see cref="RecipeFor"/> y en
+/// <c>docs/ui/arte.md</c>.
 ///
-/// <para><b>Material</b>: personaje y animaciones de Mixamo (<c>Game/models/soccer/</c>) — el «Soccer Game
-/// Pack», que es de fútbol de verdad: correr, chutar, remate de cabeza, entrada, trompicón, portero. La
-/// primera maqueta usó una biblioteca genérica de aventura (Quaternius, CC0, en <c>Game/models/</c>) y se
-/// veía lo que era: los jugadores andaban <i>encorvados</i> porque su única animación de andar era «andar
-/// cargando algo». Ese pack se conserva sin usar porque trae un juego <c>Zombie_*</c> completo que le vendrá
-/// bien a los no-muertos.</para>
+/// <para><b>Material</b>: animaciones de Mixamo (<c>Game/models/soccer/</c>, el «Soccer Game Pack»: correr, chutar,
+/// remate de cabeza, entrada, trompicón, portero) y cuerpos de Quaternius (<c>Game/models/races/</c>, preparados por
+/// <c>tools/arte/razas.py</c>: cuerpo base, trajes de campesino y explorador, pelo, barba, Imp). Cada modelo se compone en
+/// ejecución (<see cref="Compose"/>): la pieza con esqueleto, y las demás mallas colgadas de él.</para>
 ///
 /// <para><b>Cuelga de la cápsula, no la sustituye.</b> El nodo se añade como hijo del mismo
 /// <c>MeshInstance3D</c> que ya movía <c>ApplyTrace</c>, así que hereda posición sin que nada del resto de
 /// la vista —anillo, dorsal, sangre, cortinilla de teletransporte, cámara— tenga que enterarse. A la
 /// cápsula se le quita la malla y se queda como el <i>hueso</i> que la transforma.</para>
 ///
-/// <para><b>Por qué los clips se aplican sin reorientar nada</b> (medido con la sonda
-/// <c>Scenes/SondaModelo.tscn</c>, no supuesto): el personaje y los 15 clips vienen de Mixamo, tienen los
-/// <b>mismos 65 huesos</b> (<c>mixamorig_*</c>) y las pistas apuntan a <c>Skeleton3D:mixamorig_…</c>, que es
-/// exactamente la jerarquía del personaje. Se cargan una vez en una
-/// <see cref="AnimationLibrary"/> compartida y cada jugador la monta en su reproductor. Si los esqueletos
-/// no coincidieran haría falta reescribir las rutas o reorientar con <c>SkeletonProfileHumanoid</c>.</para>
+/// <para><b>Cómo animan los clips de Mixamo a los esqueletos de Quaternius</b> (retargeting de importación de Godot,
+/// medido con <c>Scenes/SondaModelo.tscn</c> y <c>Scenes/SondaRazas.tscn</c>): los <c>.import</c> de los clips y de los
+/// modelos llevan un <see cref="BoneMap"/> a <see cref="SkeletonProfileHumanoid"/> (<c>Game/models/retarget/</c>), con
+/// renombrado de huesos, esqueleto único <c>%GeneralSkeleton</c>, ejes reescritos al perfil, silueta en T y pistas de
+/// posición normalizadas por la altura de cadera. Así las pistas son <c>%GeneralSkeleton:Hips</c> y compañía en todos, se
+/// cargan una vez en una <see cref="AnimationLibrary"/> compartida y cualquier cuerpo humanoide las reproduce; las de
+/// posición se devuelven a cada cuerpo con <see cref="Skeleton3D.MotionScale"/> (de ahí la zancada de cada raza).</para>
 ///
 /// <para><b>Un mensaje de cierre que NO es un fallo</b>: al salir, Godot avisa de «3 resources still in use
 /// at exit». Son el personaje, la biblioteca y su animación, que viven en cachés <c>static</c> a propósito
@@ -93,35 +93,43 @@ public readonly record struct FallCue(float SecondsToTackle, bool TacklerFalls, 
 
 public sealed partial class PlayerModel : Node3D
 {
-    /// <summary>La carpeta del material de fútbol: personaje y clips, todos del mismo esqueleto.</summary>
+    /// <summary>La carpeta de los clips de fútbol (Mixamo).</summary>
     private const string Folder = "res://models/soccer";
 
-    /// <summary>El personaje con malla. Los clips vienen en ficheros aparte, sin malla.</summary>
-    private const string CharacterPath = Folder + "/X Bot.fbx";
+    /// <summary>La carpeta de los modelos de las razas (Quaternius, CC0; los prepara <c>tools/arte/razas.py</c>).</summary>
+    private const string RacesFolder = "res://models/races";
+
+    /// <summary>
+    /// El material del partido para los modelos de raza: textura, camisa teñida del color del equipo (máscara en el alfa de
+    /// la textura del traje), piel de no-muerto y la atenuación del corte de teletransporte (BA-K) por tramado.
+    /// </summary>
+    private const string TintShaderPath = RacesFolder + "/team_tint.gdshader";
 
     /// <summary>Nombre de la biblioteca que se monta en cada reproductor; prefija a todas las claves.</summary>
     private const string Library = "soccer";
 
     /// <summary>
-    /// El hueso raíz del esqueleto de Mixamo, el que lleva el desplazamiento del clip. Es el que se fija
-    /// para dejar la animación <b>en el sitio</b> (ver <see cref="PinInPlace"/>). Con otro pack cambia.
+    /// El hueso raíz, el que lleva el desplazamiento del clip. Es el que se fija para dejar la animación <b>en el
+    /// sitio</b> (ver <see cref="PinInPlace"/>). Desde las razas (9 oct 2026) todos los esqueletos —los clips de Mixamo y
+    /// los modelos UAL de Quaternius— se importan con un <c>BoneMap</c> a <see cref="SkeletonProfileHumanoid"/>
+    /// (<c>Game/models/retarget/</c>), así que los huesos se llaman como en el perfil y las pistas apuntan a
+    /// <c>%GeneralSkeleton:Hips</c>, sea cual sea el modelo.
     /// </summary>
-    private const string RootBone = ":mixamorig_Hips";
+    private const string RootBone = ":Hips";
 
     /// <summary>
-    /// De qué hueso sale el balón según con qué se esté jugando (BI-H). Los nombres están <b>verificados
-    /// en el propio FBX</b> —el personaje trae los 65 huesos <c>mixamorig:*</c> y el importador de Godot
-    /// sustituye el <c>:</c> por <c>_</c>—, no supuestos. Cada parte lleva dos huesos, izquierdo y derecho,
+    /// De qué hueso sale el balón según con qué se esté jugando (BI-H). Los nombres son los del
+    /// <see cref="SkeletonProfileHumanoid"/> (el importador renombra los huesos de cada modelo al perfil). Cada parte lleva dos huesos, izquierdo y derecho,
     /// y se elige el que esté <b>más cerca del balón</b>: es lo único que hace falta para que parezca que
     /// golpea con la pierna que toca, y cuesta una comparación de distancias en vez de un sistema de IK.
     /// Con otro pack de animación cambia esta tabla y nada más.
     /// </summary>
     private static readonly (ContactPart Part, string Left, string Right)[] ContactBones =
     {
-        (ContactPart.Feet, "mixamorig_LeftToeBase", "mixamorig_RightToeBase"),
-        (ContactPart.Head, "mixamorig_Head", "mixamorig_Head"),
-        (ContactPart.Hands, "mixamorig_LeftHand", "mixamorig_RightHand"),
-        (ContactPart.Chest, "mixamorig_Spine2", "mixamorig_Spine2"),
+        (ContactPart.Feet, "LeftToes", "RightToes"),
+        (ContactPart.Head, "Head", "Head"),
+        (ContactPart.Hands, "LeftHand", "RightHand"),
+        (ContactPart.Chest, "UpperChest", "UpperChest"),
     };
 
     /// <summary>
@@ -346,10 +354,10 @@ public sealed partial class PlayerModel : Node3D
     /// </summary>
     private const float FacingOffset = 0f;
 
-    private static PackedScene? _character;
     private static AnimationLibrary? _library;
-    private static bool _missing;
     private static bool _announced;
+    private static Shader? _tintShader;
+    private static Shader? _tintShaderTwoSided;
 
     private AnimationPlayer? _anim;
     private Skeleton3D? _skeleton;
@@ -391,10 +399,14 @@ public sealed partial class PlayerModel : Node3D
     /// Medidas del ciclo hechas una vez sobre los propios clips (no supuestas): en qué segundo de cada clip va la
     /// puntera izquierda más adelantada, y dónde quedan las punteras —en el espacio del personaje importado— en la
     /// zancada, en la espera y en el contacto del golpeo. De ahí salen la alineación trote/carrera y el balón al pie.
+    /// <b>Por modelo</b> (<see cref="Rig"/>), no globales: un enano y un elfo tienen la puntera a distinta distancia.
     /// </summary>
-    private static bool _cyclesMeasured;
-    private static float _jogOffset, _runOffset;
-    private static Vector3 _reachRun, _reachIdle, _reachKick;
+    private bool _cyclesMeasured { get => _rig.CyclesMeasured; set => _rig.CyclesMeasured = value; }
+    private float _jogOffset { get => _rig.JogOffset; set => _rig.JogOffset = value; }
+    private float _runOffset { get => _rig.RunOffset; set => _rig.RunOffset = value; }
+    private Vector3 _reachRun { get => _rig.ReachRun; set => _rig.ReachRun = value; }
+    private Vector3 _reachIdle { get => _rig.ReachIdle; set => _rig.ReachIdle = value; }
+    private Vector3 _reachKick { get => _rig.ReachKick; set => _rig.ReachKick = value; }
 
     /// <summary>Muestras por ciclo de las tablas de apoyo (una cada 1/60 de zancada).</summary>
     private const int StancePhases = 60;
@@ -406,8 +418,149 @@ public sealed partial class PlayerModel : Node3D
     private const float StanceToeCm = 3f;
 
     /// <summary>Apoyo por fase: [pie (0 izquierdo, 1 derecho), fase].</summary>
-    private static readonly bool[,] _stanceJog = new bool[2, StancePhases];
-    private static readonly bool[,] _stanceRun = new bool[2, StancePhases];
+    private bool[,] _stanceJog => _rig.StanceJog;
+    private bool[,] _stanceRun => _rig.StanceRun;
+
+    /// <summary>
+    /// Un modelo de raza: de qué piezas se compone (la primera trae el esqueleto; las demás —cabeza, pelo, barba— se
+    /// cuelgan de él, sus pieles se atan a los huesos por nombre), cuánto se ensancha y la piel. Más sus medidas, que se
+    /// toman una vez por modelo. Las recetas están en <see cref="RecipeFor"/> y en <c>docs/ui/arte.md</c>.
+    /// </summary>
+    private sealed class Rig
+    {
+        public Rig(string key, string[] parts, float width, Color? skin)
+        {
+            Key = key;
+            PartPaths = parts;
+            Width = width;
+            Skin = skin;
+        }
+
+        public string Key { get; }
+        public string[] PartPaths { get; }
+
+        /// <summary>Escala X/Z sobre la que da la altura (1 = las proporciones del modelo).</summary>
+        public float Width { get; }
+
+        /// <summary>Color que multiplica la piel desaturada (no-muertos), o nada.</summary>
+        public Color? Skin { get; }
+
+        public PackedScene[]? Parts;
+        public bool Missing;
+        public bool CyclesMeasured;
+        public float JogOffset, RunOffset;
+        public Vector3 ReachRun, ReachIdle, ReachKick;
+        public readonly bool[,] StanceJog = new bool[2, StancePhases];
+        public readonly bool[,] StanceRun = new bool[2, StancePhases];
+    }
+
+    private static readonly System.Collections.Generic.Dictionary<string, Rig> Rigs = new();
+
+    /// <summary>
+    /// Las recetas por raza (encargo del revisor, 9 oct 2026). Los anchos son los de la receta, <b>provisionales, sin
+    /// medir</b>: el alto lo sigue mandando la raza (<c>bodyRadius</c> y las proporciones de la vista), aquí sólo se
+    /// corrige la silueta. El humano varía de pelo por dorsal (<paramref name="variant"/>, determinista).
+    /// </summary>
+    private static Rig RecipeFor(Race race, int variant)
+    {
+        string P(string name) => $"{RacesFolder}/{name}.gltf";
+        string[] hairs = { "hair_buzzed", "hair_simpleparted", "hair_long" };
+        (string key, string[] parts, float width, Color? skin) recipe = race switch
+        {
+            Race.Elf => ("elf", new[] { P("ranger_male"), P("head_male") }, 0.92f, null),
+            Race.Dwarf => ("dwarf", new[] { P("peasant_male"), P("head_male"), P("hair_beard"), P("hair_buzzed") }, 1.15f, null),
+            Race.Orc => ("orc", new[] { P("imp") }, 1.15f, null),
+            Race.Undead => ("undead", new[] { P("peasant_male"), P("head_male") }, 1f, new Color(0.62f, 0.74f, 0.6f)),
+            _ => ("human_" + (variant % hairs.Length), new[] { P("peasant_male"), P("head_male"), P(hairs[Math.Abs(variant) % hairs.Length]) }, 1f, null),
+        };
+
+        if (!Rigs.TryGetValue(recipe.key, out var rig))
+        {
+            rig = new Rig(recipe.key, recipe.parts, recipe.width, recipe.skin);
+            Rigs[recipe.key] = rig;
+        }
+
+        return rig;
+    }
+
+    /// <summary>
+    /// Monta el modelo de la receta: instancia la pieza con esqueleto, cuelga de su <c>GeneralSkeleton</c> las mallas de
+    /// las demás y le pone un <see cref="AnimationPlayer"/> (los glTF de Quaternius no traen animaciones). Sus pistas
+    /// (<c>%GeneralSkeleton:…</c>) se resuelven desde la raíz de la instancia. <c>null</c> si falta alguna pieza.
+    /// </summary>
+    private static Node3D? Compose(Rig rig)
+    {
+        if (rig.Missing)
+        {
+            return null;
+        }
+
+        if (rig.Parts is null)
+        {
+            var parts = new PackedScene[rig.PartPaths.Length];
+            for (int i = 0; i < parts.Length; i++)
+            {
+                var loaded = ResourceLoader.Exists(rig.PartPaths[i]) ? ResourceLoader.Load<PackedScene>(rig.PartPaths[i]) : null;
+                if (loaded is null)
+                {
+                    rig.Missing = true;
+                    GD.Print($"[modelos] no está {rig.PartPaths[i]}: '{rig.Key}' sigue siendo cápsula");
+                    return null;
+                }
+
+                parts[i] = loaded;
+            }
+
+            rig.Parts = parts;
+        }
+
+        var root = rig.Parts[0].Instantiate<Node3D>();
+        var skeleton = FindSkeleton(root);
+        if (skeleton is null)
+        {
+            root.Free();
+            rig.Missing = true;
+            return null;
+        }
+
+        for (int i = 1; i < rig.Parts.Length; i++)
+        {
+            var extra = rig.Parts[i].Instantiate<Node3D>();
+            foreach (var mesh in Meshes(extra))
+            {
+                mesh.Owner = null;
+                mesh.GetParent().RemoveChild(mesh);
+                skeleton.AddChild(mesh);
+                mesh.Owner = root;
+                mesh.Skeleton = new NodePath("..");
+            }
+
+            extra.Free();
+        }
+
+        var player = new AnimationPlayer { Name = "AnimationPlayer" };
+        root.AddChild(player);
+        player.Owner = root;
+        return root;
+    }
+
+    private static System.Collections.Generic.List<MeshInstance3D> Meshes(Node node, System.Collections.Generic.List<MeshInstance3D>? into = null)
+    {
+        into ??= new System.Collections.Generic.List<MeshInstance3D>();
+        if (node is MeshInstance3D mesh)
+        {
+            into.Add(mesh);
+        }
+
+        foreach (var child in node.GetChildren())
+        {
+            Meshes(child, into);
+        }
+
+        return into;
+    }
+
+    private Rig _rig = null!;
 
     /// <summary>
     /// Índices de hueso resueltos una vez por modelo. <see cref="Skeleton3D.FindBone"/> recorre los 65
@@ -456,35 +609,28 @@ public sealed partial class PlayerModel : Node3D
     /// </summary>
     /// <param name="bodyHeight">Altura de la cápsula que sustituye, en casillas (1 casilla = 1 unidad).</param>
     /// <param name="keeper">Si es el portero: espera en postura de portero en vez de la de campo.</param>
-    public static PlayerModel? TryCreate(float bodyHeight, bool keeper)
+    /// <param name="race">La raza: decide el modelo (receta en <see cref="RecipeFor"/>).</param>
+    /// <param name="variant">Número del jugador (índice en la traza): desfasa su espera y elige el pelo del humano.</param>
+    public static PlayerModel? TryCreate(float bodyHeight, bool keeper, Race race, int variant)
     {
-        if (_missing)
+        var rig = RecipeFor(race, variant);
+        var instance = Compose(rig);
+        if (instance is null)
         {
             return null;
         }
 
-        if (_character is null)
-        {
-            _character = ResourceLoader.Load<PackedScene>(CharacterPath);
-            if (_character is null)
-            {
-                _missing = true;
-                GD.Print($"[modelos] no está {CharacterPath}: los humanos siguen siendo cápsulas");
-                return null;
-            }
-
-            _library = BuildLibrary();
-        }
-
-        var instance = _character.Instantiate<Node3D>();
-        var model = new PlayerModel { Name = "Model", _keeper = keeper };
+        _library ??= BuildLibrary();
+        var model = new PlayerModel { Name = "Model", _keeper = keeper, _rig = rig, Variant = variant };
         model.AddChild(instance);
 
         // La altura real del personaje se mide, no se supone: si mañana se cambia de modelo, el tamaño en
-        // el campo sigue siendo el que manda la raza y no hay una constante mágica que corregir.
-        float natural = MeasureHeight(instance);
+        // el campo sigue siendo el que manda la raza y no hay una constante mágica que corregir. El ancho es el de la
+        // receta, sobre esa misma escala.
+        var (bottom, natural) = MeasureHeight(instance);
         float scale = natural > 0.01f ? bodyHeight / natural : 1f;
-        instance.Scale = new Vector3(scale, scale, scale);
+        instance.Scale = new Vector3(scale * rig.Width, scale, scale * rig.Width);
+        instance.Position = new Vector3(0f, -bottom * scale, 0f);
 
         // El personaje tiene el origen en los pies y la cápsula está centrada en su mitad.
         model.Position = new Vector3(0f, -bodyHeight / 2f, 0f);
@@ -502,7 +648,7 @@ public sealed partial class PlayerModel : Node3D
         if (!_announced)
         {
             _announced = true;
-            GD.Print($"[modelos] {CharacterPath}: alto natural {natural:0.###}, "
+            GD.Print($"[modelos] {rig.Key}: alto natural {natural:0.###}, "
                 + (model._anim is null
                     ? "SIN AnimationPlayer (se queda en su pose de reposo)"
                     : $"{model._anim.GetAnimationList().Length} animaciones montadas"));
@@ -519,7 +665,145 @@ public sealed partial class PlayerModel : Node3D
     /// Pinta el modelo del color del equipo. Se hace con <c>MaterialOverride</c> sobre las mallas: lo que
     /// tiene que leerse de un vistazo es de qué bando es cada uno (RA-002).
     /// </summary>
-    public void Paint(Material material) => Paint(this, material);
+    /// <remarks>
+    /// Desde las razas (9 oct 2026) el modelo lleva su textura y lo que se tiñe es la <b>camisa</b> (o los calzones del
+    /// orco): <paramref name="team"/> es el color del equipo. Con <paramref name="team"/> nulo (modo silueta, RA-002) se
+    /// vuelve a lo de antes: todo el cuerpo con <paramref name="material"/>. La opacidad del corte de teletransporte
+    /// (BA-K) la sigue escribiendo la vista en <paramref name="material"/>; el modelo la copia en cada <see cref="Pose"/>.
+    /// </remarks>
+    public void Paint(Material material, Color? team = null)
+    {
+        _capsuleMaterial = material as BaseMaterial3D;
+        if (team is null)
+        {
+            _dressed.Clear();
+            Paint(this, material);
+            return;
+        }
+
+        Dress(team.Value);
+    }
+
+    private BaseMaterial3D? _capsuleMaterial;
+    private readonly System.Collections.Generic.List<ShaderMaterial> _dressed = new();
+    private float _opacity = 1f;
+
+    /// <summary>Materiales del traje que llevan máscara de teñido en el alfa de su textura (ver <c>tools/arte/razas.py</c>).</summary>
+    private static readonly string[] DyedMaterials = { "MI_Peasant", "MI_Ranger", "MI_Imp" };
+
+    /// <summary>Materiales de piel humana: los que se vuelven grises en el no-muerto.</summary>
+    private static readonly string[] SkinMaterials = { "MI_Superhero_Male", "MI_Regular_Male" };
+
+    private void Dress(Color team)
+    {
+        if (_tintShader is null)
+        {
+            _tintShader = ResourceLoader.Load<Shader>(TintShaderPath);
+            if (_tintShader is null)
+            {
+                return;
+            }
+
+            _tintShaderTwoSided = new Shader { Code = _tintShader.Code.Replace("cull_back", "cull_disabled") };
+        }
+
+        _dressed.Clear();
+        foreach (var mesh in Meshes(this))
+        {
+            mesh.MaterialOverride = null;
+            if (mesh.Mesh is null)
+            {
+                continue;
+            }
+
+            for (int surface = 0; surface < mesh.Mesh.GetSurfaceCount(); surface++)
+            {
+                var source = mesh.Mesh.SurfaceGetMaterial(surface) as BaseMaterial3D;
+                string name = source?.ResourceName ?? string.Empty;
+                bool twoSided = source is not null && source.CullMode == BaseMaterial3D.CullModeEnum.Disabled;
+                var material = new ShaderMaterial { Shader = twoSided ? _tintShaderTwoSided : _tintShader };
+                material.SetShaderParameter("albedo_color", name.StartsWith("MI_Hair", StringComparison.Ordinal)
+                    ? HairColor()
+                    : name == "MI_Imp" ? OrcSkin : source?.AlbedoColor ?? Colors.White);
+                material.SetShaderParameter("use_texture", source?.AlbedoTexture is not null);
+                if (source?.AlbedoTexture is { } texture)
+                {
+                    material.SetShaderParameter("albedo_tex", texture);
+                }
+
+                if (source is not null && source.EmissionEnabled && source.EmissionTexture is { } glow)
+                {
+                    material.SetShaderParameter("emission_tex", glow);
+                    material.SetShaderParameter("emission_energy", 1f);
+                }
+
+                material.SetShaderParameter("tint_mask", Array.IndexOf(DyedMaterials, name) >= 0);
+                material.SetShaderParameter("team_color", team);
+                bool skin = _rig.Skin is not null && Array.IndexOf(SkinMaterials, name) >= 0;
+                material.SetShaderParameter("skin", skin);
+                if (skin)
+                {
+                    material.SetShaderParameter("skin_color", _rig.Skin!.Value);
+                }
+
+                material.SetShaderParameter("opacity", _opacity);
+                mesh.SetSurfaceOverrideMaterial(surface, material);
+                _dressed.Add(material);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Coloca el modelo en un instante de un clip, sin árbol de mezcla ni IK. Solo para la sonda de razas
+    /// (<c>Scenes/SondaRazas.tscn</c>): ver cómo queda cada clip retargeteado en cada cuerpo.
+    /// </summary>
+    public void DebugPlayClip(string key, float seconds, float yawDegrees)
+    {
+        if (_anim is null || _library is null || !_library.HasAnimation(key))
+        {
+            return;
+        }
+
+        if (_tree is not null)
+        {
+            _tree.Active = false;
+        }
+
+        _anim.Play($"{Library}/{key}");
+        _anim.Seek(Mathf.Min(seconds, _library.GetAnimation(key).Length), true);
+        Rotation = new Vector3(0f, Mathf.DegToRad(yawDegrees), 0f);
+    }
+
+    /// <summary>
+    /// El verde del Imp (su textura 2) es casi lima: se oscurece hacia el oliva con <see cref="OrcSkin"/> (a ojo, provisional).
+    /// El pelo de Quaternius viene en gris (el color se pone en el motor). Uno por dorsal, determinista: castaño, negro,
+    /// caoba, rubio; el enano, de los pelirrojos y castaños. Los tonos son <b>provisionales</b> (a ojo sobre la captura).
+    /// </summary>
+    private static readonly Color OrcSkin = new(0.55f, 0.78f, 0.5f);
+
+    private Color HairColor()
+    {
+        Color[] human = { new("3b2a1e"), new("1f1a17"), new("6b3e22"), new("b08a55") };
+        Color[] dwarf = { new("8a3b1c"), new("5a3520"), new("a4552a") };
+        var palette = _rig.Key == "dwarf" ? dwarf : human;
+        return palette[Math.Abs(Variant * 7 + 3) % palette.Length] * 1.6f;
+    }
+
+    /// <summary>Copia en el traje la opacidad que la vista escribió en el material de la cápsula (BA-K).</summary>
+    private void SyncOpacity()
+    {
+        float opacity = _capsuleMaterial?.AlbedoColor.A ?? 1f;
+        if (Mathf.IsEqualApprox(opacity, _opacity) || _dressed.Count == 0)
+        {
+            return;
+        }
+
+        _opacity = opacity;
+        foreach (var material in _dressed)
+        {
+            material.SetShaderParameter("opacity", opacity);
+        }
+    }
 
     /// <summary>
     /// La postura de este fotograma. <paramref name="velocity"/> es la velocidad de PRESENTACIÓN en casillas
@@ -533,6 +817,7 @@ public sealed partial class PlayerModel : Node3D
     /// </summary>
     public void Pose(Vector2 velocity, Vector2 facing, Vector2 toBall, bool receiving, PlayerState state, ContactCue cue, KickCue kick, FallCue fall, float rate, float delta)
     {
+        SyncOpacity();
         if (_tree is null)
         {
             return;
@@ -863,9 +1148,9 @@ public sealed partial class PlayerModel : Node3D
         {
             var foot = _feet[side];
             string s = sides[side];
-            foot.Hip = _skeleton.FindBone($"mixamorig_{s}UpLeg");
-            int knee = _skeleton.FindBone($"mixamorig_{s}Leg");
-            foot.Ankle = _skeleton.FindBone($"mixamorig_{s}Foot");
+            foot.Hip = _skeleton.FindBone($"{s}UpperLeg");
+            int knee = _skeleton.FindBone($"{s}LowerLeg");
+            foot.Ankle = _skeleton.FindBone($"{s}Foot");
             if (foot.Hip < 0 || knee < 0 || foot.Ankle < 0)
             {
                 return;
@@ -881,9 +1166,9 @@ public sealed partial class PlayerModel : Node3D
             AddChild(foot.Target);
             AddChild(foot.Pole);
             var ik = new TwoBoneIK3D { Name = $"FootIK{s}", SettingCount = 1, Influence = 0f, Active = false };
-            ik.SetRootBoneName(0, $"mixamorig_{s}UpLeg");
-            ik.SetMiddleBoneName(0, $"mixamorig_{s}Leg");
-            ik.SetEndBoneName(0, $"mixamorig_{s}Foot");
+            ik.SetRootBoneName(0, $"{s}UpperLeg");
+            ik.SetMiddleBoneName(0, $"{s}LowerLeg");
+            ik.SetEndBoneName(0, $"{s}Foot");
             ik.SetPoleDirection(0, SkeletonModifier3D.SecondaryDirection.PlusZ);
             _skeleton.AddChild(ik);
             ik.SetTargetNode(0, ik.GetPathTo(foot.Target));
@@ -907,9 +1192,9 @@ public sealed partial class PlayerModel : Node3D
         var forward = new Vector3(Mathf.Sin(_yaw), 0f, Mathf.Cos(_yaw));
         (float, float) Knee(string s)
         {
-            var h = DebugBone($"mixamorig_{s}UpLeg");
-            var k = DebugBone($"mixamorig_{s}Leg");
-            var a = DebugBone($"mixamorig_{s}Foot");
+            var h = DebugBone($"{s}UpperLeg");
+            var k = DebugBone($"{s}LowerLeg");
+            var a = DebugBone($"{s}Foot");
             float angle = Mathf.RadToDeg((h - k).AngleTo(a - k));
             var mid = (h + a) * 0.5f;
             return (angle, (k - mid).Dot(forward));
@@ -929,8 +1214,8 @@ public sealed partial class PlayerModel : Node3D
 
         _lookTarget = new Node3D { Name = "LookTarget", TopLevel = true };
         AddChild(_lookTarget);
-        _torsoLook = NewLook("mixamorig_Spine2", HeadLookLimitDegrees * 0.5f);
-        _headLook = NewLook("mixamorig_Head", HeadLookLimitDegrees);
+        _torsoLook = NewLook("UpperChest", HeadLookLimitDegrees * 0.5f);
+        _headLook = NewLook("Head", HeadLookLimitDegrees);
     }
 
     private LookAtModifier3D NewLook(string bone, float limitDegrees)
@@ -961,7 +1246,9 @@ public sealed partial class PlayerModel : Node3D
             return 0f;
         }
 
-        float scale = _skeleton.GlobalTransform.Basis.Scale.X;
+        // Las pistas de posición vienen normalizadas por la altura de cadera (retargeting, normalize_position_tracks):
+        // MotionScale las devuelve a unidades de ESTE esqueleto, y la escala Z (la del avance) al mundo.
+        float scale = _skeleton.GlobalTransform.Basis.Scale.Z * _skeleton.MotionScale;
         NaturalSkeletonSpeed.TryGetValue("jog", out float jog);
         NaturalSkeletonSpeed.TryGetValue("run", out float run);
         return Mathf.Lerp(jog * ClipLength("jog"), run * ClipLength("run"), jogToRun) * scale;
@@ -991,7 +1278,7 @@ public sealed partial class PlayerModel : Node3D
             return false;
         }
 
-        float k = _instance.GlobalTransform.Basis.Scale.X;
+        float k = _instance.GlobalTransform.Basis.Scale.Z;
         float move = _jogBlend > 0f ? Mathf.Clamp(_blend / _jogBlend, 0f, 1f) : 1f;
         float reach = Mathf.Lerp(_reachIdle.Z, _reachRun.Z, move) * k;
         float dribble = reach + ballRadius + (DribbleRollCells * move * Mathf.Sin(Mathf.Pi * _phase));
@@ -1007,13 +1294,18 @@ public sealed partial class PlayerModel : Node3D
     /// </summary>
     private void MeasureCycles()
     {
-        if (_cyclesMeasured || _character is null || _library is null || !IsInsideTree())
+        if (_cyclesMeasured || _library is null || !IsInsideTree())
         {
             return;
         }
 
         _cyclesMeasured = true;
-        var probe = _character.Instantiate<Node3D>();
+        var probe = Compose(_rig);
+        if (probe is null)
+        {
+            return;
+        }
+
         AddChild(probe);
         var anim = FindAnimationPlayer(probe);
         var skeleton = FindSkeleton(probe);
@@ -1024,8 +1316,8 @@ public sealed partial class PlayerModel : Node3D
                 anim.AddAnimationLibrary(Library, _library);
             }
 
-            int left = skeleton.FindBone("mixamorig_LeftToeBase");
-            int right = skeleton.FindBone("mixamorig_RightToeBase");
+            int left = skeleton.FindBone("LeftToes");
+            int right = skeleton.FindBone("RightToes");
             if (left >= 0 && right >= 0)
             {
                 (Vector3 L, Vector3 R) Toes(string key, float t)
@@ -1393,7 +1685,7 @@ public sealed partial class PlayerModel : Node3D
 
         if (NaturalSkeletonSpeed.TryGetValue("run", out float run) && run > 0f)
         {
-            _runCells = run * _skeleton.GlobalTransform.Basis.Scale.X;
+            _runCells = run * _skeleton.GlobalTransform.Basis.Scale.Z * _skeleton.MotionScale;
         }
     }
 
@@ -1527,7 +1819,7 @@ public sealed partial class PlayerModel : Node3D
             return 0f;
         }
 
-        return perSecond * _skeleton.GlobalTransform.Basis.Scale.X;
+        return perSecond * _skeleton.GlobalTransform.Basis.Scale.Z * _skeleton.MotionScale;
     }
 
     /// <summary>
@@ -1554,8 +1846,8 @@ public sealed partial class PlayerModel : Node3D
             var toWorld = _skeleton.GlobalTransform;
             foreach (var bone in new[]
             {
-                "mixamorig_Hips", "mixamorig_LeftToeBase", "mixamorig_RightToeBase", "mixamorig_LeftUpLeg", "mixamorig_LeftLeg",
-                "mixamorig_LeftFoot", "mixamorig_RightUpLeg", "mixamorig_RightLeg", "mixamorig_RightFoot",
+                "Hips", "LeftToes", "RightToes", "LeftUpperLeg", "LeftLowerLeg",
+                "LeftFoot", "RightUpperLeg", "RightLowerLeg", "RightFoot",
             })
             {
                 int index = _skeleton.FindBone(bone);
@@ -1587,7 +1879,7 @@ public sealed partial class PlayerModel : Node3D
             return 0f;
         }
 
-        return DebugBone("mixamorig_Hips").Y;
+        return DebugBone("Hips").Y;
     }
 
     /// <summary>Las dos punteras en coordenadas del mundo, ya animadas; ceros si el modelo no tiene esqueleto. Solo BV-A.</summary>
@@ -1599,8 +1891,8 @@ public sealed partial class PlayerModel : Node3D
             return;
         }
 
-        left = DebugBone("mixamorig_LeftToeBase");
-        right = DebugBone("mixamorig_RightToeBase");
+        left = DebugBone("LeftToes");
+        right = DebugBone("RightToes");
     }
 
     /// <summary>Una línea CSV por clip montado: clave, duración en segundos, bucle y desplazamiento horneado por segundo (unidades de esqueleto). BV-A.</summary>
@@ -1631,12 +1923,11 @@ public sealed partial class PlayerModel : Node3D
     public static string DebugFootProfile(Node parent, string key)
     {
         var sb = new System.Text.StringBuilder();
-        if (_character is null || _library is null || !_library.HasAnimation(key))
+        if (_library is null || !_library.HasAnimation(key) || Compose(RecipeFor(Race.Human, 0)) is not { } probe)
         {
             return sb.ToString();
         }
 
-        var probe = _character.Instantiate<Node3D>();
         parent.AddChild(probe);
         var anim = FindAnimationPlayer(probe);
         var skeleton = FindSkeleton(probe);
@@ -1647,10 +1938,10 @@ public sealed partial class PlayerModel : Node3D
                 anim.AddAnimationLibrary(Library, _library);
             }
 
-            int left = skeleton.FindBone("mixamorig_LeftToeBase");
-            int right = skeleton.FindBone("mixamorig_RightToeBase");
-            int hips = skeleton.FindBone("mixamorig_Hips");
-            int head = skeleton.FindBone("mixamorig_Head");
+            int left = skeleton.FindBone("LeftToes");
+            int right = skeleton.FindBone("RightToes");
+            int hips = skeleton.FindBone("Hips");
+            int head = skeleton.FindBone("Head");
             float length = _library.GetAnimation(key).Length;
             anim.Play($"{Library}/{key}");
             for (float t = 0f; t <= length; t += 1f / 60f)
@@ -1907,19 +2198,32 @@ public sealed partial class PlayerModel : Node3D
     }
 
     /// <summary>Alto del modelo en su pose de reposo, medido sobre la caja de la malla más alta que tenga.</summary>
-    private static float MeasureHeight(Node node)
+    private static (float Bottom, float Height) MeasureHeight(Node3D root)
     {
-        float best = 0f;
-        if (node is MeshInstance3D mesh)
+        // Las piezas (traje, cabeza, pelo) son mallas sueltas: el alto es el de la caja que las junta a todas, en el
+        // espacio de la raíz del modelo. El suelo es lo más bajo de esa caja (el origen de Quaternius está en los pies,
+        // pero no se supone).
+        Aabb? box = null;
+        foreach (var mesh in Meshes(root))
         {
-            best = mesh.GetAabb().Size.Y;
+            if (mesh.Mesh is null)
+            {
+                continue;
+            }
+
+            var toRoot = Transform3D.Identity;
+            for (Node? node = mesh; node is not null && node != root; node = node.GetParent())
+            {
+                if (node is Node3D spatial)
+                {
+                    toRoot = spatial.Transform * toRoot;
+                }
+            }
+
+            var aabb = toRoot * mesh.GetAabb();
+            box = box is { } merged ? merged.Merge(aabb) : aabb;
         }
 
-        foreach (var child in node.GetChildren())
-        {
-            best = Math.Max(best, MeasureHeight(child));
-        }
-
-        return best;
+        return box is { } b ? (b.Position.Y, b.Size.Y) : (0f, 0f);
     }
 }

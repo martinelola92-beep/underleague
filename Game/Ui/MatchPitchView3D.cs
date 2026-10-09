@@ -693,24 +693,16 @@ public partial class MatchPitchView3D : SubViewportContainer
             _radii.Add(radius);
             _keepers.Add(IsKeeper(setup, player));
 
-            // MAQUETA (23 sep 2026, encargo del revisor): solo los humanos llevan modelo, para poder
-            // comparar las dos cosas en la misma imagen. Si el modelo no está, TryCreate devuelve null y
-            // el jugador se queda con su cápsula: la maqueta no puede romper la vista.
-            PlayerModel? model = null;
-            if (race == Race.Human)
+            // Las cinco razas llevan modelo desde el 9 oct 2026 (antes, solo los humanos: la maqueta del 23 sep).
+            // Si el modelo no está, TryCreate devuelve null y el jugador se queda con su cápsula: el arte no
+            // puede romper la vista.
+            var model = PlayerModel.TryCreate(height, IsKeeper(setup, player), race, _models.Count);
+            if (model is not null)
             {
-                model = PlayerModel.TryCreate(height, IsKeeper(setup, player));
-                if (model is not null)
-                {
-                    model.Variant = _models.Count;
-                }
-                if (model is not null)
-                {
-                    // La cápsula se queda sin malla y pasa a ser solo el hueso que transforma al modelo:
-                    // posición, altura y postura las sigue mandando ApplyTrace, sin enterarse de nada.
-                    body.Mesh = null;
-                    body.AddChild(model);
-                }
+                // La cápsula se queda sin malla y pasa a ser solo el hueso que transforma al modelo:
+                // posición, altura y postura las sigue mandando ApplyTrace, sin enterarse de nada.
+                body.Mesh = null;
+                body.AddChild(model);
             }
 
             _models.Add(model);
@@ -748,31 +740,26 @@ public partial class MatchPitchView3D : SubViewportContainer
             var proportion = RaceProportions[race];
             float height = proportion.Height / proportion.Width * (radius * 2f);
 
-            // Con la maqueta puesta, la ficha que reciba "humano" enseña el modelo y las otras cuatro su
-            // cápsula: si se le devolviera la malla a una ficha con modelo se verían las dos cosas a la vez.
-            // El desfile REPARTE razas que el partido no tiene —aquí no juega ningún humano—, así que si a
-            // esta ficha le toca humano y no traía modelo, se le crea ahora: sin esto la maqueta no se ve
-            // en la única captura donde se pueden comparar las cinco razas juntas.
-            if (race == Race.Human && _models[i] is null)
+            // El modelo es de raza: el desfile REPARTE razas que el partido no tiene, así que cada ficha
+            // cambia el suyo por el de la raza que le toca (si no, se verían orcos con alto de elfo).
+            if (_models[i] is { } previous)
             {
-                var created = PlayerModel.TryCreate(height, keeper: i == 0);
-                if (created is not null)
+                previous.QueueFree();
+                _models[i] = null;
+            }
+
+            var created = PlayerModel.TryCreate(height, _keepers[i], race, i);
+            if (created is not null)
+            {
+                _bodies[i].AddChild(created);
+                _models[i] = created;
+                if (_bodies[i].MaterialOverride is { } current && i < (Trace?.Players.Count ?? 0))
                 {
-                    _bodies[i].AddChild(created);
-                    _models[i] = created;
-                    if (_bodies[i].MaterialOverride is { } current)
-                    {
-                        created.Paint(current);
-                    }
+                    created.Paint(current, SilhouetteMode ? null : TeamColor(Trace!.Players[i].Team));
                 }
             }
 
-            if (_models[i] is { } humanoid)
-            {
-                humanoid.Visible = race == Race.Human;
-            }
-
-            _bodies[i].Mesh = _models[i] is not null && race == Race.Human
+            _bodies[i].Mesh = _models[i] is not null
                 ? null
                 : new CapsuleMesh { Radius = radius, Height = height, RadialSegments = 28, Rings = 12 };
             _rings[i].Scale = new Vector3(radius, 1f, radius);
@@ -1957,9 +1944,12 @@ public partial class MatchPitchView3D : SubViewportContainer
             // El modelo comparte el MISMO material que su cápsula, no una copia: así la atenuación del
             // corte de teletransporte (BA-K), que ApplyTrace escribe sobre el material de la cápsula, le
             // llega también al modelo sin que ApplyTrace tenga que saber que existe.
-            _models[i]?.Paint(material);
+            _models[i]?.Paint(material, SilhouetteMode ? null : TeamColor(Trace.Players[i].Team));
         }
     }
+
+    /// <summary>El color de equipo de la cápsula, el anillo y la leyenda: con el que se tiñe la camisa del modelo.</summary>
+    private static Color TeamColor(int team) => team == 0 ? Style.TeamOwn : Style.TeamRival;
 
     /// <summary>
     /// Gris, con el tono del equipo apenas insinuado. Gris porque lo que se está probando es la
