@@ -36,9 +36,13 @@ Capturas: `capturas/playtest-3oct-saque-portero.png` (saque de puerta al centro,
   «26'» en el tablero (`%Reloj`, pieza editable) y barra con el reloj del partido; en la turba el reloj dice «Gol
   de oro». Captura `pausa-1-congelada.png`.
 - **BX-15** Las faltas deberían pitarse DESPUÉS de la entrada. Hoy se pita, se para, se ven jugadores cayendo, pero no queda claro quién ha caído ni quién ha hecho la falta. Es lo que menos se percibe como jugador.
+  **Implementada por la [ADR 0192](../decisiones/0192-la-pausa-ensena-quien-y-la-ruleta-del-destino.md)** (9 oct), pendiente de que el revisor la juegue: causa CONFIRMED por lectura del director (la ADR 0173 congelaba el fotograma anterior al suceso, así que el silbato llegaba antes de la entrada). La pausa llega ahora hasta 0,4 s después, con carteles FALTA / AL SUELO sobre los implicados y acercamiento. Captura `pausa-1-congelada.png`.
 - **BX-16** La tirada del destino al lesionarse alguien tiene que ser algo gráfico, aunque pare el partido: por ejemplo, una ruleta verde y roja con una aguja que gira. Tiene que ser un evento curioso; hoy se siente atropellado.
+  **Implementada por la ADR 0192** (9 oct), pendiente de partida: ruleta verde y roja con el partido congelado; el sector rojo es la probabilidad real. Hallado de paso (CONFIRMED, semilla 20260905): una entrada puede tirar dos dados al mismo jugador en el mismo tick (dos momentos) y la banda enseñaba uno cualquiera; ahora el que acertó o, si ninguno, el de la muerte, y la segunda tirada no se encola. Capturas `destino-*-2-ruleta-gira.png`, `destino-*-3-ruleta-parada.png`.
 - **BX-17** Timing y pausa (cita): «Una de las mayores virtudes del humor es el timing y la pausa. Pasan cosas demasiado rápido, no tengo tiempo a procesar, sale un cartel 1 segundo, escucho un grito, no sé quién es, no me divierto, no me entero, es frustrante. Busca pausas, zooms… No tiene por qué ser excesivo, pero hay que buscar algo.» Esto corrige la tendencia a evitar parones a toda costa.
+  **Atendida por la ADR 0192** (9 oct): sellos 1,6/2,2 s, pausa 1,4 s, carteles con nombre y acercamiento. Cifras provisionales: se validan con la siguiente partida.
 - **BX-18** Gritos demasiado altos. Las lesiones graves y las muertes están bien; el resto debería bajar, y el ambiente subir un poco.
+  **Atendida por la ADR 0192** (9 oct): esfuerzos y regates −9 dB, caída −5, lesión leve −8, ambiente −12 → −7 dB. A oído, sin medir.
 
 ## Paquete 4 — Rendimiento de las decisiones
 - **BX-19** Al cambiar la táctica (defensa, neutro, ataque) hay un parón, porque se vuelve a simular. Hay que solucionarlo.

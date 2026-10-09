@@ -58,7 +58,8 @@ public sealed class PresentationDirectorHoldTests
         Assert.False(f.Frozen);
         Assert.Equal(100, f.DisplayFrame);
         Assert.Null(f.Held);
-        Assert.InRange(frozen, 8, 10);
+        int expected = (int)Math.Round(DirectorTimings.Default.Hold / Step);
+        Assert.InRange(frozen, expected - 1, expected + 1);
     }
 
     [Theory]
@@ -113,7 +114,8 @@ public sealed class PresentationDirectorHoldTests
         Assert.Same(red, r.Held);
 
         var f = r;
-        for (int i = 0; i < 12; i++)
+        int steps = (int)Math.Ceiling(DirectorTimings.Default.Hold / Step) + 2;
+        for (int i = 0; i < steps; i++)
         {
             f = d.Advance(f.Frozen ? 99 : f.DisplayFrame + 1, Step, 1);
         }
@@ -171,5 +173,71 @@ public sealed class PresentationDirectorHoldTests
         var r = RunTo(d, 90, 100);
         Assert.True(r.Frozen);
         Assert.Equal(99, r.DisplayFrame);
+    }
+
+    // ---------------------------------------------------------------- ADR 0192 (BX-15): la pausa tras la caída
+
+    private static PresentationDirector Lead(int lead, params MatchMoment[] moments) =>
+        new(moments, DirectorTimings.Default, Stops, _ => lead);
+
+    [Fact]
+    public void WithLeadTheFoulPlaysOnAndHoldsAfterTheFall()
+    {
+        var foul = M(100, 1, MomentKind.Foul);
+        var d = Lead(6, foul);
+        var before = RunTo(d, 90, 105);
+        Assert.False(before.Frozen);
+        Assert.Null(before.Stamp);
+
+        var held = d.Advance(106, Step, 1);
+        Assert.True(held.Frozen);
+        Assert.Equal(106, held.DisplayFrame);
+        Assert.Same(foul, held.Held);
+        Assert.Same(foul, held.Stamp);
+
+        var f = held;
+        for (int i = 0; i < 60 && f.Frozen; i++)
+        {
+            f = d.Advance(106, Step, 1);
+        }
+
+        Assert.False(f.Frozen);
+        Assert.Equal(106, f.DisplayFrame);
+    }
+
+    [Fact]
+    public void TheLeadNeverRunsOverTheNextMoment()
+    {
+        var foul = M(100, 1, MomentKind.Foul);
+        var next = M(103, 1, MomentKind.Yellow);
+        var d = Lead(6, foul, next);
+        var held = RunTo(d, 90, 102);
+        Assert.True(held.Frozen);
+        Assert.Equal(102, held.DisplayFrame);
+    }
+
+    [Fact]
+    public void ADecisionInsideTheLeadDoesNotLoseTheFoul()
+    {
+        // Una orden o un consumible durante el margen crea un director nuevo con Seek(F + k + 1): la falta, que aún
+        // no se ha presentado, sigue pendiente (revisión independiente).
+        var foul = M(100, 1, MomentKind.Foul);
+        var d = Lead(6, foul);
+        d.Seek(103);
+        var held = RunTo(d, 103, 106);
+        Assert.True(held.Frozen);
+        Assert.Same(foul, held.Held);
+    }
+
+    [Fact]
+    public void AtX4TheLeadDoesNotHoldBackTheNextMoment()
+    {
+        // A x4 no hay margen: la falta (que a x4 no se presenta) no retiene al gol que viene detrás.
+        var foul = M(100, 1, MomentKind.Foul);
+        var goal = M(102, 3, MomentKind.Goal, pauses: true, goal: true);
+        var d = Lead(6, foul, goal);
+        var r = RunTo(d, 90, 102, speed: 4);
+        Assert.Null(r.Held);
+        Assert.Same(goal, r.Voice);
     }
 }

@@ -92,12 +92,83 @@ public sealed class PresentationDirectorFateTests
     [Fact]
     public void ThePausingInjuryThatFollowsTheRollTakesOverTheVoiceAndFreezes()
     {
+        // ADR 0192: primero gira la ruleta (congelada en el fotograma anterior a los dados) y después la lesión.
         var director = Director(Fate(rollFrame: 100), Injury(100));
         Play(director, 93, 1, 1);
-        var result = director.Advance(100, Step, 1);
+        var wheel = director.Advance(99, Step, 1);
+        Assert.True(wheel.Frozen);
+        Assert.Equal(99, wheel.DisplayFrame);
+        Assert.True(wheel.FateSpin >= 0f);
+
+        var result = wheel;
+        for (int i = 0; i < 60 * 6 && result.Voice?.Kind != MomentKind.SevereInjury; i++)
+        {
+            result = director.Advance(result.Frozen ? 99 : 100, Step, 1);
+        }
+
         Assert.Equal(MomentKind.SevereInjury, result.Voice!.Kind);
         Assert.True(result.Frozen);
         Assert.Equal(1d, result.TimeScale);
+    }
+
+    [Fact]
+    public void TheWheelSpinsFrozenThenSettlesThenJumpsToTheRoll()
+    {
+        var director = Director(Fate(rollFrame: 100));
+        Play(director, 93, 1, 1);
+        var r = director.Advance(99, Step, 1);
+        Assert.True(r.Frozen);
+        Assert.False(r.FateSettled);
+
+        int steps = 0;
+        while (r.Frozen && steps < 60 * 10)
+        {
+            r = director.Advance(99, Step, 1);
+            steps++;
+            if (r.Frozen && steps == (int)(DirectorTimings.Default.FateSpin / Step) + 2)
+            {
+                Assert.True(r.FateSettled);
+            }
+        }
+
+        double seconds = steps * Step;
+        Assert.InRange(seconds, DirectorTimings.Default.FateSpin + DirectorTimings.Default.FateResult - 0.05, DirectorTimings.Default.FateSpin + DirectorTimings.Default.FateResult + 0.05);
+
+        // Al terminar, en el fotograma de los dados: ninguna orden puede caer antes de la tirada ya enseñada.
+        Assert.Equal(100, r.DisplayFrame);
+        Assert.Equal(-1f, r.FateSpin);
+    }
+
+    [Fact]
+    public void ALateRollThatStartsPastItsFrameDoesNotSpinBackwards()
+    {
+        var director = Director(Fate(rollFrame: 100));
+        var r = director.Advance(101, Step, 1);
+        Assert.Equal(MomentKind.Fate, r.Voice!.Kind);
+        Assert.False(r.Frozen);
+        Assert.True(r.DisplayFrame >= 101);
+    }
+
+    [Fact]
+    public void ASecondRollOfTheSamePlayerAndTickIsNotQueued()
+    {
+        var first = Fate(rollFrame: 100);
+        var second = Fate(rollFrame: 100);
+        var director = Director(first, second);
+        var r = director.Advance(93, Step, 1);
+        Assert.Same(first, r.Voice);
+        r = director.Advance(94, Step, 1);
+        Assert.Same(first, r.Voice);
+
+        var wheel = director.Advance(99, Step, 1);
+        Assert.Same(first, wheel.Voice);
+        for (int i = 0; i < 60 * 6 && wheel.Frozen; i++)
+        {
+            wheel = director.Advance(99, Step, 1);
+        }
+
+        var after = director.Advance(101, 3d, 1);
+        Assert.NotSame(second, after.Voice);
     }
 
     [Fact]

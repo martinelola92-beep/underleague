@@ -176,7 +176,22 @@ public sealed partial class AudioManager : Node
     /// <c>sfx/</c>). Si el pool no existe, no suena nada y se anota una vez: quien llama no tiene que
     /// comprobar si el sonido está puesto todavía.
     /// </summary>
-    public void PlayRandomSfx(string pool)
+    public void PlayRandomSfx(string pool) => PlayRandomSfx(pool, 0f);
+
+    /// <summary>
+    /// BX-18 (9 oct): ganancia de mezcla por pool, en dB. «Gritos demasiado altos: las lesiones graves y las muertes
+    /// están bien; el resto debería bajar.» Los esfuerzos y el regate suenan cada pocos segundos y tapaban la grada.
+    /// Provisional, a oído del revisor.
+    /// </summary>
+    private static readonly Dictionary<string, float> PoolGainDb = new(StringComparer.Ordinal)
+    {
+        ["players/grunt"] = -9f,
+        ["players/shout"] = -9f,
+        ["combat/fall"] = -5f,
+    };
+
+    /// <summary>Como <see cref="PlayRandomSfx(string)"/>, con una ganancia extra en dB para este golpe.</summary>
+    public void PlayRandomSfx(string pool, float gainDb)
     {
         if (string.IsNullOrEmpty(pool))
         {
@@ -204,7 +219,8 @@ public sealed partial class AudioManager : Node
 
         player.Stream = sounds.Next(_rng);
         player.PitchScale = 1f + (((float)_rng.NextDouble() * 2f) - 1f) * PitchJitter;
-        player.VolumeDb = (((float)_rng.NextDouble() * 2f) - 1f) * VolumeJitterDb;
+        player.VolumeDb = ((((float)_rng.NextDouble() * 2f) - 1f) * VolumeJitterDb)
+            + gainDb + (PoolGainDb.TryGetValue(pool, out float poolGain) ? poolGain : 0f);
         player.Play();
 
         if (Trace)

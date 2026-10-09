@@ -59,6 +59,18 @@ public static class MomentSounds
     private static readonly string[] FullTime = { "referee/whistle" };
 
     /// <summary>
+    /// BX-18: ganancia de mezcla del momento, en dB. La lesión leve comparte el grito de la grave pero ya no a todo
+    /// volumen: «las lesiones graves y las muertes están bien; el resto debería bajar». Provisional, a oído.
+    /// </summary>
+    public static float GainFor(MomentKind kind) => kind switch
+    {
+        MomentKind.MinorInjury => -8f,
+        MomentKind.Yellow => -4f,
+        MomentKind.Foul => -3f,
+        _ => 0f,
+    };
+
+    /// <summary>
     /// Los pools que suenan en ese momento, en orden. Lista vacía si el momento no suena.
     /// </summary>
     /// <param name="kind">El momento.</param>

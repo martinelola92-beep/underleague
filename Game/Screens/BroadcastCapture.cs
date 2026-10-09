@@ -1676,11 +1676,18 @@ public partial class BroadcastCapture : Control
             await StepUntil(() => screen.Pitch3D.Frame >= f.Moment.Frame - 4, "destino-" + label + "-0-antes");
             await StepUntil(() => screen.Pitch3D.Frame >= f.Moment.Frame + 3, "destino-" + label + "-1-rueda");
 
+            // BX-16: la ruleta. Congela en el fotograma anterior a los dados: un segundo girando y, pasado su giro,
+            // parada en el resultado.
+            await StepUntil(() => screen.Pitch3D.Frame >= f.Moment.LastFrame - 1, "destino-" + label + "-2-ruleta-gira", extraSteps: 120);
+            StepManual(screen, Delta, (int)((Underleague.Game.Match.DirectorTimings.Default.FateSpin - 1d + 0.6d) / Delta));
+            await Settle(2);
+            await Save("destino-" + label + "-3-ruleta-parada");
+
             // El resultado: si se salva, lo cuenta la banda; si cae, la presentación de la lesión o de la
             // muerte («los dados lo han querido»; el bando de la muerte llega tras su retardo real).
             await StepUntil(
-                () => screen.Pitch3D.Frame >= (label == "salva" ? f.Moment.LastFrame + 2 : f.Moment.LastFrame - 1),
-                "destino-" + label + "-2-resultado",
+                () => screen.Pitch3D.Frame >= (label == "salva" ? f.Moment.LastFrame + 2 : f.Moment.LastFrame),
+                "destino-" + label + "-4-resultado",
                 extraSteps: label == "muerte" ? 200 : 6);
             Drop(instance);
         }

@@ -3154,6 +3154,13 @@ public partial class MatchPitchView3D : SubViewportContainer
     }
 
     /// <summary>
+    /// BX-15: dónde está en pantalla (coordenadas globales del lienzo) la cabeza de un jugador en el fotograma que se
+    /// pinta, para que la pantalla ancle encima los carteles de quién es quién; null si no está en el campo.
+    /// </summary>
+    public Vector2? HeadGlobalPosition(int traceIndex) =>
+        MarkScreenPosition(traceIndex) is { } local ? GetGlobalTransform() * local : null;
+
+    /// <summary>
     /// Carteles de pergamino de <see cref="Marks"/> vivos en el fotograma que se pinta: tamaño fijo en
     /// pantalla, 1 s de vida (<see cref="MatchFlashView.DurationFrames"/>), pequeños si el aviso quedó
     /// absorbido por un momento del director (<see cref="MomentMark.MomentIndex"/> &gt;= 0).

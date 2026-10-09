@@ -793,6 +793,23 @@ public static class UiText
         ["ui.pregon.referee.foul"] = "¡Falta!",
         ["ui.pregon.referee.unseen"] = "¿?",
         ["ui.pregon.stamp.foul"] = "Falta",
+
+        // BX-15: quién es quién en la pausa de un suceso (carteles sobre la cabeza).
+        ["ui.pregon.tag.foul"] = "FALTA",
+        ["ui.pregon.tag.fouled"] = "AL SUELO",
+        ["ui.pregon.tag.yellow"] = "AMARILLA",
+        ["ui.pregon.tag.red"] = "ROJA",
+        ["ui.pregon.tag.minor"] = "TOCADO",
+        ["ui.pregon.tag.severe"] = "HERIDO GRAVE",
+        ["ui.pregon.tag.tackler"] = "LE ENTRA",
+
+        // BX-16: la ruleta del destino.
+        ["ui.pregon.wheel.save"] = "SE SALVA",
+        ["ui.pregon.wheel.severe"] = "GRAVE",
+        ["ui.pregon.wheel.death"] = "AL OTRO BARRIO",
+        ["ui.pregon.wheel.resultSaved"] = "¡SE SALVA!",
+        ["ui.pregon.wheel.resultSevere"] = "¡GRAVE!",
+        ["ui.pregon.wheel.resultDeath"] = "¡AL OTRO BARRIO!",
         ["ui.pregon.stamp.unseen"] = "No lo ha visto",
         ["ui.pregon.banner.said"] = "Se hace saber",
         ["ui.pregon.edict.said"] = "Se hace saber",

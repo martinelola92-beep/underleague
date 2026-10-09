@@ -95,6 +95,15 @@ public partial class BroadcastScreen : Control
     private Edict _edict = null!;
     private MatchRecord _record = null!;
     private DecisionTray _tray = null!;
+
+    /// <summary>BX-16: la ruleta del destino.</summary>
+    private FateWheel _wheel = null!;
+
+    /// <summary>BX-15: los carteles de quién es quién durante la pausa de un suceso.</summary>
+    private MomentTags _tags = null!;
+
+    /// <summary>BX-15: el suceso cuya pausa ya pidió su acercamiento de cámara (uno por pausa).</summary>
+    private MatchMoment? _heldGestureFor;
     private MatchPitchView3D _pitch3d = null!;
 
     /// <summary>La cortinilla del reinicio tras gol (ADR 0151) y el velo negro que pinta, encima del campo y debajo del tablero.</summary>
@@ -133,6 +142,8 @@ public partial class BroadcastScreen : Control
     // Acercamiento del tiro (docs/ui/README §4, valores provisionales — marcador de posición procedural,
     // regla 10 de CLAUDE.md): ×1,15, entrada 0,25 s, mantenimiento mínimo 0,35 s reales, salida 0,4 s.
     private const float ShotPunchZoom = 1.15f;
+    /// <summary>BX-15: acercamiento durante la pausa de un suceso (provisional, sin medir).</summary>
+    private const float HoldPunchZoom = 1.2f;
     private const float ShotPunchInSeconds = 0.25f;
     private const float ShotPunchHoldSeconds = 0.35f;
     private const float ShotPunchOutSeconds = 0.4f;
@@ -284,6 +295,8 @@ public partial class BroadcastScreen : Control
 
         ApplyPresentation(result);
         UpdateFateBand(result);
+        UpdateFateWheel(result);
+        UpdateMomentTags(result);
 
         // Muerte, dos tiempos (docs/ui/README §4): si el bando quedó pendiente de su retardo, la bandeja
         // se abre cuando toque (UpdateDeathEdict más abajo), no aquí — el campo cuenta la muerte primero.
@@ -445,6 +458,8 @@ public partial class BroadcastScreen : Control
         _edict = GetNode<Edict>("%Bando");
         _record = GetNode<MatchRecord>("%Acta");
         _tray = GetNode<DecisionTray>("%Bandeja");
+        _wheel = GetNode<FateWheel>("%Ruleta");
+        _tags = GetNode<MomentTags>("%Etiquetas");
         _tray.Chosen += OnSubstituteChosen;
         _tray.OptionChosen += OnOptionChosen;
 
@@ -466,7 +481,7 @@ public partial class BroadcastScreen : Control
         }
 
         _moments = MatchMomentView.Build(_playback.Setup, _playback.Result, _catalog, 0, _run.Decisions.Declines);
-        _director = new PresentationDirector(_moments.Moments, DirectorTimings.Default, moment => PlayStops.Holds(moment, _trace));
+        _director = new PresentationDirector(_moments.Moments, DirectorTimings.Default, moment => PlayStops.Holds(moment, _trace), HoldLead);
         BuildShotGestures();
         BuildEventSounds();
         BuildBiasChanges();
@@ -743,7 +758,7 @@ public partial class BroadcastScreen : Control
     {
         foreach (string pool in MomentSounds.PoolsFor(moment.Kind, moment.Team))
         {
-            AudioManager.Instance?.PlayRandomSfx(pool);
+            AudioManager.Instance?.PlayRandomSfx(pool, MomentSounds.GainFor(moment.Kind));
         }
     }
 
@@ -1062,7 +1077,14 @@ public partial class BroadcastScreen : Control
             return;
         }
 
-        var roll = FindHeadEvent(moment);
+        // BX-16: mientras gira la ruleta, ella cuenta la tirada; la banda se retira para no decirlo dos veces.
+        if (result.FateSpin >= 0f)
+        {
+            _band.Visible = false;
+            return;
+        }
+
+        var roll = FindDecisiveFateRoll(moment);
         var parts = roll?.Detail.Split(':');
         if (roll is null || parts is not { Length: 3 } || !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int basisPoints))
         {
@@ -1101,6 +1123,242 @@ public partial class BroadcastScreen : Control
             percent + " %",
             1f,
             ProclamationBand.FateOutcome.Saved);
+    }
+
+    /// <summary>
+    /// BX-16: la ruleta del destino. Gira con el partido congelado (el director da cuánto lleva) y cae en el sector que
+    /// ya decidió <c>/Sim</c>: el porcentaje y el resultado se leen del <c>Detail</c> de <c>FATE_ROLL</c> (RT-014).
+    /// </summary>
+    private void UpdateFateWheel(DirectorFrame result)
+    {
+        if (_matchEnded || result.FateSpin < 0f || result.Voice is not { Kind: MomentKind.Fate } moment)
+        {
+            _wheel.Visible = false;
+            return;
+        }
+
+        var roll = FindDecisiveFateRoll(moment);
+        var parts = roll?.Detail.Split(':');
+        if (roll is null || parts is not { Length: 3 } || !int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int basisPoints))
+        {
+            _wheel.Visible = false;
+            return;
+        }
+
+        bool lethal = parts[0] == "death";
+        bool hit = parts[2] == "hit";
+        string percent = ((basisPoints + 50) / 100).ToString(CultureInfo.InvariantCulture);
+        bool hasRoller = roll.Opponent >= 0;
+        string announce = UiText.Get(
+            "ui.pregon.fate." + (lethal ? "death" : "severe") + (hasRoller ? string.Empty : "Nobody"),
+            hasRoller ? NameOf(roll.Opponent) : string.Empty,
+            NameOf(roll.Actor),
+            percent);
+        string result2 = hit
+            ? UiText.Get(lethal ? "ui.pregon.wheel.resultDeath" : "ui.pregon.wheel.resultSevere")
+            : UiText.Get("ui.pregon.wheel.resultSaved");
+        _wheel.Show(
+            UiText.Get("ui.pregon.fate.header"),
+            announce,
+            UiText.Get(lethal ? "ui.pregon.wheel.death" : "ui.pregon.wheel.severe"),
+            UiText.Get("ui.pregon.wheel.save"),
+            result2,
+            basisPoints,
+            hit,
+            roll.Tick,
+            result.FateSpin,
+            result.FateSettled);
+    }
+
+    /// <summary>
+    /// BX-16: la tirada que cuenta la ruleta. Una entrada puede tirar dos dados seguidos al mismo jugador —el de la
+    /// muerte y el de la grave— en el mismo momento: se enseña el que acertó y, si ninguno, el de la muerte (el que
+    /// más asusta, y el resultado «se salva» vale para los dos).
+    /// </summary>
+    private MatchEvent? FindDecisiveFateRoll(MatchMoment moment)
+    {
+        // Cada FATE_ROLL es su propio momento (MatchMomentView), así que se buscan entre TODOS los eventos los del
+        // mismo tick y el mismo jugador que el de este momento (revisión independiente).
+        var head = FindHeadEvent(moment);
+        if (head is null)
+        {
+            return null;
+        }
+
+        MatchEvent? best = null;
+        int bestRank = -1;
+        foreach (var e in _playback.Result.Events)
+        {
+            if (e.Type != EventType.FateRoll || e.Tick != head.Tick || e.Actor != head.Actor)
+            {
+                continue;
+            }
+
+            int rank = (e.Detail.EndsWith(":hit", StringComparison.Ordinal) ? 2 : 0) + (e.Detail.StartsWith("death", StringComparison.Ordinal) ? 1 : 0);
+            if (rank > bestRank)
+            {
+                best = e;
+                bestRank = rank;
+            }
+        }
+
+        return best ?? head;
+    }
+
+    /// <summary>
+    /// BX-15: cuántos fotogramas puede seguir corriendo el partido tras un suceso que lo detiene antes de pausar, sin que
+    /// ninguno de sus implicados haya salido del campo (un lesionado grave o un expulsado desaparecen en el tick del
+    /// suceso: entonces la pausa vuelve al fotograma anterior, como en la ADR 0173).
+    /// </summary>
+    /// <summary>
+    /// Más que esto entre dos fotogramas no es correr, es un teletransporte del motor (casillas): el mismo umbral con
+    /// el que la vista 3D decide su cortinilla (<c>MatchPitchView3D.TeleportThresholdCells</c>).
+    /// </summary>
+    private const float MaxStepCells = 0.6f;
+
+    private int HoldLead(MatchMoment moment)
+    {
+        if (_trace is not { FrameCount: > 0 } trace)
+        {
+            return 0;
+        }
+
+        var involved = new List<int>();
+        foreach (var (playerId, _, _, _) in Protagonists(moment))
+        {
+            int index = FindTraceIndex(playerId);
+            if (index >= 0)
+            {
+                involved.Add(index);
+            }
+        }
+
+        int lead = 0;
+        for (int k = 0; k <= DirectorTimings.Default.HoldLeadFrames; k++)
+        {
+            int frame = moment.Frame + k;
+            if (frame >= trace.FrameCount)
+            {
+                break;
+            }
+
+            // Siguen en el campo y nadie ha saltado de sitio: un penalti saca del área en el tick de la falta
+            // (ClearPenaltyArea) y ese salto no se puede enseñar antes del silbato (regla C.2, revisión independiente).
+            bool allOn = true;
+            foreach (int index in involved)
+            {
+                allOn &= trace.OnPitchAt(frame, index)
+                    && (k == 0 || Vec2.Distance(trace.PositionAt(frame, index), trace.PositionAt(frame - 1, index)) < MaxStepCells);
+            }
+
+            if (!allOn)
+            {
+                break;
+            }
+
+            lead = k;
+        }
+
+        return lead;
+    }
+
+    /// <summary>
+    /// BX-15: los implicados de un momento y su papel, leídos de sus eventos: el que hace la falta y el que cae, el
+    /// amonestado, el lesionado y quien le entró. Un jugador con dos papeles se queda con el más grave.
+    /// </summary>
+    private List<(int PlayerId, string Role, Color Tone, int Priority)> Protagonists(MatchMoment moment)
+    {
+        var found = new List<(int PlayerId, string Role, Color Tone, int Priority)>();
+        void Add(int playerId, string key, Color tone, int priority)
+        {
+            if (playerId < 0)
+            {
+                return;
+            }
+
+            int existing = found.FindIndex(p => p.PlayerId == playerId);
+            if (existing >= 0)
+            {
+                if (found[existing].Priority >= priority)
+                {
+                    return;
+                }
+
+                found.RemoveAt(existing);
+            }
+
+            found.Add((playerId, UiText.Get(key), tone, priority));
+        }
+
+        var events = _playback.Result.Events;
+        foreach (int i in moment.EventIndices)
+        {
+            var e = events[i];
+            if (IsCancelled(e))
+            {
+                continue;
+            }
+
+            switch (e.Type)
+            {
+                case EventType.Foul when e.Detail != "unseen":
+                    Add(e.Actor, "ui.pregon.tag.foul", Underleague.Game.Ui.Knavall.Ink.Red, 1);
+                    Add(e.Opponent, "ui.pregon.tag.fouled", Underleague.Game.Ui.Knavall.Ink.Black, 1);
+                    break;
+                case EventType.Card:
+                    bool red = e.Detail.StartsWith("red", StringComparison.Ordinal);
+                    // La roja manda sobre la amarilla del mismo jugador (segunda amarilla: el motor emite las dos).
+                    Add(e.Actor, red ? "ui.pregon.tag.red" : "ui.pregon.tag.yellow", red ? Underleague.Game.Ui.Knavall.Ink.Red : Underleague.Game.Ui.Knavall.Ink.Ochre, red ? 3 : 2);
+                    break;
+                case EventType.Injury:
+                    bool severe = e.Detail.StartsWith("severe", StringComparison.Ordinal);
+                    Add(e.Actor, severe ? "ui.pregon.tag.severe" : "ui.pregon.tag.minor", severe ? Underleague.Game.Ui.Knavall.Ink.Red : Underleague.Game.Ui.Knavall.Ink.Ochre, 4);
+                    Add(e.Opponent, "ui.pregon.tag.tackler", Underleague.Game.Ui.Knavall.Ink.Black, 0);
+                    break;
+            }
+        }
+
+        return found;
+    }
+
+    /// <summary>
+    /// BX-15/BX-17: durante la pausa de un suceso, carteles con el papel y el nombre de cada implicado sobre su cabeza, y
+    /// un acercamiento de cámara al sitio (sólo a 1×, como todos los gestos). Fuera de la pausa, nada.
+    /// </summary>
+    private void UpdateMomentTags(DirectorFrame result)
+    {
+        if (result.Held is not { } held || _matchEnded)
+        {
+            _tags.SetTags(Array.Empty<MomentTags.Tag>());
+            return;
+        }
+
+        var tags = new List<MomentTags.Tag>();
+        var centre = Vector2.Zero;
+        int count = 0;
+        var inverse = _tags.GetGlobalTransform().AffineInverse();
+        foreach (var (playerId, role, tone, _) in Protagonists(held))
+        {
+            int index = FindTraceIndex(playerId);
+            if (index < 0 || _pitch3d.HeadGlobalPosition(index) is not { } head)
+            {
+                continue;
+            }
+
+            tags.Add(new MomentTags.Tag(inverse * head, role, NameOf(playerId), tone));
+            var at = _trace!.PositionAt(_frame, index);
+            centre += new Vector2(at.X, at.Y);
+            count++;
+        }
+
+        _tags.SetTags(tags);
+
+        if (count > 0 && _heldGestureFor != held && Speeds[_speedIndex] == 1)
+        {
+            _heldGestureFor = held;
+            centre /= count;
+            _pitch3d.PunchIn(new Vector3(centre.X, 0f, centre.Y), HoldPunchZoom, 0.25f, (float)DirectorTimings.Default.Hold - 0.25f, 0.35f);
+        }
     }
 
     private void ShowMobBand()

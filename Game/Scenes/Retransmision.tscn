@@ -10,6 +10,8 @@
 [ext_resource type="PackedScene" path="res://Ui/Broadcast/Edict.tscn" id="edict"]
 [ext_resource type="PackedScene" path="res://Ui/Broadcast/MatchRecord.tscn" id="record"]
 [ext_resource type="PackedScene" path="res://Ui/Broadcast/DecisionTray.tscn" id="tray"]
+[ext_resource type="PackedScene" path="res://Ui/Broadcast/FateWheel.tscn" id="wheel"]
+[ext_resource type="PackedScene" path="res://Ui/Broadcast/MomentTags.tscn" id="tags"]
 
 [node name="Retransmision" type="Control"]
 layout_mode = 3
@@ -17,6 +19,10 @@ offset_right = 1920.0
 offset_bottom = 1080.0
 mouse_filter = 2
 script = ExtResource("1")
+
+[node name="Etiquetas" parent="." instance=ExtResource("tags")]
+unique_name_in_owner = true
+layout_mode = 1
 
 [node name="Tablero" parent="." instance=ExtResource("board")]
 unique_name_in_owner = true
@@ -185,6 +191,19 @@ offset_left = 0.0
 offset_top = 150.0
 offset_right = 600.0
 offset_bottom = 850.0
+
+[node name="Ruleta" parent="." instance=ExtResource("wheel")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchor_left = 0.5
+anchor_top = 0
+anchor_right = 0.5
+anchor_bottom = 0
+offset_left = -360.0
+offset_top = 260.0
+offset_right = 360.0
+offset_bottom = 900.0
 
 [node name="Acta" parent="." instance=ExtResource("record")]
 unique_name_in_owner = true

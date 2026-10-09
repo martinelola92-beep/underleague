@@ -26,8 +26,16 @@ namespace Underleague.Game.Match;
 /// Pausa breve a 1× ante un suceso que detiene el juego y no tiene congelado propio (BB-D, ADR 0173): falta pitada,
 /// tarjeta, lesión que para el partido. <b>Provisional, sin medir</b> (Regla H): menos de la mitad del sello más
 /// corto (<see cref="N1"/>), para que el sello siga en pantalla cuando el juego se reanuda; cuesta ~3 pausas por
-/// partido, 1,8 s de reloj de pared (1,6 %).
+/// partido, 1,8 s de reloj de pared (1,6 %). BX-17 (9 oct): 0,6 → 1,4 s, el revisor no tenía tiempo de ver quién; sigue
+/// por debajo del sello más corto (N1 = 1,6 s), así que el sello aún está en pantalla al reanudarse el juego.
 /// </param>
+/// <param name="HoldLeadFrames">
+/// BX-15: cuántos fotogramas sigue corriendo el partido tras el suceso antes de la pausa breve, para que se vea la
+/// entrada y la caída antes del silbato (la caída toca el suelo a 0,03-0,30 s, BV-B). La pantalla lo acorta si algún
+/// implicado sale del campo antes (<see cref="PresentationDirector"/>, <c>holdLead</c>). <b>Provisional, sin medir.</b>
+/// </param>
+/// <param name="FateSpin">BX-16: lo que gira la ruleta del destino a 1×, con el partido congelado. Provisional.</param>
+/// <param name="FateResult">BX-16: lo que se queda la ruleta parada enseñando el resultado. Provisional.</param>
 public sealed record DirectorTimings(
     double N1,
     double N2,
@@ -41,12 +49,18 @@ public sealed record DirectorTimings(
     double FateSlowScale,
     double Fate,
     double FateCompressed,
-    double Hold)
+    double Hold,
+    int HoldLeadFrames = 6,
+    double FateSpin = 2.6,
+    double FateResult = 1.6)
 {
-    /// <summary>Los valores provisionales del encargo (docs/ui/README.md §4/§6).</summary>
+    /// <summary>
+    /// Los valores provisionales del encargo (docs/ui/README.md §4/§6), con los de BX-17 (9 oct): sellos y pausa más
+    /// largos porque «pasan cosas demasiado rápido, sale un cartel 1 segundo». Sin medir (Regla H).
+    /// </summary>
     public static DirectorTimings Default { get; } = new(
-        N1: 1.0,
-        N2: 1.5,
+        N1: 1.6,
+        N2: 2.2,
         N3: 3.0,
         N4: 4.0,
         GoalFreeze: 2.0,
@@ -60,7 +74,7 @@ public sealed record DirectorTimings(
         // más 1,5 s de resultado en pantalla. Provisional, como el resto: es ritmo, no balance (ADR 0171).
         Fate: (MatchMomentView.FateLeadFrames / 15d / 0.5) + 1.5,
         FateCompressed: 1.2,
-        Hold: 0.6);
+        Hold: 1.4);
 }
 
 /// <summary>
@@ -87,6 +101,8 @@ public sealed record DirectorTimings(
 /// para que el residuo —tablero, tiras, residuo del rival— ya refleje el suceso mientras el campo sigue un
 /// fotograma por detrás (principio 5), igual que con la voz alta que pausa.
 /// </param>
+/// <param name="FateSpin">BX-16: 0..1 lo que lleva girada la ruleta del destino con el partido congelado; −1 si no gira.</param>
+/// <param name="FateSettled">BX-16: la ruleta ya se paró y enseña el resultado.</param>
 public sealed record DirectorFrame(
     bool Frozen,
     int DisplayFrame,
@@ -96,7 +112,9 @@ public sealed record DirectorFrame(
     float StampProgress,
     bool AwaitingDecision,
     double TimeScale = 1d,
-    MatchMoment? Held = null);
+    MatchMoment? Held = null,
+    float FateSpin = -1f,
+    bool FateSettled = false);
 
 /// <summary>
 /// Director de presentación de la retransmisión (ADR 0119 «En <c>/Game</c>»): recibe los momentos ya
@@ -123,7 +141,8 @@ public sealed class PresentationDirector
     private int _seekFrame;
 
     private bool IsPending(MatchMoment moment) =>
-        moment.Frame >= _seekFrame || (moment.Kind == MomentKind.Fate && moment.LastFrame >= _seekFrame);
+        moment.Frame >= _seekFrame || (moment.Kind == MomentKind.Fate && moment.LastFrame >= _seekFrame)
+        || (_holdLead is not null && PresentAt(moment, 1) >= _seekFrame);
 
     private MatchMoment? _stamp;
     private double _stampElapsed;
@@ -166,15 +185,74 @@ public sealed class PresentationDirector
     /// </summary>
     private int _lastSpeed = 1;
 
+    /// <summary>BX-15: fotogramas de margen tras el suceso antes de su pausa, por momento (0 si no se adelanta nada).</summary>
+    private readonly Func<MatchMoment, int>? _holdLead;
+
+    /// <summary>BX-16: la ruleta del destino en curso (partido congelado en el fotograma anterior a la tirada).</summary>
+    private bool _fateHolding;
+
+    private double _fateElapsed;
+    private int _fateFrame;
+
     /// <param name="stopsPlay">
     /// Si un suceso detiene el juego de verdad (<see cref="PlayStops.Holds"/>): lo decide la pantalla, que tiene la
     /// traza, y el director sólo la pregunta. Null = ninguna pausa breve (el director de antes).
     /// </param>
-    public PresentationDirector(IReadOnlyList<MatchMoment> moments, DirectorTimings timings, Func<MatchMoment, bool>? stopsPlay = null)
+    /// <param name="holdLead">
+    /// BX-15: cuántos fotogramas, como mucho <see cref="DirectorTimings.HoldLeadFrames"/>, puede seguir corriendo el
+    /// partido tras un suceso que lo detiene antes de presentarlo, sin que ninguno de sus implicados haya salido del
+    /// campo (un lesionado grave desaparece en el tick del suceso). Lo decide la pantalla, que tiene la traza.
+    /// Null = sin margen: la pausa en el fotograma anterior al suceso, como en la ADR 0173.
+    /// </param>
+    public PresentationDirector(
+        IReadOnlyList<MatchMoment> moments, DirectorTimings timings, Func<MatchMoment, bool>? stopsPlay = null, Func<MatchMoment, int>? holdLead = null)
     {
         _moments = moments ?? throw new ArgumentNullException(nameof(moments));
         _timings = timings ?? throw new ArgumentNullException(nameof(timings));
         _stopsPlay = stopsPlay;
+        _holdLead = holdLead;
+    }
+
+    /// <summary>
+    /// BX-15: el fotograma en que se presenta un momento a esta velocidad. Un suceso que detiene el juego, a 1×, se
+    /// presenta unos fotogramas después de ocurrir —se ve la entrada y la caída, y después pitan—; todo lo demás,
+    /// en su fotograma.
+    /// </summary>
+    private int PresentAt(MatchMoment moment, int speed)
+    {
+        if (speed != 1 || _holdLead is null || _stopsPlay is null || moment.Decision || !_stopsPlay(moment))
+        {
+            return moment.Frame;
+        }
+
+        int lead = Math.Clamp(_holdLead(moment), 0, _timings.HoldLeadFrames);
+
+        // El margen nunca pasa por encima del momento siguiente: si otro suceso cae dentro, la pausa se presenta antes
+        // que él (revisión independiente: una decisión o una voz que pausa detrás congelaría por detrás de la pausa).
+        int index = IndexOf(moment);
+        for (int next = index + 1; next >= 1 && next < _moments.Count; next++)
+        {
+            if (_moments[next].Frame > moment.Frame)
+            {
+                lead = Math.Min(lead, Math.Max(_moments[next].Frame - moment.Frame - 1, 0));
+                break;
+            }
+        }
+
+        return moment.Frame + lead;
+    }
+
+    private int IndexOf(MatchMoment moment)
+    {
+        for (int i = 0; i < _moments.Count; i++)
+        {
+            if (ReferenceEquals(_moments[i], moment))
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     /// <summary>
@@ -194,6 +272,8 @@ public sealed class PresentationDirector
         _held = null;
         _holdLeft = 0d;
         _holdToFrame = 0;
+        _fateHolding = false;
+        _fateElapsed = 0d;
 
         // ADR 0171: una tirada del destino que ya ha empezado (su Frame es 8 fotogramas anterior al de la tirada)
         // sigue viva si la búsqueda cae dentro de ella —típicamente, la decisión de sustitución de una lesión
@@ -241,10 +321,28 @@ public sealed class PresentationDirector
         TickVoiceQueue(realDelta);
 
         bool wasFrozen = _frozen;
+
+        // BX-16: la ruleta del destino gira con el partido congelado; la voz termina cuando la ruleta ha enseñado el
+        // resultado, no por su reloj (que contaba la cámara lenta de antes). Cambiar de velocidad la deja terminar ya.
+        if (_fateHolding)
+        {
+            _fateElapsed += realDelta;
+            if (speed == 1 && _fateElapsed < _timings.FateSpin + _timings.FateResult)
+            {
+                return BuildFrame(_fateFrame, frozen: true);
+            }
+
+            // Al terminar se salta al fotograma de los dados, no al anterior: con el resultado ya enseñado, ninguna
+            // orden puede caer antes de la tirada y volverla a tirar (ADR 0183, revisión independiente).
+            _fateHolding = false;
+            _voiceElapsed = _voiceDuration;
+            frame = Math.Max(frame, _fateFrame + 1);
+        }
+
         if (_voice is not null)
         {
             _voiceElapsed += realDelta;
-            if (_voiceElapsed >= _voiceDuration)
+            if (_voiceElapsed >= _voiceDuration && !(_voice.Kind == MomentKind.Fate && FateWheelPending(frame)))
             {
                 FinishVoice();
             }
@@ -253,6 +351,16 @@ public sealed class PresentationDirector
         if (_frozen)
         {
             return BuildFrame(_frozenAtFrame, frozen: true);
+        }
+
+        // BX-16: la cámara lenta de la tirada llega al fotograma anterior a los dados y ahí se congela la ruleta.
+        if (FateWheelPending(frame) && _voice is { } fateVoice)
+        {
+            _fateHolding = true;
+            _fateWheelFor = fateVoice;
+            _fateElapsed = 0d;
+            _fateFrame = Math.Max(fateVoice.LastFrame - 1, 0);
+            return BuildFrame(_fateFrame, frozen: true);
         }
 
         // La pausa breve (BB-D, ADR 0173): mientras dure, el campo se queda en el fotograma anterior al suceso.
@@ -277,11 +385,19 @@ public sealed class PresentationDirector
         int displayFrame = wasFrozen
             ? Math.Max(frame, _unfreezeToFrame)
             : holdEnded ? Math.Max(frame, _holdToFrame) : frame;
-        while (_nextMomentIndex < _moments.Count && _moments[_nextMomentIndex].Frame <= displayFrame)
+        while (_nextMomentIndex < _moments.Count && PresentAt(_moments[_nextMomentIndex], speed) <= displayFrame)
         {
             var moment = _moments[_nextMomentIndex];
             _nextMomentIndex++;
             if (!IsPending(moment))
+            {
+                continue;
+            }
+
+            // BX-16: una entrada puede tirar dos dados al mismo jugador en el mismo tick (muerte y grave), cada uno su
+            // momento. La ruleta de la primera ya cuenta la decisiva (la pantalla la elige entre las del tick), así que
+            // la segunda queda en residuo en vez de esperar en la cola y caducar.
+            if (moment.Kind == MomentKind.Fate && IsSameRoll(moment))
             {
                 continue;
             }
@@ -340,7 +456,7 @@ public sealed class PresentationDirector
 
                 if (StartHold(moment, speed))
                 {
-                    displayFrame = moment.FreezeFrame;
+                    displayFrame = _holdAtFrame;
                     break;
                 }
 
@@ -374,7 +490,7 @@ public sealed class PresentationDirector
             // libre. Con otra voz en pantalla o en cola no hay pausa: una sola voz alta a la vez.
             if (stageFree && StartHold(moment, speed, ownVoice: true))
             {
-                displayFrame = moment.FreezeFrame;
+                displayFrame = _holdAtFrame;
                 break;
             }
         }
@@ -392,9 +508,16 @@ public sealed class PresentationDirector
     private bool StartHold(MatchMoment moment, int speed, bool ownVoice = false)
     {
         bool stageBusy = _voice is not null && !ownVoice;
+
+        // BX-15: con margen, la pausa cae DESPUÉS del suceso (la caída ya se ha visto) y la reproducción sigue desde
+        // ese mismo fotograma; sin margen, en el anterior al suceso y salta al suyo, como en la ADR 0173.
+        int at = PresentAt(moment, speed);
+        int freeze = at > moment.Frame ? at : moment.FreezeFrame;
+        int resume = at > moment.Frame ? at : moment.Frame;
+
         // Dos pausas encadenadas no hacen retroceder la imagen: si el fotograma de congelado de esta queda atrás
         // del fotograma al que la anterior acaba de saltar (_holdToFrame), no hay pausa.
-        if (_stopsPlay is null || speed != 1 || _timings.Hold <= 0d || stageBusy || moment.FreezeFrame < _holdToFrame
+        if (_stopsPlay is null || speed != 1 || _timings.Hold <= 0d || stageBusy || freeze < _holdToFrame
             || !_stopsPlay(moment))
         {
             return false;
@@ -402,8 +525,8 @@ public sealed class PresentationDirector
 
         _held = moment;
         _holdLeft = _timings.Hold;
-        _holdAtFrame = moment.FreezeFrame;
-        _holdToFrame = moment.Frame;
+        _holdAtFrame = freeze;
+        _holdToFrame = resume;
         return true;
     }
 
@@ -513,6 +636,24 @@ public sealed class PresentationDirector
         return _timings.N3;
     }
 
+    /// <summary>
+    /// BX-16: la voz es una tirada del destino presentada entera (1×, sin comprimir), aún no ha girado su ruleta y la
+    /// reproducción ya ha llegado al fotograma anterior a los dados.
+    /// </summary>
+    private bool FateWheelPending(int frame) =>
+        !_fateHolding && _lastSpeed == 1 && _voice is { Kind: MomentKind.Fate } fate && !_voiceCompressed
+        && _fateWheelFor != fate && frame >= fate.LastFrame - 1 && frame <= fate.LastFrame;
+
+    /// <summary>La tirada cuya ruleta ya giró: cada tirada gira una vez.</summary>
+    private MatchMoment? _fateWheelFor;
+
+    private bool IsSameRoll(MatchMoment fate)
+    {
+        bool Same(MatchMoment? other) => other is { Kind: MomentKind.Fate } o && !ReferenceEquals(o, fate)
+            && o.LastFrame == fate.LastFrame && o.LeadPlayerId == fate.LeadPlayerId && o.Team == fate.Team;
+        return Same(_voice) || Same(_fateWheelFor);
+    }
+
     private DirectorFrame BuildFrame(int displayFrame, bool frozen)
     {
         float voiceProgress = _voice is null || _voiceDuration <= 0d
@@ -527,7 +668,9 @@ public sealed class PresentationDirector
         double timeScale = !frozen && _lastSpeed == 1 && _voice is { Kind: MomentKind.Fate } fate && !_voiceCompressed && displayFrame < fate.LastFrame
             ? _timings.FateSlowScale
             : 1d;
-        return new DirectorFrame(frozen, displayFrame, _voice, voiceProgress, _stamp, stampProgress, _awaitingDecision, timeScale, _held);
+        float fateSpin = _fateHolding ? (float)Math.Clamp(_fateElapsed / _timings.FateSpin, 0d, 1d) : -1f;
+        bool fateSettled = _fateHolding && _fateElapsed >= _timings.FateSpin;
+        return new DirectorFrame(frozen, displayFrame, _voice, voiceProgress, _stamp, stampProgress, _awaitingDecision, timeScale, _held, fateSpin, fateSettled);
     }
 
     private sealed record QueuedVoice(MatchMoment Moment, double Waited);
