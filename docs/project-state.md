@@ -29,9 +29,19 @@ renders y no pastillas»*. Todo lo hecho, las fuentes y licencias, el pipeline (
   - Material propio para esos modelos (`generated_figure.gdshader`) y árbitro humano generado vestido de negro.
   - Detalle, cifras y lo medido sobre la «carrera agachada» (es de proporciones, CONFIRMED): **`docs/ui/modelos-3d.md`**.
   - El prototipo 2D de figuras de papel queda apagado, de reserva.
+- **Paquete 2 de BX (10 oct)**, en `docs/pendientes/BX-playtest-3oct.md`:
+  - BX-12 cerrada: el árbitro ya no se teletransporta; histéresis, tope y zona muerta, medidos en 40 partidos.
+  - BX-11 respondida: en el minuto 0 no hay lesiones graves en 1.000 partidos.
+  - **BX-8** diagnosticada y arreglada en la rama **`bx8-saque-de-puerta`**, sin fusionar. Endurece el jefe final
+    (`eternal_crown`, puerta roja con dos semillas) y queda una decisión del revisor: el tope del pase largo del
+    portero. Todo en `docs/pendientes/BX-8.md`.
+- **Siguiente paso**:
+  1. Con la respuesta del revisor sobre BX-8: aplicar el tope o no, recalibrar o aceptar `eternal_crown` (ADR,
+     RT-057), los tests que pidió la revisión, y fusionar.
+  2. Sin respuesta: BX-7, BX-9, BX-10 o BX-13, con `gameplay-debug`.
 - **Trampa nueva**: importar recursos abre el editor, que re-sangra los `.cs` con tabuladores. Usa
   `tools/arte/importar.sh`, nunca `godot --import` a pelo.
-- **Siguiente paso**: que el revisor juegue una build (`tools/export-windows.sh`) y diga (1) si el estilo 3D le vale o
+- **Siguiente paso (anterior, sigue valiendo)**: que el revisor juegue una build (`tools/export-windows.sh`) y diga (1) si el estilo 3D le vale o
   quiere modelos más «chunky» (`docs/ui/arte.md` §Siguiente), (2) si la pausa y la ruleta tienen el ritmo bueno (cifras
   provisionales de la ADR 0192). Sin su respuesta: paquete 2 de BX (conducta en el campo, `/Sim`, BX-7..BX-13) con
   `gameplay-debug`, o los pendientes de arte 2-4 de `docs/ui/arte.md`.
