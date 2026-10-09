@@ -40,26 +40,42 @@ public partial class MomentTags : Control
         QueueRedraw();
     }
 
+    private const int RoleSize = 18;
+    private const int NameSize = 20;
+    private const float TagHeight = 58f;
+
     public override void _Draw()
     {
+        // Dos implicados juntos (el que entra y el que cae suelen estar a una casilla) darían carteles montados: cada
+        // cartel que pisaría a uno ya puesto sube encima de él, con su pico estirado hasta la cabeza.
+        var placed = new List<Rect2>();
         for (int i = 0; i < _tags.Count; i++)
         {
-            DrawTag(_tags[i], i);
+            var tag = _tags[i];
+            float width = Mathf.Clamp(Mathf.Max(Ink.Width(Ink.Heavy, tag.Role, RoleSize), Ink.Width(Ink.Data, tag.Name, NameSize)) + 30f, 120f, 300f);
+            var rect = new Rect2(tag.Anchor - new Vector2(width / 2f, TagHeight + 22f), new Vector2(width, TagHeight));
+            for (int guard = 0; guard < 6 && placed.Exists(r => r.Grow(4f).Intersects(rect)); guard++)
+            {
+                rect.Position -= new Vector2(0f, TagHeight + 10f);
+            }
+
+            placed.Add(rect);
+            DrawTag(tag, rect, i);
         }
     }
 
-    private void DrawTag(Tag tag, int index)
+    private void DrawTag(Tag tag, Rect2 rect, int index)
     {
-        const int RoleSize = 18;
-        const int NameSize = 20;
-        float width = Mathf.Max(Ink.Width(Ink.Heavy, tag.Role, RoleSize), Ink.Width(Ink.Data, tag.Name, NameSize)) + 30f;
-        width = Mathf.Clamp(width, 120f, 300f);
-        const float Height = 58f;
+        float width = rect.Size.X;
+        float lift = tag.Anchor.Y - rect.End.Y;
+        var beak = new[] { new Vector2(tag.Anchor.X - 10f, rect.End.Y - 2f), new Vector2(tag.Anchor.X + 10f, rect.End.Y - 2f), tag.Anchor - new Vector2(0f, 6f) };
+        if (lift > 30f)
+        {
+            // Subido sobre otro: el pico es un hilo de tinta hasta la cabeza.
+            DrawLine(new Vector2(tag.Anchor.X, rect.End.Y), tag.Anchor - new Vector2(0f, 6f), Ink.Black, 2.5f, true);
+            beak = new[] { new Vector2(tag.Anchor.X - 7f, rect.End.Y - 2f), new Vector2(tag.Anchor.X + 7f, rect.End.Y - 2f), new Vector2(tag.Anchor.X, rect.End.Y + 10f) };
+        }
 
-        // Encima de la cabeza, con un pico que la señala; dos carteles vecinos se separan en altura.
-        var topLeft = tag.Anchor - new Vector2(width / 2f, Height + 22f + ((index % 2) * 14f));
-        var rect = new Rect2(topLeft, new Vector2(width, Height));
-        var beak = new[] { tag.Anchor + new Vector2(-10f, -22f - ((index % 2) * 14f)), tag.Anchor + new Vector2(10f, -22f - ((index % 2) * 14f)), tag.Anchor - new Vector2(0f, 6f) };
         Ink.Slab(this, rect, Ink.Paper, 40 + index, 1.4f, 3f, new Vector2(4f, 5f));
         Ink.Poly(this, beak, Ink.Paper, 3f);
         DrawColoredPolygon(new[] { beak[0] + new Vector2(2f, 2f), beak[1] + new Vector2(-2f, 2f), beak[2] + new Vector2(0f, -4f) }, Ink.Paper);

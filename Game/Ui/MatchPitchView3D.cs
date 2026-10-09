@@ -129,6 +129,14 @@ public partial class MatchPitchView3D : SubViewportContainer
         [Race.Undead] = (11f, 17f),
     };
 
+    /// <summary>
+    /// Pase de arte (9 oct 2026): las figuras se dibujan más altas que su volumen simulado, como miniaturas de mesa,
+    /// para que a la distancia de la retransmisión se lea el personaje y no sólo su anillo (con 0,9 casillas salían
+    /// de ~60 px y el dorsal del suelo pesaba más que ellas). Sólo presentación: el anillo y el radio siguen siendo
+    /// el <c>bodyRadius</c> de <c>/data</c>. Provisional, a ojo.
+    /// </summary>
+    private const float FigureScale = 1.45f;
+
     /// <summary>Las cinco razas de lanzamiento, en el orden en el que las recorre la captura de siluetas.</summary>
     private static readonly Race[] LaunchRaces = { Race.Dwarf, Race.Elf, Race.Human, Race.Orc, Race.Undead };
 
@@ -246,13 +254,18 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// </summary>
     private MeshInstance3D _referee = null!;
 
+    /// <summary>Pase de arte (9 oct): el árbitro con figura de humano vestido de negro; null si falta el modelo.</summary>
+    private PlayerModel? _refereeModel;
+
+    private Vector2 _refereeLastDrawn;
+
     private MeshInstance3D _refereeBand = null!;
 
     /// <summary>Radio del árbitro, en casillas: por debajo del radio típico de un humano (~0,45) para que nunca se confunda con un jugador.</summary>
     private const float RefereeRadius = 0.30f;
 
     /// <summary>Alto del árbitro, en casillas: por debajo de la altura humana (~0,907, ver <see cref="RaceProportions"/>).</summary>
-    private const float RefereeHeight = 0.82f;
+    private const float RefereeHeight = 0.82f * FigureScale;
 
     /// <summary>A cuántas casillas del balón se coloca, por el lado de la banda más cercana (ADR 0158 §6).</summary>
     private const float RefereeOffsetCells = 3f;
@@ -680,7 +693,7 @@ public partial class MatchPitchView3D : SubViewportContainer
             var race = RaceOf(setup, player);
             float radius = catalog.Race(race).BodyRadius / 100f;
             var proportion = RaceProportions.TryGetValue(race, out var found) ? found : RaceProportions[Race.Human];
-            float height = proportion.Height / proportion.Width * (radius * 2f);
+            float height = proportion.Height / proportion.Width * (radius * 2f) * FigureScale;
 
             var body = new MeshInstance3D
             {
@@ -738,7 +751,7 @@ public partial class MatchPitchView3D : SubViewportContainer
             var race = LaunchRaces[i % LaunchRaces.Length];
             float radius = catalog.Race(race).BodyRadius / 100f;
             var proportion = RaceProportions[race];
-            float height = proportion.Height / proportion.Width * (radius * 2f);
+            float height = proportion.Height / proportion.Width * (radius * 2f) * FigureScale;
 
             // El modelo es de raza: el desfile REPARTE razas que el partido no tiene, así que cada ficha
             // cambia el suyo por el de la raza que le toca (si no, se verían orcos con alto de elfo).
@@ -1072,6 +1085,17 @@ public partial class MatchPitchView3D : SubViewportContainer
         };
         _referee.AddChild(_refereeBand);
 
+        // Pase de arte (9 oct): con modelo, la cápsula se queda de hueso (como la de los jugadores) y la marca de color
+        // es el traje negro; sin modelo, la cápsula con su banda de siempre.
+        _refereeModel = PlayerModel.TryCreate(RefereeHeight, false, Race.Human, 7);
+        if (_refereeModel is not null)
+        {
+            _referee.AddChild(_refereeModel);
+            _refereeModel.Paint(_referee.MaterialOverride, new Color("15130f"));
+            _referee.Mesh = null;
+            _refereeBand.Visible = false;
+        }
+
         _appliedSilhouette = !SilhouetteMode;
         ApplyCamera();
         ApplyPalette();
@@ -1333,7 +1357,9 @@ public partial class MatchPitchView3D : SubViewportContainer
 
             // Alto del texto ~1,4 radios: dos cifras caben de sobra dentro del anillo (2 radios de diámetro)
             // y siguen siendo legibles con la compresión vertical de los tres cuartos.
-            PixelSize = radius * 1.4f / FontPixels,
+            // Pase de arte (9 oct): 1,4 → 0,95 radios; con figuras de verdad el dorsal ya no tiene que cargar con la
+            // identidad del jugador, y a 1,4 tapaba los pies.
+            PixelSize = radius * 0.95f / FontPixels,
             Modulate = tint,
             OutlineSize = 14,
             OutlineModulate = new Color(Style.Background, 0.95f),
@@ -2105,6 +2131,22 @@ public partial class MatchPitchView3D : SubViewportContainer
 
         ApplyRefereeCue(trace, frame, delta);
         _referee.Position = new Vector3(_refereePosition.X, RefereeHeight / 2f, _refereePosition.Y);
+        PoseReferee(ball, delta, snap);
+    }
+
+    /// <summary>El modelo del árbitro anda hacia donde se mueve y mira al balón. Sólo dibujo (RT-014).</summary>
+    private void PoseReferee(Vec2 ball, float delta, bool snap)
+    {
+        if (_refereeModel is null)
+        {
+            return;
+        }
+
+        var velocity = snap || delta <= 0f ? Vector2.Zero : (_refereePosition - _refereeLastDrawn) / delta;
+        _refereeLastDrawn = _refereePosition;
+        var toBall = new Vector2(ball.X, ball.Y) - _refereePosition;
+        var facing = velocity.LengthSquared() > 0.04f ? velocity : toBall;
+        _refereeModel.Pose(velocity, facing, toBall, false, PlayerState.Positioning, ContactCue.None, KickCue.None, FallCue.None, _playbackRate, delta);
     }
 
     /// <summary>
