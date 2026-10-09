@@ -1,0 +1,72 @@
+{
+  "_doc": "Encargo de ilustraciones para Nano Banana (tools/arte/nanobanana.py). 'estilo' se antepone a cada prompt; 'referencias' son imágenes de estilo que se mandan con cada pieza. Cada grupo genera sus piezas en 'salida'. Añadir una pieza = añadir una entrada; las que ya existen en disco no se regeneran salvo --forzar.",
+  "estilo": "Gritty hand-inked comic illustration for a dark-humour fantasy football management game. Same art style as the reference image: thick irregular black ink linework, heavy cross-hatching in the shadows, three-tone cel shading, muted earthy palette, slightly grimy textured paper look, expressive and ugly-charming faces. Bust portrait, three-quarter view, head and shoulders, the character looks fierce and battered. Square format, the character fills the frame, background is a torn painted cloth in the colour given. No text, no letters, no logo, no frame border.",
+  "referencias": ["docs/ui/referencias/retrato-orco.png"],
+  "grupos": [
+    {
+      "id": "retratos",
+      "salida": "Game/Art/Portraits/{id}.png",
+      "lado": 256,
+      "piezas": [
+        {"id": "orc_0", "prompt": "Orc goalkeeper, olive green skin, huge lower tusks, flattened pig nose, deep-set yellow eyes, red bandana around the neck, spiked iron pauldron. Background: dark red cloth."},
+        {"id": "orc_1", "prompt": "Orc brawler, dark moss-green skin, one broken tusk, scarred bald head with a black top-knot, gold ring in a pointed ear, leather harness. Background: dark red cloth."},
+        {"id": "orc_2", "prompt": "Young orc midfielder, yellowish green skin, small tusks, shaved sides with a black mohawk, war paint stripes in red across the eyes, padded leather vest. Background: dark red cloth."},
+        {"id": "orc_3", "prompt": "Old orc veteran, grey-green wrinkled skin, missing an eye covered with a crude patch, long white moustache, dented iron helmet. Background: dark red cloth."},
+        {"id": "orc_4", "prompt": "Orc striker grinning with sharp teeth, bright olive skin, nose ring, stitched scar across the cheek, fur collar. Background: dark red cloth."},
+        {"id": "orc_5", "prompt": "Massive orc defender, very dark green skin, jaw like a brick, chain around the neck, cauliflower ears, bandaged forehead. Background: dark red cloth."},
+        {"id": "orc_6", "prompt": "Female orc winger, jade green skin, braided black hair with bone beads, tusks, freckles of mud, determined snarl. Background: dark red cloth."},
+        {"id": "orc_7", "prompt": "Orc thug with a bloody nose, olive skin, small mean eyes, iron spikes on the shoulder, torn red scarf. Background: dark red cloth."},
+
+        {"id": "human_0", "prompt": "Human medieval footballer, rough peasant, broken crooked nose, black eye, stubble, short brown hair, blue tunic with gold trim. Background: dusty ochre cloth."},
+        {"id": "human_1", "prompt": "Human brute with a thick black beard, shaved head, cauliflower ear, scar across the lip, blue tunic. Background: dusty ochre cloth."},
+        {"id": "human_2", "prompt": "Human woman striker, long dirty blonde hair tied back, freckles, split lip, defiant grin, blue tunic. Background: dusty ochre cloth."},
+        {"id": "human_3", "prompt": "Bald human veteran with an eye patch and a bushy grey moustache, missing teeth, blue tunic. Background: dusty ochre cloth."},
+        {"id": "human_4", "prompt": "Young human lad with messy red hair, bandage around the head stained with blood, nervous grin, blue tunic. Background: dusty ochre cloth."},
+        {"id": "human_5", "prompt": "Human butcher-turned-defender, fat face, double chin, bloody apron straps over a blue tunic, tiny angry eyes. Background: dusty ochre cloth."},
+        {"id": "human_6", "prompt": "Weathered human woman defender, short black hair, scar through the eyebrow, stern look, blue tunic. Background: dusty ochre cloth."},
+        {"id": "human_7", "prompt": "Shifty human with a thin moustache and slicked hair, gold tooth, smug smirk, blue tunic. Background: dusty ochre cloth."},
+
+        {"id": "dwarf_0", "prompt": "Dwarf miner footballer, enormous braided red beard, horned iron helmet, bulbous nose, bushy eyebrows, blue tunic. Background: deep amber cloth."},
+        {"id": "dwarf_1", "prompt": "Dwarf with a brown beard tied in two braids with gold rings, bald head with tattoos, squashed nose, blue tunic. Background: deep amber cloth."},
+        {"id": "dwarf_2", "prompt": "Old dwarf with a huge white beard, monocle, soot-covered face, grumpy frown, blue tunic. Background: deep amber cloth."},
+        {"id": "dwarf_3", "prompt": "Female dwarf with thick black braids and a short braided beard, iron cap, missing tooth, fierce grin, blue tunic. Background: deep amber cloth."},
+        {"id": "dwarf_4", "prompt": "Dwarf brawler with a ginger beard full of crumbs, black eye, dented helmet without horns, blue tunic. Background: deep amber cloth."},
+        {"id": "dwarf_5", "prompt": "Dwarf with grey beard and eye patch, mining lamp strapped on the head, deep wrinkles, blue tunic. Background: deep amber cloth."},
+        {"id": "dwarf_6", "prompt": "Young dwarf with a short patchy blond beard, big nose, nervous eyes, oversized helmet, blue tunic. Background: deep amber cloth."},
+        {"id": "dwarf_7", "prompt": "Dwarf blacksmith with a singed black beard, leather goggles on the forehead, burn scar, blue tunic. Background: deep amber cloth."},
+
+        {"id": "elf_0", "prompt": "Arrogant elf footballer, long pale blond hair, very long pointed ears, sharp cheekbones, contemptuous smirk, bruised cheek, blue hooded tunic. Background: dark teal cloth."},
+        {"id": "elf_1", "prompt": "Elf woman with silver hair and a thin circlet, cold stare, small cut on the nose, blue hooded tunic. Background: dark teal cloth."},
+        {"id": "elf_2", "prompt": "Wood elf with brown hair in braids with leaves, tattooed face lines, missing tip of an ear, blue tunic. Background: dark teal cloth."},
+        {"id": "elf_3", "prompt": "Dark-haired elf with a hood up, shadowed eyes, scar across the lips, blue hooded tunic. Background: dark teal cloth."},
+        {"id": "elf_4", "prompt": "Elf dandy with a perfect blond fringe, black eye, offended expression, blue tunic with gold trim. Background: dark teal cloth."},
+        {"id": "elf_5", "prompt": "Old elf with long white hair and a weary face, thin beard, bandage on the ear, blue hooded tunic. Background: dark teal cloth."},
+        {"id": "elf_6", "prompt": "Red-haired elf woman with freckles and a feral grin, twigs in her hair, blue tunic. Background: dark teal cloth."},
+        {"id": "elf_7", "prompt": "Pale elf with shaved sides and a long ponytail, earrings along the ear, sneer, blue tunic. Background: dark teal cloth."},
+
+        {"id": "undead_0", "prompt": "Undead zombie footballer, grey-green rotting skin, stitches across the forehead, one glowing green eye, exposed teeth, tattered blue tunic. Background: sickly grey-green cloth."},
+        {"id": "undead_1", "prompt": "Skeleton footballer with a cracked skull, glowing green eye sockets, rusty helmet, tattered blue tunic. Background: sickly grey-green cloth."},
+        {"id": "undead_2", "prompt": "Ghoul with sunken cheeks, bandaged jaw, wisps of white hair, milky eyes, tattered blue tunic. Background: sickly grey-green cloth."},
+        {"id": "undead_3", "prompt": "Zombie with a worm coming out of the ear, missing nose, grin of broken teeth, tattered blue tunic. Background: sickly grey-green cloth."},
+        {"id": "undead_4", "prompt": "Undead woman with long black stringy hair, pale blue skin, stitched mouth corner, hollow stare, tattered blue tunic. Background: sickly grey-green cloth."},
+        {"id": "undead_5", "prompt": "Mummy footballer wrapped in dirty bandages, one glowing eye visible, tattered blue tunic. Background: sickly grey-green cloth."},
+        {"id": "undead_6", "prompt": "Fat zombie with bloated green skin, flies around, drooping eyelid, tattered blue tunic. Background: sickly grey-green cloth."},
+        {"id": "undead_7", "prompt": "Skeletal knight footballer with a cracked jaw tied with rope, rusted gorget, green fire in the eyes, tattered blue tunic. Background: sickly grey-green cloth."}
+      ]
+    },
+    {
+      "id": "hojas-de-modelo",
+      "_doc": "Láminas de referencia para el modelado 3D (frente, perfil, espalda) de cada raza, en el mismo estilo. Se usan para modelar o elegir modelos, no en el juego.",
+      "salida": "out/arte/nanobanana/hojas/{id}.png",
+      "estilo_extra": "Character model sheet: the same character shown full body three times side by side — front view, side view, back view — standing in a neutral pose, plain parchment background, wearing a blue football tunic with gold trim. Proportions: big head and hands, chunky, stylised.",
+      "aspecto": "16:9",
+      "piezas": [
+        {"id": "orc", "prompt": "Orc footballer, broad and hunched, olive green skin, big tusks, pointed ears, red bandana."},
+        {"id": "human", "prompt": "Human peasant footballer, stocky, broken nose, stubble."},
+        {"id": "dwarf", "prompt": "Dwarf footballer, very short and wide, huge braided beard, horned helmet."},
+        {"id": "elf", "prompt": "Elf footballer, tall and lanky, long ears, long blond hair, hood."},
+        {"id": "undead", "prompt": "Undead zombie footballer, thin and crooked, grey-green rotting skin, stitches, glowing green eye."}
+      ]
+    }
+  ]
+}

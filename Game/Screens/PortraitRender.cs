@@ -29,7 +29,7 @@ public partial class PortraitRender : Node3D
         AddChild(camera);
 
         // Luz de retrato: principal de tres cuartos, relleno frío y contraluz cálido para despegar la silueta.
-        AddChild(new DirectionalLight3D { RotationDegrees = new Vector3(-28f, -38f, 0f), LightEnergy = 0.95f, ShadowEnabled = true });
+        AddChild(new DirectionalLight3D { RotationDegrees = new Vector3(-28f, -38f, 0f), LightEnergy = 0.7f, ShadowEnabled = true });
         AddChild(new DirectionalLight3D { RotationDegrees = new Vector3(-10f, 60f, 0f), LightEnergy = 0.12f, LightColor = new Color("b9c8e8") });
         AddChild(new DirectionalLight3D { RotationDegrees = new Vector3(-20f, 170f, 0f), LightEnergy = 0.45f, LightColor = new Color("ffd9a0") });
         AddChild(new WorldEnvironment
@@ -39,11 +39,22 @@ public partial class PortraitRender : Node3D
                 BackgroundMode = Godot.Environment.BGMode.ClearColor,
                 AmbientLightSource = Godot.Environment.AmbientSource.Color,
                 AmbientLightColor = new Color(0.7f, 0.68f, 0.66f),
-                AmbientLightEnergy = 0.45f,
+                AmbientLightEnergy = 0.32f,
             },
         });
 
-        string folder = ProjectSettings.GlobalizePath("res://").TrimEnd('/') + "/../out/arte/retratos";
+        // Exploración de estilos (9 oct): `-- cabeza 1.4` agranda la cabeza (proporción de cómic), `-- ancho 1.2`
+        // ensancha el cuerpo, `-- carpeta x` cambia la salida. Sin argumentos, los retratos del juego.
+        var args = OS.GetCmdlineUserArgs();
+        string Arg(string key, string fallback)
+        {
+            int at = System.Array.IndexOf(args, key);
+            return at >= 0 && at + 1 < args.Length ? args[at + 1] : fallback;
+        }
+
+        float headScale = float.Parse(Arg("cabeza", "1"), System.Globalization.CultureInfo.InvariantCulture);
+        float bodyWidth = float.Parse(Arg("ancho", "1"), System.Globalization.CultureInfo.InvariantCulture);
+        string folder = ProjectSettings.GlobalizePath("res://").TrimEnd('/') + "/../out/arte/" + Arg("carpeta", "retratos");
         Directory.CreateDirectory(folder);
         for (int r = 0; r < Races.Length; r++)
         {
@@ -61,6 +72,7 @@ public partial class PortraitRender : Node3D
                 holder.AddChild(model);
                 model.Paint(new StandardMaterial3D(), Style.TeamOwn.Darkened(0.35f));
                 model.DebugPlayClip("idle", 1.0f + (v * 0.13f), 18f + ((v % 3) * 6f));
+                Exaggerate(model, headScale, bodyWidth);
 
                 // Busto: cabeza y hombros. La cabeza cae hacia el 92 % del alto (medido en las capturas de prueba).
                 float headY = Height * 0.92f;
@@ -87,5 +99,30 @@ public partial class PortraitRender : Node3D
         }
 
         GetTree().Quit();
+    }
+
+    /// <summary>Congela la postura y escala la cabeza (y el ancho del tronco) para probar proporciones de cómic.</summary>
+    private static void Exaggerate(Node model, float head, float width)
+    {
+        foreach (var node in model.FindChildren("*", "AnimationPlayer", true, false))
+        {
+            ((AnimationPlayer)node).Pause();
+        }
+
+        foreach (var node in model.FindChildren("*", "Skeleton3D", true, false))
+        {
+            var skeleton = (Skeleton3D)node;
+            int headBone = skeleton.FindBone("Head");
+            if (headBone >= 0 && !Mathf.IsEqualApprox(head, 1f))
+            {
+                skeleton.SetBonePoseScale(headBone, new Vector3(head, head, head));
+            }
+
+            int chest = skeleton.FindBone("UpperChest");
+            if (chest >= 0 && !Mathf.IsEqualApprox(width, 1f))
+            {
+                skeleton.SetBonePoseScale(chest, new Vector3(width, 1f, width));
+            }
+        }
     }
 }

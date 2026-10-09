@@ -30,6 +30,21 @@ fuente queda anotada aquí.
 | Quaternius: Bestiary (Imp), Modular Outfits Fantasy (`Male_Peasant`, `Male_Ranger`), Universal Base Characters (cabeza de `Superhero_Male`, `Hair_*`, `Hair_Beard`) — tiers *Standard* gratuitos, zips en `out/arte/q/` | CC0 | las cinco razas del partido 3D (`tools/arte/razas.py`) | `Game/models/races/` (8,3 MB, + `LICENSE-quaternius.txt`) |
 | Mixamo «Soccer Game Pack» (clips) | licencia de Mixamo (uso en juegos) | correr, chutar, entrada, caída, portero… para todas las razas | `Game/models/soccer/` |
 
+## Ilustraciones con Nano Banana (desde el 9 oct 2026)
+
+Decisión del revisor: las ilustraciones van primero y se hacen con **Nano Banana** (Gemini Image), el mismo
+generador de su mockup (`docs/ui/referencias/plantilla-orcos.png`). El dibujo por código y los renders de los modelos no
+llegaban a esa referencia (comparativa en `out/arte/ilustracion/`). Los modelos 3D vienen **después** y salen de las
+hojas de modelo que genera el mismo encargo.
+
+- Encargo: `tools/arte/encargo-nanobanana.json` — un bloque de estilo común, las referencias de estilo
+  (`docs/ui/referencias/retrato-orco.png`) y una entrada por pieza: 40 retratos (5 razas × 8) y 5 hojas de modelo.
+- Generar: `GEMINI_API_KEY=… out/arte-venv/bin/python tools/arte/nanobanana.py --si` (sin `--si` sólo dice qué haría y
+  cuánto costaría). `--solo orc_0,orc_1` para probar dos antes de lanzar todo; `--forzar` para rehacer una pieza.
+- Las piezas van directas a su sitio (`Game/Art/Portraits/<raza>_<v>.png`, que `Portrait.Draw` ya usa) y la procedencia
+  (modelo, prompt, fecha) a `Game/Art/nanobanana-procedencia.json`. Lo bruto, en `out/arte/nanobanana/bruto/`.
+- Coste: lo paga la clave del revisor; el script avisa del precio aproximado antes de llamar.
+
 ## Pipeline
 
 - `out/arte-venv/bin/python tools/arte/materiales.py` — mapas de detalle en gris (media ~0,93) que la interfaz
