@@ -1876,6 +1876,15 @@ internal static class Utility
             int advance = Centi((mate.Position.X - p.Position.X) * direction);
             int rank = p.IsOutfield ? advance - (Centi(distance) * 20 / 100) : advance;
 
+            // BX-8 (segunda revisión): el saque largo del portero no tiene tope (decisión del revisor), pero más allá
+            // del alcance del pase largo de los demás cada casilla de más deja de valer como avance. Sin esto el
+            // portero buscaba siempre al más adelantado (~9,7 casillas) y el rival se quedaba el ~62 %. Medido sobre
+            // 325 saques largos: a 5-8 casillas se conserva el 60 %, a 8-11 el 32 %.
+            if (!p.IsOutfield && longPass && distance > maxCells)
+            {
+                rank -= Centi(distance - maxCells);
+            }
+
             // AZ-B paso 3: el pasillo PUNTÚA, nunca descarta. Un pasillo tapado del todo vale como
             // retroceder passBlockedLaneRankPenalty centésimas de casilla al comparar receptores.
             int danger = LaneDanger(players, p.Team, p.Position, mate.Position, context.PassLaneRadiusCells);

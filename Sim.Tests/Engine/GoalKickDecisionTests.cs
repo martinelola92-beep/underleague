@@ -212,6 +212,56 @@ public sealed class GoalKickDecisionTests
         Assert.True(beyond > 0, $"ninguno de {longPasses} saques largos del portero pasó de {longRange} casillas: ¿tiene tope?");
     }
 
+    /// <summary>
+    /// BX-8, segunda revisión: el saque largo del portero no busca al más adelantado por sistema. Más allá del alcance del
+    /// pase largo de los demás, cada casilla de más deja de sumar avance (sin tope: si no hay nadie mejor, sigue llegando
+    /// a donde llega). Medido con este mismo instrumento sobre 200 partidos: 126 de 326 saques largos conservados antes
+    /// (39 %) y 161 de 321 después (50 %). El suelo, 44 %, queda a unos dos errores típicos de cada lado.
+    /// </summary>
+    [Fact]
+    public void TheKeepersLongGoalKickLooksForAKeepableReceiver()
+    {
+        int kicks = 0;
+        int kept = 0;
+        foreach (var (trace, _, frame, taker) in GoalKicks(200))
+        {
+            if (trace.ActionAt(frame, taker) != PlayerAction.LongPass)
+            {
+                continue;
+            }
+
+            int team = trace.Players[taker].Team;
+            for (int f = frame; f < trace.FrameCount && f < frame + 150; f++)
+            {
+                int owner = trace.BallOwnerAt(f);
+                if (owner >= 0 && owner != taker)
+                {
+                    kicks++;
+                    kept += trace.Players[owner].Team == team ? 1 : 0;
+                    break;
+                }
+
+                // Un saque que sale del campo se lo queda quien saca la reanudación: el balón largo al más adelantado se
+                // iba por la línea de fondo (112 de 325 saques largos acababan en reanudación antes del arreglo, ~51
+                // después). Sin contarlas, las dos versiones conservaban lo mismo (56 % y 58 %): es aquí donde se perdía.
+                if (f > frame && trace.RestartAt(f) != RestartKind.None)
+                {
+                    int restartTaker = trace.RestartTakerAt(f);
+                    if (restartTaker >= 0)
+                    {
+                        kicks++;
+                        kept += trace.Players[restartTaker].Team == team ? 1 : 0;
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        Assert.True(kicks >= 150, $"muestra corta: {kicks} saques largos resueltos");
+        Assert.True(kept * 100 >= kicks * 44, $"el equipo del portero conservó {kept} de {kicks} saques largos ({100.0 * kept / kicks:F0} %; antes del arreglo, 126 de 326, el 39 %)");
+    }
+
     private static UtilityRow? ClearAt(MatchSetup setup, ulong seed, MatchTrace trace, int frame, int player)
     {
         var dump = Simulator.Run(setup, seed, Catalog, new SimConfig(CollectLog: false, DumpUtility: (trace.Players[player].Id, trace.TickAt(frame)))).Report.UtilityDump;
