@@ -35,10 +35,17 @@ renders y no pastillas»*. Todo lo hecho, las fuentes y licencias, el pipeline (
   - **BX-8** diagnosticada y arreglada en la rama **`bx8-saque-de-puerta`**, sin fusionar. Endurece el jefe final
     (`eternal_crown`, puerta roja con dos semillas) y queda una decisión del revisor: el tope del pase largo del
     portero. Todo en `docs/pendientes/BX-8.md`.
+  - BX-9 cerrada (`/Game`): el portero sostiene el balón a la altura de las manos (captura `-- portero`).
+  - BX-10 arreglada (`/Sim`, en `main`): la intercepción se tira en la máxima aproximación. Deja dos hermanos abiertos
+    (BX-10b barrera en la línea de fondo, BX-10c bloqueo del tiro) y dos lecturas LIKELY: `contextualAdvantage` −3,3
+    y oscilación +1,7 puntos. La puerta de doctrinas está roja, pero es ruido de semilla (en la base ya se invierte con
+    la semilla 2). Todo en `docs/pendientes/BX-10.md`.
 - **Siguiente paso**:
   1. Con la respuesta del revisor sobre BX-8: aplicar el tope o no, recalibrar o aceptar `eternal_crown` (ADR,
-     RT-057), los tests que pidió la revisión, y fusionar.
-  2. Sin respuesta: BX-7, BX-9, BX-10 o BX-13, con `gameplay-debug`.
+     RT-057), los tests que pidió la revisión, y fusionar. **Al fusionar, la rama choca con BX-10** en las huellas de
+     `MobNarrowingTests` y en `GrudgeAndMobTests`: renovar las huellas sobre el resultado y volver a medir BX-8 encima.
+  2. Sin respuesta: BX-7 o BX-13 (la oscilación de BX-13 se mide con `PositioningHoldTests`, ahora con 120 partidos),
+     con `gameplay-debug`.
 - **Trampa nueva**: importar recursos abre el editor, que re-sangra los `.cs` con tabuladores. Usa
   `tools/arte/importar.sh`, nunca `godot --import` a pelo.
 - **Siguiente paso (anterior, sigue valiendo)**: que el revisor juegue una build (`tools/export-windows.sh`) y diga (1) si el estilo 3D le vale o
