@@ -32,20 +32,28 @@ renders y no pastillas»*. Todo lo hecho, las fuentes y licencias, el pipeline (
 - **Paquete 2 de BX (10 oct)**, en `docs/pendientes/BX-playtest-3oct.md`:
   - BX-12 cerrada: el árbitro ya no se teletransporta; histéresis, tope y zona muerta, medidos en 40 partidos.
   - BX-11 respondida: en el minuto 0 no hay lesiones graves en 1.000 partidos.
-  - **BX-8** diagnosticada y arreglada en la rama **`bx8-saque-de-puerta`**, sin fusionar. Endurece el jefe final
-    (`eternal_crown`, puerta roja con dos semillas) y queda una decisión del revisor: el tope del pase largo del
-    portero. Todo en `docs/pendientes/BX-8.md`.
+  - **BX-8**: el revisor decidió que el pase largo del portero **no tiene tope** (10 oct).
+    - Rama nueva **`bx8-sobre-bx10`**, puesta sobre `main` (con BX-10) y con los tests que pidió la revisión. Sin
+      fusionar.
+    - La segunda revisión independiente encontró tres cosas abiertas:
+      - el saque largo va siempre al compañero más adelantado y el rival se queda ~62 %: la colocación no decide nada;
+      - `PositioningHoldTests` queda rojo (oscilación 15,8 %, BX-13);
+      - `eternal_crown` queda rojo en los tres niveles (CONFIRMED con dos semillas), con el mecanismo sin medir.
+    - Las puertas completas no tienen ninguna roja nueva aparte de la de jefes. Todo en `docs/pendientes/BX-8.md`.
+    - La rama vieja `bx8-saque-de-puerta` queda superada.
   - BX-9 cerrada (`/Game`): el portero sostiene el balón a la altura de las manos (captura `-- portero`).
   - BX-10 arreglada (`/Sim`, en `main`): la intercepción se tira en la máxima aproximación. Deja dos hermanos abiertos
     (BX-10b barrera en la línea de fondo, BX-10c bloqueo del tiro) y dos lecturas LIKELY: `contextualAdvantage` −3,3
     y oscilación +1,7 puntos. La puerta de doctrinas está roja, pero es ruido de semilla (en la base ya se invierte con
     la semilla 2). Todo en `docs/pendientes/BX-10.md`.
 - **Siguiente paso**:
-  1. Con la respuesta del revisor sobre BX-8: aplicar el tope o no, recalibrar o aceptar `eternal_crown` (ADR,
-     RT-057), los tests que pidió la revisión, y fusionar. **Al fusionar, la rama choca con BX-10** en las huellas de
-     `MobNarrowingTests` y en `GrudgeAndMobTests`: renovar las huellas sobre el resultado y volver a medir BX-8 encima.
-  2. Sin respuesta: BX-7 o BX-13 (la oscilación de BX-13 se mide con `PositioningHoldTests`, ahora con 120 partidos),
-     con `gameplay-debug`.
+  1. **BX-13** con `gameplay-debug`, sobre la rama `bx8-sobre-bx10`: la oscilación tiene que bajar del 15 % con BX-8
+     dentro. Primero hay que validar que el instrumento mide el recular tras un ataque (Regla J). Empezar por
+     `docs/pendientes/BX-13.md`.
+  2. **El receptor del saque largo del portero** (`game-design-review`; hoy `rank = advance`), con una sonda que
+     compare colocaciones.
+  3. El mecanismo por el que BX-8 endurece `eternal_crown`. Después, recalibrar con ADR (RT-057) o aceptar la curva.
+  4. Fusionar `bx8-sobre-bx10` cuando 1-3 estén cerrados.
 - **Trampa nueva**: importar recursos abre el editor, que re-sangra los `.cs` con tabuladores. Usa
   `tools/arte/importar.sh`, nunca `godot --import` a pelo.
 - **Siguiente paso (anterior, sigue valiendo)**: que el revisor juegue una build (`tools/export-windows.sh`) y diga (1) si el estilo 3D le vale o
