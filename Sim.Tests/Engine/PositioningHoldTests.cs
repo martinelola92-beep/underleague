@@ -58,6 +58,9 @@ public sealed class PositioningHoldTests
         // Los datos, sobre 120 partidos (10 oct 2026, BX-10): con 40 el porcentaje bailaba ±1 punto de un conjunto de
         // semillas a otro (11,9 / 12,7 / 14,3 % en 1-40, 41-80 y 81-120 con el mismo motor) y el tope está a esa distancia.
         // Con la intercepción en la máxima aproximación: 15,8 / 13,5 / 14,9 %, 14,7 % juntos, contra 13,0 % antes.
+        // BX-8 (el saque de puerta) la sube en los cuatro bloques de 120 partidos (+1,3 de media, 15,8 % en 1-120): este
+        // test queda ROJO en la rama de BX-8 a propósito, y la muestra NO se amplía para esconderlo (revisión
+        // independiente, 10 oct). Se trata en BX-13.
         var on = OscillationProbeTests.Measure(Catalog, 1, 3 * Matches);
         OscillationProbeTests.Report(_output, "sin sostener", off);
         OscillationProbeTests.Report(_output, "datos", on);

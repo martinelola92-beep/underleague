@@ -41,9 +41,14 @@ public sealed class MobNarrowingTests
     // al rival, no al entrar en su radio, así que cambian las trayectorias. Antes de renovarlas, el árbol sin el cambio
     // pasaba las seis. Valores anteriores: 3129567429540966643 / 37 / 7641109458777701280 y, con las reglas apagadas,
     // 12818003483072846353 / 47 / 8688216646563204419.
-    private const ulong RegulationOnlyBefore = 16753414833695689260UL;
+    // Renovadas el 10 oct 2026 por BX-8, el saque de puerta (Utility.EvaluateClear sin el bono de peligro en el saque;
+    // Utility.EvaluatePass con el portero sujeto al alcance del pase corto), fusionado sobre BX-10. Antes de renovarlas,
+    // main (c40518a, sin el cambio de Utility.cs) pasaba las seis en la suite completa. Valores anteriores (BX-10):
+    // 16753414833695689260 / 39 / 14477576825799339481 y, con las reglas apagadas, 1492436985385627695 / 46 /
+    // 7026620416233399305.
+    private const ulong RegulationOnlyBefore = 1148590664567200023UL;
     private const int RegulationOnlyMatches = 39;
-    private const ulong EveryMatchBefore = 14477576825799339481UL;
+    private const ulong EveryMatchBefore = 3970857990952304695UL;
 
     // Las mismas tres huellas con las reglas de las ADR 0184/0186 apagadas (positioningHoldBonus = 0, BV-B apagada) y las
     // bases de lesión de antes: el motor de antes de la ADR 0184 más los arreglos sin dato posteriores (BO-A).
@@ -54,9 +59,9 @@ public sealed class MobNarrowingTests
     // Y otra vez, sólo la de TODOS los partidos (13369841099302331167 -> 8688216646563204419), por el segundo arreglo sin
     // dato de la ADR 0185: el sacador del saque de centro tiene que llegar andando (TakerInPlaceCells) también con
     // accelTicks 0. Con esa comprobación condicionada otra vez al arranque, la huella vieja vuelve (comprobado).
-    private const ulong RegulationOnlyBeforeAdr0184PlusBoA = 1492436985385627695UL;
-    private const int RegulationOnlyMatchesBeforeAdr0184PlusBoA = 46;
-    private const ulong EveryMatchBeforeAdr0184PlusBoA = 7026620416233399305UL;
+    private const ulong RegulationOnlyBeforeAdr0184PlusBoA = 15481862805985855111UL;
+    private const int RegulationOnlyMatchesBeforeAdr0184PlusBoA = 45;
+    private const ulong EveryMatchBeforeAdr0184PlusBoA = 2346269057888070546UL;
 
     private const float Eps = 0.001f;
 

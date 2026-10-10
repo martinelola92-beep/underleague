@@ -1244,8 +1244,13 @@ internal static class Utility
             return;
         }
 
+        // BX-8: en el saque de puerta el balón está muerto y los rivales fuera del área (ADR 0143 §3), así que
+        // el peligro —que mide dónde está el balón, no quién amenaza— no describe ninguna amenaza. Con su bono
+        // el despeje ganaba el 89 % de los saques y el rival se quedaba el 92 % de ellos. Sin él, despejar es
+        // el tercer caso de la ADR 0141 §2: lo que queda cuando ni el pase corto ni el largo son seguros.
+        bool goalKick = ctx.RestartTakerIndex == p.Index && ctx.RestartTakerKind == RestartKind.GoalKick;
         eval.Context = context.ClearBase
-            + (context.ClearDangerBonusPerCenti * danger)
+            + (goalKick ? 0 : context.ClearDangerBonusPerCenti * danger)
             + (context.ClearPressureBonusPerCenti * ctx.Pressure[p.Index]);
     }
 
@@ -1822,7 +1827,11 @@ internal static class Utility
             }
 
             float distance = Vec2.Distance(p.Position, mate.Position);
-            if (distance <= minCells || (p.IsOutfield && distance > maxCells))
+            // BX-8: el portero se salta el tope sólo en el pase LARGO, como dice el resumen de arriba. La
+            // condición era `p.IsOutfield && …` para las dos bandas, así que su «pase corto» —la base más
+            // alta de la tabla— iba al compañero más adelantado: 9,7 casillas de mediana en el saque de
+            // puerta, con la física del pase corto, y el 76 % acababa en balón suelto.
+            if (distance <= minCells || ((p.IsOutfield || !longPass) && distance > maxCells))
             {
                 continue;
             }

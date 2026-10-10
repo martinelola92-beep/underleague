@@ -102,24 +102,42 @@ public sealed class LethalRiskTests
     [Fact]
     public void BeingHurtMultipliesTheNumberOfTheSamePlayerInTheSameCell()
     {
-        var (state, node) = StateAtLethalMatch();
-        var risks = RunEngine.LethalRisks(state, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
-        int target = risks.OrderByDescending(r => r.Risk).ThenBy(r => r.PlayerId).First().PlayerId;
+        // El primer escenario de la búsqueda en el que el objetivo SANO corre riesgo: si no lo corre, la comparación no
+        // mide nada. Mismo criterio que StateAtLethalMatchWithOutfieldVictim: un escenario que no puede probar lo que se
+        // prueba se descarta, no se deja fallar. (BX-8, 10 oct: el arreglo del saque de puerta cambió los partidos previos
+        // de la semilla y el primer escenario dejó de valer.)
+        foreach (ulong seed in LethalSearchSeeds)
+        {
+            if (SearchLethalMatch(seed) is not { } found)
+            {
+                continue;
+            }
 
-        // El jugador se deja SANO a mano antes de medir. El escenario que encuentra la búsqueda no lo garantiza: con
-        // el jefe curando sólo las leves (ADR 0170) el objetivo llega al partido con lo que arrastra de los anteriores,
-        // y una versión anterior de esta prueba comparaba «tocado» contra un «sano» que en realidad ya venía tocado
-        // (8000 contra 8000, el techo del indicador). La comparación es entre los dos estados del MISMO jugador.
-        var healthy = state.WithPlayer(state.GetPlayer(target) with { PhysicalState = PhysicalState.Healthy, MinorInjuries = 0 });
-        var hurt = state.WithPlayer(state.GetPlayer(target) with { PhysicalState = PhysicalState.MinorInjury, MinorInjuries = 1 });
+            var (state, node) = found;
+            var risks = RunEngine.LethalRisks(state, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems);
+            int target = risks.OrderByDescending(r => r.Risk).ThenBy(r => r.PlayerId).First().PlayerId;
 
-        int before = RunEngine.LethalRisks(healthy, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems)
-            .Single(r => r.PlayerId == target).Risk;
-        int now = RunEngine.LethalRisks(hurt, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems)
-            .Single(r => r.PlayerId == target).Risk;
+            // El jugador se deja SANO a mano antes de medir. El escenario que encuentra la búsqueda no lo garantiza: con
+            // el jefe curando sólo las leves (ADR 0170) el objetivo llega al partido con lo que arrastra de los anteriores,
+            // y una versión anterior de esta prueba comparaba «tocado» contra un «sano» que en realidad ya venía tocado
+            // (8000 contra 8000, el techo del indicador). La comparación es entre los dos estados del MISMO jugador.
+            var healthy = state.WithPlayer(state.GetPlayer(target) with { PhysicalState = PhysicalState.Healthy, MinorInjuries = 0 });
+            var hurt = state.WithPlayer(state.GetPlayer(target) with { PhysicalState = PhysicalState.MinorInjury, MinorInjuries = 1 });
 
-        Assert.True(before > 0, "el objetivo sano no corre riesgo en este escenario: la prueba no mide nada");
-        Assert.True(now > before, $"tocado {now} y sano {before}: el estado tiene que pesar en el indicador");
+            int before = RunEngine.LethalRisks(healthy, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems)
+                .Single(r => r.PlayerId == target).Risk;
+            if (before == 0)
+            {
+                continue;
+            }
+
+            int now = RunEngine.LethalRisks(hurt, node.Id, SystemsTestSupport.Catalog, SystemsTestSupport.Systems)
+                .Single(r => r.PlayerId == target).Risk;
+            Assert.True(now > before, $"semilla {seed}: tocado {now} y sano {before}: el estado tiene que pesar en el indicador");
+            return;
+        }
+
+        Assert.Fail("ninguna semilla da un partido letal en el que el objetivo sano corra riesgo: la prueba no mide nada");
     }
 
     /// <summary>
