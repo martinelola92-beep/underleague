@@ -1,8 +1,8 @@
 # ADR 0193 — La Corona Eterna baja a calidad 25 tras el saque de puerta de BX-8
 
 Fecha: 10 oct 2026 · Estado: **aceptada** (autónoma, RT-057; el revisor autoriza mover rangos con ADR y datos).
-Recalibra `data/bosses/eternal_crown.json` (`template.quality` 31 → 25). No toca ninguna banda de la ADR 0033 ni el
-margen de medida de `BossGateTests`. Relacionadas: ADR 0033 (curva de jefes), 0049 y 0050 (recalibraciones anteriores
+Recalibra `data/bosses/eternal_crown.json` (`template.quality` 31 → 25). No toca ninguna banda (la tabla de la ADR 0033
+con la enmienda de la ADR 0089, que bajó `excellent` de este jefe a 50-70) ni el margen de medida de `BossGateTests`. Relacionadas: ADR 0033 (curva de jefes), 0049 y 0050 (recalibraciones anteriores
 del mismo jefe), 0027 (salvaguarda sin legendarios), BX-8 (`docs/pendientes/BX-8.md`).
 
 ## Contexto
@@ -11,7 +11,7 @@ del mismo jefe), 0027 (salvaguarda sin legendarios), BX-8 (`docs/pendientes/BX-8
   `/Balance`.
 - **Eso endurece a la Corona Eterna en los tres niveles de build, CONFIRMED con dos semillas.**
   - `correct` 12,3/11,4; `good` 37,1/34,6; `excellent` 39,0/38,8.
-  - Bandas: 15-28, 40-55 y 50-70, con ±2,5 de margen.
+  - Bandas: 15-28, 40-55 y 50-70 (esta última, de la ADR 0089), con ±2,5 de margen.
 - **Mecanismo (LIKELY, `/Balance --boss-gate`, semilla 1).** La caída sale mitad y mitad de los dos canales del jefe:
   - menos victorias en el campo (−1,4 a −1,7 puntos);
   - más empates que «El campeón conserva el título» convierte en derrota (+0,4 a +1,7).
@@ -38,7 +38,10 @@ Barrido, puerta completa (5.120 partidos por celda):
 
 - Las cifras de 28 que faltan no se volcaron: entonces la puerta sólo enseñaba las celdas que fallaban.
 - 26 y 27 dejan `excellent` apoyada en el margen de medida, y 27 lo rompe con la semilla 2.
-- **25 es la primera calidad con las cuatro celdas dentro de banda sin margen, en las dos semillas.**
+- **25 es la primera calidad con las cuatro celdas dentro de banda, en las dos semillas.**
+  - «Sin margen» sería exagerar: `excellent` da 50,16 con la semilla 2, frente a un mínimo de 50. Esa diferencia está
+    por debajo del error típico de una celda (0,20-0,89, `BossGateTests`).
+  - Se eligió la primera calidad que cruza: es un ajuste al borde, y el margen de ±2,5 sigue haciendo falta.
 - La escalera sigue siendo monótona (`EveryBossRewardsABetterBuild`). La salvaguarda de la ADR 0027 (una build muy
   buena sin legendarios gana al jefe final) queda con más holgura.
 
@@ -56,6 +59,17 @@ Barrido, puerta completa (5.120 partidos por celda):
   - **Sin evidencia de efecto, por lo que se ha medido:** `contextualAdvantage`, −2,9 con una semilla y +2,5 con la
     otra.
 - `docs/catalogo-perks-y-objetos.md` no cambia: el jefe no es contenido del catálogo.
+
+## Lo que esta ADR no explica
+
+- **La calidad del jefe hace de sumidero de los cambios del motor.**
+  - Historial: ADR 0049 (28 → 24), 0050 P2 (24 → 29), 0050 P1 (29 → 31, `bb8d249`) y ahora 31 → 25, el mayor
+    movimiento.
+  - `excellent` ya llevaba 41-42 desde las ADR 0184 y 0188 sin explicación. Esta ADR lo absorbe junto con BX-8.
+- **Nadie ha decidido si «el cerrojo se fortalece cuando se marcan menos goles» es la identidad del jefe o un
+  acoplamiento que habría que cortar.** Es una pregunta de diseño (`game-design-review`), no de calibración.
+- **Las runs completas son 240 por semilla**: el error típico de `runWinRate` ronda los 2,6 puntos. «Entra en banda
+  con la semilla 2» (20,83 frente a 20) no es evidencia por sí solo.
 
 ## Pendiente
 

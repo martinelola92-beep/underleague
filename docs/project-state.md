@@ -32,28 +32,34 @@ renders y no pastillas»*. Todo lo hecho, las fuentes y licencias, el pipeline (
 - **Paquete 2 de BX (10 oct)**, en `docs/pendientes/BX-playtest-3oct.md`:
   - BX-12 cerrada: el árbitro ya no se teletransporta; histéresis, tope y zona muerta, medidos en 40 partidos.
   - BX-11 respondida: en el minuto 0 no hay lesiones graves en 1.000 partidos.
-  - **BX-8**: el revisor decidió que el pase largo del portero **no tiene tope** (10 oct).
-    - Rama nueva **`bx8-sobre-bx10`**, puesta sobre `main` (con BX-10) y con los tests que pidió la revisión. Sin
-      fusionar.
-    - La segunda revisión independiente encontró tres cosas abiertas:
-      - el saque largo va siempre al compañero más adelantado y el rival se queda ~62 %: la colocación no decide nada;
-      - `PositioningHoldTests` queda rojo (oscilación 15,8 %, BX-13);
-      - `eternal_crown` queda rojo en los tres niveles (CONFIRMED con dos semillas), con el mecanismo sin medir.
-    - Las puertas completas no tienen ninguna roja nueva aparte de la de jefes. Todo en `docs/pendientes/BX-8.md`.
-    - La rama vieja `bx8-saque-de-puerta` queda superada.
+  - **BX-8 cerrada (10 oct, fusionada):** el saque de puerta sin tope en el largo (decisión del revisor).
+    - El despeje no cobra el peligro con el balón muerto.
+    - El pase corto del portero tiene alcance.
+    - El saque largo deja de sumar avance más allá de 8 casillas. Saques largos conservados: 39 → 50 %, porque se
+      van menos por la línea de fondo.
+    - Queda abierto: el saque sigue sin ser una decisión de colocación (`docs/pendientes/BX-8.md`).
+  - **BX-13 (fusionada):** el marcador iba al centro del marcado y la separación los hacía temblar. Ahora se pone del
+    lado de su portería, en contacto. Oscilación 14,45 → 12,3 %. Quedan los saltos de destino de `FindSpace` y el
+    hermano `EvaluatePress`.
+  - **ADR 0193:** la Corona Eterna baja a calidad 25.
+    - La puerta de jefes entra entera en banda, `excellent` al borde.
+    - En las puertas completas sólo queda roja `orc_violence` (57,45 frente a 58).
+    - `runWinRate` sube; `runWinRate_noMarket` empeora (deuda de la economía).
   - BX-9 cerrada (`/Game`): el portero sostiene el balón a la altura de las manos (captura `-- portero`).
   - BX-10 arreglada (`/Sim`, en `main`): la intercepción se tira en la máxima aproximación. Deja dos hermanos abiertos
     (BX-10b barrera en la línea de fondo, BX-10c bloqueo del tiro) y dos lecturas LIKELY: `contextualAdvantage` −3,3
     y oscilación +1,7 puntos. La puerta de doctrinas está roja, pero es ruido de semilla (en la base ya se invierte con
     la semilla 2). Todo en `docs/pendientes/BX-10.md`.
 - **Siguiente paso**:
-  1. **BX-13** con `gameplay-debug`, sobre la rama `bx8-sobre-bx10`: la oscilación tiene que bajar del 15 % con BX-8
-     dentro. Primero hay que validar que el instrumento mide el recular tras un ataque (Regla J). Empezar por
-     `docs/pendientes/BX-13.md`.
-  2. **El receptor del saque largo del portero** (`game-design-review`; hoy `rank = advance`), con una sonda que
-     compare colocaciones.
-  3. El mecanismo por el que BX-8 endurece `eternal_crown`. Después, recalibrar con ADR (RT-057) o aceptar la curva.
-  4. Fusionar `bx8-sobre-bx10` cuando 1-3 estén cerrados.
+  1. BX-7 (paquete 2 de `docs/pendientes/BX-playtest-3oct.md`) con `gameplay-debug`.
+  2. Hermanos abiertos, de más a menos visible:
+     - `EvaluatePress` al centro del poseedor (BX-13);
+     - BX-10c, el bloqueo del tiro;
+     - BX-10b, la barrera en la línea de fondo;
+     - el bono de peligro tras blocar;
+     - la falta a favor dentro del área propia (BX-8).
+  3. `runWinRate_noMarket` fuera de techo (economía; ADR 0193 la agrava).
+  4. Que el revisor juegue: el saque de puerta y el repliegue (BX-8, BX-13) se ven en la retransmisión.
 - **Trampa nueva**: importar recursos abre el editor, que re-sangra los `.cs` con tabuladores. Usa
   `tools/arte/importar.sh`, nunca `godot --import` a pelo.
 - **Siguiente paso (anterior, sigue valiendo)**: que el revisor juegue una build (`tools/export-windows.sh`) y diga (1) si el estilo 3D le vale o

@@ -331,4 +331,20 @@ Hay 4 rojas, y ninguna es nueva frente a la base de BX-10:
 Para cerrar:
 1. ~~`game-design-review` del receptor del pase largo del portero~~: hecho (arriba).
 2. ~~BX-13 (oscilación)~~: 12,3 % con BX-8 dentro, `PositioningHoldTests` verde.
-3. Mecanismo de `eternal_crown`, y luego recalibrar con ADR (RT-057) o aceptar la curva.
+3. ~~Mecanismo de `eternal_crown`~~: recalibrado, ADR 0193 (calidad 31 → 25, mecanismo LIKELY).
+
+## Tercera revisión independiente (rama entera, 10 oct, noche): fusionable; lo que queda abierto
+
+- **DESIGN CLAIM NOT PROVEN, reducida pero no cerrada: el saque sigue sin ser una decisión.**
+  - El portero saca largo casi siempre; sólo el 7 % de los saques van a ≤ 8 casillas.
+  - Lo que se ganó (39 → 50 %) es «menos balones por la línea de fondo», no «un receptor más alcanzable».
+  - El test se llama ahora `TheKeepersLongGoalKickGoesOutForTheRivalLessOften`; antes, `LooksForAKeepableReceiver`,
+    que prometía más de lo que mide.
+  - Que la colocación decida el saque sigue sin demostrar.
+- **Peso de IA en el código, no en `/data`.** La pendiente de c904c54 (una centésima de avance por centésima de
+  distancia) sigue el precedente del `* 20 / 100` de los jugadores de campo, que tampoco está en datos (RT-096).
+- `TheKeepersLongGoalKickHasNoRangeCap` exige ahora que pasen de 8 casillas al menos la mitad de los saques largos
+  (hoy el 93 %), no uno solo.
+- **Hermano sin medir:** el pase largo de un jugador de campo hacia un delantero pegado a la línea de fondo puede
+  irse fuera igual que el saque.
+- `runWinRate_noMarket` empeora con la ADR 0193; es deuda de la economía, anotada allí.
