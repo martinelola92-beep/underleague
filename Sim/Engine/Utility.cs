@@ -1367,8 +1367,27 @@ internal static class Utility
             return;
         }
 
-        eval.Target = target.Position;
+        eval.Target = MarkPoint(p, target);
         eval.Context = -(context.MarkDistancePenaltyPerCell * Centi(Vec2.Distance(p.Position, target.Position)) / 100);
+    }
+
+    /// <summary>
+    /// BX-13: dónde se pone el que marca. Del lado de su portería y pegado al cuerpo del marcado, a la suma de los dos
+    /// radios, no ENCIMA de él. Con el centro del rival por destino, el marcador llegaba, los cuerpos se solapaban, la
+    /// separación (ADR 0020) los apartaba y el marcador volvía a entrar: los dos temblaban ±0,08 casillas por tick, y el
+    /// que protegía el balón también (medido: la deriva del destino deshacía el 75 % de sus inversiones, el marcaje el
+    /// 42 %). En contacto la entrada sigue a mano (<c>tackleDistanceMaxCells</c> 1, contra radios de 0,56 a 0,76).
+    /// </summary>
+    internal static Vec2 MarkPoint(MatchPlayer p, MatchPlayer target)
+    {
+        var toGoal = Pitch.GoalCenter(1 - p.Team) - target.Position;
+        float length = toGoal.Length;
+        if (length <= 0.01f)
+        {
+            return target.Position;
+        }
+
+        return target.Position + (toGoal * ((p.BodyRadius + target.BodyRadius) / length));
     }
 
     private static MatchPlayer? NearestOpponent(UtilityContext ctx, MatchPlayer p)
