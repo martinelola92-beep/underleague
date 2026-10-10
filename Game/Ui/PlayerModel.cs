@@ -2061,6 +2061,13 @@ public sealed partial class PlayerModel : Node3D
             return true;
         }
 
+        // BX-9: el balón en las manos va ENTRE las dos, no pegado a la más cercana, que lo escondía tras el antebrazo.
+        if (part == ContactPart.Hands)
+        {
+            world = (left.Value + right.Value) * 0.5f;
+            return true;
+        }
+
         world = left.Value.DistanceSquaredTo(towards) <= right.Value.DistanceSquaredTo(towards)
             ? left.Value
             : right.Value;

@@ -18,6 +18,16 @@ Capturas: `capturas/playtest-3oct-saque-portero.png` (saque de puerta al centro,
 - **BX-7** En una turba, el delantero se queda «bloqueado» sin poder volver a su campo porque el saque tarda mucho.
 - **BX-8** El portero saca de puerta sin criterio: lanza el balón al centro, hacia los rivales, en vez de buscar a un compañero abierto. Captura.
 - **BX-9** Al portero a veces le cuesta coger el balón con las manos: se queda unos ticks con él en los pies.
+  **Cerrada (10 oct), sólo `/Game`.** Tras atrapar, `/Sim` deja al portero en `Holding` `save.holdTicks` (ADR de la
+  parada: no decide ni se mueve) con el balón a altura 0, y la vista lo anclaba a la mano sólo en planta: brazos al
+  pecho y pelota en el césped. **CONFIRMED** con la captura nueva `-- portero` (`CapturasRetransmision.tscn`):
+  fotogramas 1156-1174 de la semilla 20260905, altura 0 y balón a los pies los 18 ticks que lo sostiene.
+  - Arreglo en `MatchPitchView3D`: con el portero dueño en juego, el balón va entre las dos manos (antes, la más
+    cercana, que lo escondía tras el antebrazo), un radio hacia fuera y **a la altura de las manos**; al soltarlo baja
+    en el mismo relevo de 2 ticks que la posición.
+  - En un saque (de puerta, falta) el portero lo pone con el pie: ahí sigue en el suelo (captura `portero-saque`).
+  - Al despejar de volea el clip de golpeo baja las manos y el balón pasa por el pie antes de volar (`portero-0-19`):
+    se lee como un despeje, se deja.
 - **BX-10** A menudo el balón pasa al lado de un jugador solo y no lo coge (probabilidad de captura o intercepción).
 - **BX-11** ¿Puede lesionarse gravemente un jugador en el minuto 0?
   **Respondida (9 oct), sin cambio de código.**

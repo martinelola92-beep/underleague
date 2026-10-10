@@ -138,6 +138,14 @@ public partial class BroadcastCapture : Control
             return;
         }
 
+        // BX-9: `-- portero` fotografía al portero en los fotogramas siguientes a hacerse con el balón en juego.
+        if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "portero") >= 0)
+        {
+            await CaptureKeeperGather(run);
+            GetTree().Quit();
+            return;
+        }
+
         // ADR 0173: `-- pausa` captura sólo la pausa breve de una falta pitada (sigue jugando la pantalla de verdad).
         if (System.Array.IndexOf(OS.GetCmdlineUserArgs(), "pausa") >= 0)
         {
@@ -1311,6 +1319,91 @@ public partial class BroadcastCapture : Control
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// BX-9 («al portero le cuesta coger el balón con las manos: se queda unos ticks con él en los pies»): la primera
+    /// vez, pasado el saque, que el portero pasa a ser dueño del balón en juego, en el instante y 2, 5 y 10 ticks
+    /// después. Imprime por fotograma el estado del portero en /Sim y la altura del balón en la traza.
+    /// </summary>
+    private async Task CaptureKeeperGather(RunController run)
+    {
+        ulong seed = Seeds[0];
+        run.NewRun("orc_ironworks", Race.Orc, seed);
+        int node = FirstOfKind(run, n => n.IsMatch);
+        run.SelectedNodeId = node;
+        var playback = MatchPlaybacks.Of(run.State!, node, run.Catalog!, run.Engine, trace: true, MatchDecisions.None);
+        if (playback.Trace is not { } trace)
+        {
+            return;
+        }
+
+        var keepers = new HashSet<int>();
+        foreach (var squad in new[] { playback.Setup.Home.Players, playback.Setup.Away.Players })
+        {
+            foreach (var definition in squad)
+            {
+                if (definition.Position == Underleague.Sim.Model.Position.Goalkeeper)
+                {
+                    keepers.Add(definition.Id);
+                }
+            }
+        }
+
+        var found = new List<int>();
+        for (int f = 300; f < trace.FrameCount && found.Count < 2; f++)
+        {
+            int owner = trace.BallOwnerAt(f);
+            if (owner >= 0 && trace.BallOwnerAt(f - 1) != owner && keepers.Contains(trace.Players[owner].Id)
+                && trace.RestartAt(f) == Underleague.Sim.Engine.RestartKind.None)
+            {
+                found.Add(f);
+                f += 200;
+            }
+        }
+
+        var instance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+        if (instance is not BroadcastScreen screen)
+        {
+            Drop(instance);
+            return;
+        }
+
+        for (int k = 0; k < found.Count; k++)
+        {
+            int gather = found[k];
+            int keeper = trace.BallOwnerAt(gather);
+            foreach (int after in new[] { -2, 0, 2, 5, 10, 18, 19, 20, 21 })
+            {
+                int f = gather + after;
+                await ShowFrame(screen, f, "portero");
+                GD.Print($"portero-{k}-{after}: fotograma {f}, dueño {trace.BallOwnerAt(f)}, estado {trace.StateAt(f, keeper)}, saque {trace.RestartAt(f)}, altura {trace.BallHeightAt(f):0.00}");
+                await Save($"portero-{k}-{(after < 0 ? "m" : "")}{Math.Abs(after)}");
+            }
+        }
+
+        Drop(instance);
+
+        // Y un saque de puerta, que se pone con el pie: el balón tiene que seguir en el suelo.
+        foreach (var probe in Seeds)
+        {
+            if (FindGoalKick(run, probe, node) is not { } goalKick)
+            {
+                continue;
+            }
+
+            run.SelectedNodeId = node;
+            var kickInstance = await Show("res://Scenes/Retransmision.tscn", frames: 10);
+            if (kickInstance is BroadcastScreen kickScreen)
+            {
+                await ShowFrame(kickScreen, goalKick + 3, "portero-saque");
+                GD.Print($"portero-saque: semilla {probe}, fotograma {goalKick + 3}");
+                await Save("portero-saque");
+            }
+
+            Drop(kickInstance);
+            break;
+        }
     }
 
     /// <summary>

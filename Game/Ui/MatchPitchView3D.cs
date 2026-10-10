@@ -2486,6 +2486,7 @@ public partial class MatchPitchView3D : SubViewportContainer
         var ball = InterpolateBall(trace, frame);
         int carrier = trace.BallOwnerAt(frame);
         var offset = Vector2.Zero;
+        float boneLift = 0f;
         if (carrier >= 0 && carrier < _radii.Count)
         {
             // Con dueño, la traza pone el balón EXACTAMENTE encima de él, así que la vista lo aparta para
@@ -2540,6 +2541,20 @@ public partial class MatchPitchView3D : SubViewportContainer
                     if (pull.Length() <= MaxBoneAnchorCells)
                     {
                         offset = pull;
+                        // BX-9: en las manos, también a la ALTURA de las manos. La traza deja el balón con dueño
+                        // a altura 0, y el portero que lo sostiene tenía los brazos al pecho y la pelota en el
+                        // césped («se queda unos ticks con él en los pies»). Un radio por delante de las manos,
+                        // hacia fuera del cuerpo: entre ellas quedaba dentro de los antebrazos.
+                        if (part == ContactPart.Hands)
+                        {
+                            var outward = new Vector2(bone.X - drawn.X, bone.Z - drawn.Z);
+                            if (outward.LengthSquared() > 0.000001f)
+                            {
+                                offset += outward.Normalized() * BallRadius;
+                            }
+
+                            boneLift = Mathf.Max(0f, bone.Y - BallRadius);
+                        }
                     }
                 }
             }
@@ -2556,11 +2571,18 @@ public partial class MatchPitchView3D : SubViewportContainer
         if (carrier >= 0 && carrier < _radii.Count)
         {
             _handOff = offset;
+            _handLift = boneLift;
             _handOffTicks = frame + Mathf.Clamp(Alpha, 0f, 1f);
         }
         else
         {
             offset = HandOverOffset(trace, frame, ball);
+            // BX-9: el balón que sale de las manos baja desde ellas en el mismo relevo, no cae de golpe al césped.
+            float since = frame + Mathf.Clamp(Alpha, 0f, 1f) - _handOffTicks;
+            if (since >= 0f && since < HandOverTicks)
+            {
+                boneLift = _handLift * (1f - (since / HandOverTicks));
+            }
         }
 
         float height = trace.BallHeightAt(frame);
@@ -2568,6 +2590,8 @@ public partial class MatchPitchView3D : SubViewportContainer
         {
             height = Mathf.Lerp(height, trace.BallHeightAt(frame + 1), Alpha);
         }
+
+        height = Mathf.Max(height, boneLift);
 
         _ball.Visible = true;
         var ballAt = new Vector3(ball.X + offset.X, BallRadius + Mathf.Max(0f, height), ball.Y + offset.Y);
@@ -2634,7 +2658,8 @@ public partial class MatchPitchView3D : SubViewportContainer
     /// </summary>
     private ContactPart ContactPartFor(MatchTrace trace, int frame, int player)
     {
-        if (player >= 0 && player < _keepers.Count && _keepers[player])
+        // BX-9: el saque de puerta y la falta los pone el portero con el pie, con el balón en el suelo.
+        if (player >= 0 && player < _keepers.Count && _keepers[player] && trace.RestartAt(frame) == RestartKind.None)
         {
             return ContactPart.Hands;
         }
@@ -2914,6 +2939,7 @@ public partial class MatchPitchView3D : SubViewportContainer
     private const float HandOverTicks = 2f;
 
     private Vector2 _handOff;
+    private float _handLift;
     private float _handOffTicks = -100f;
 
     /// <summary>
