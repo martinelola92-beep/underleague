@@ -104,10 +104,28 @@ public static class SubstitutionPoints
         ArgumentNullException.ThrowIfNull(catalog);
         var side = team == 0 ? setup.Home : setup.Away;
         var events = result.Events;
+        int endTick = int.MaxValue;
+        for (int i = events.Count - 1; i >= 0; i--)
+        {
+            if (events[i].Type == EventType.MatchEnd)
+            {
+                endTick = events[i].Tick;
+                break;
+            }
+        }
+
         for (int i = 0; i < events.Count; i++)
         {
             var e = events[i];
             if (e.Team != team || (e.Type != EventType.Injury && e.Type != EventType.Death))
+            {
+                continue;
+            }
+
+            // BX-10 (destapado al mover las semillas): una lesión en el último tick no tiene decisión. La sustitución
+            // entraría en el tick siguiente, que ya no existe: se ofrecía una pausa sin efecto y, al repetir el partido
+            // con ella, el momento perdía la marca de decisión (MatchMomentViewTests, semilla 101).
+            if (e.Tick >= endTick)
             {
                 continue;
             }

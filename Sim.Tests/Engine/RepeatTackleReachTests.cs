@@ -217,9 +217,33 @@ public sealed class RepeatTackleReachTests
     [Fact]
     public void TheNutmegOnALostDribbleNoLongerFreezes()
     {
-        var (setup, seed, config) = WorstCaseProbeTests.Build("run", 385, Catalog);
-        var result = Simulator.Run(setup, seed, Catalog, config);
-        Assert.Contains(result.Events, e => e.Type == EventType.PerkTriggered && e.Detail == "nutmeg");
+        // El partido «run 385» era el del caso, pero el caño apenas sale en partidos de run (3 en 400 antes de BX-10, 0
+        // después) y cada cambio del motor mueve las semillas. Se fabrica como el del rodillo de arriba: partidos de
+        // referencia con el perk en los jugadores de campo locales, y el primero con un caño en un regate PERDIDO (el perk
+        // salta en DRIBBLE_ATTEMPTED, también en los ganados). 10 oct 2026, BX-10.
+        MatchResult? result = null;
+        for (ulong seed = 1; seed <= 60 && result is null; seed++)
+        {
+            var setup = TestMatches.Reference(Catalog, seed);
+            setup = setup with
+            {
+                Home = setup.Home with
+                {
+                    Players = setup.Home.Players
+                        .Select(p => p.Position == Position.Goalkeeper ? p : p with { Perks = p.Perks.Append("nutmeg").ToList() })
+                        .ToList(),
+                },
+            };
+            var candidate = Simulator.Run(setup, seed, Catalog, SimConfig.Default with { Trace = true });
+            var ev = candidate.Events;
+            if (ev.Any(e => e.Type == EventType.PerkTriggered && e.Detail == "nutmeg"
+                && ev.Any(l => l.Tick == e.Tick && l.Actor == e.Actor && l.Type == EventType.DribbleLost)))
+            {
+                result = candidate;
+            }
+        }
+
+        Assert.NotNull(result);
         Assert.Equal(0, OwnerOutOfCarrierFrames(result));
         Assert.Empty(SymptomDetectors.Freeze(DetectorTrace.From(result), out _));
     }

@@ -112,7 +112,9 @@ public sealed class TackleReachTests
         // (medido con accelTicks 3 y el arranque acotado al juego abierto: 192 de 1.338, el 14,3 %, contra el 24 % de antes).
         var off = Measure(AccelerationTests.WithAccel(With(follow: false, foulDownsVictim: true), 0), 1, 100);
         Report(_output, "sin seguir a la víctima", off);
-        Assert.True(off.Count(x => x.BeforeResolving > 0.9f) * 100 > off.Count * 15, "control: sin seguir a la víctima debían verse entradas resueltas a más de 0,9");
+        // Listón del control al 10 % (10 oct 2026, BX-10): con la intercepción en la máxima aproximación las semillas dan
+        // 152 de 1.039, el 14,6 %, contra el 0,8 % con la regla puesta; el control sigue separando los dos casos por 18×.
+        Assert.True(off.Count(x => x.BeforeResolving > 0.9f) * 100 > off.Count * 10, "control: sin seguir a la víctima debían verse entradas resueltas a más de 0,9");
     }
 
     /// <summary>

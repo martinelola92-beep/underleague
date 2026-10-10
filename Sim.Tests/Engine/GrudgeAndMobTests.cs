@@ -92,7 +92,11 @@ public sealed class GrudgeAndMobTests
 
         // Todas las turbas de 300 partidos, no las tres primeras: las que importan para la reanudación de falta son las que
         // empiezan en el mismo tick de una falta pitada (medido: semillas 219 y 248).
-        for (ulong seed = 1; seed <= 300; seed++)
+        // Al menos 300 partidos, y más si hace falta hasta dar con una turba que empiece en una falta pitada: cuál lo hace
+        // depende de las trayectorias, que cambian con cualquier ajuste del motor (BX-8, 10 oct: con el saque de puerta
+        // arreglado, ninguna de las 300 primeras; BX-10, la intercepción en la máxima aproximación: la primera pasada la
+        // 1.200, con 386 turbas por delante). Tope de 4.000 para que un caso que desaparece de verdad falle.
+        for (ulong seed = 1; seed <= 4000 && (seed <= 300 || startedOnAWhistle == 0); seed++)
         {
             var result = Simulator.Run(
                 TestMatches.Reference(Catalog, seed), seed, Catalog,
@@ -154,7 +158,7 @@ public sealed class GrudgeAndMobTests
             }
         }
 
-        Assert.True(mobs > 0, "ninguna turba en trescientos partidos: el test no cubre nada");
-        Assert.True(startedOnAWhistle > 0, "ninguna turba empezó en el tick de una falta pitada: el caso de la reanudación pendiente no se cubre");
+        Assert.True(mobs > 0, "ninguna turba en la muestra: el test no cubre nada");
+        Assert.True(startedOnAWhistle > 0, $"ninguna turba empezó en el tick de una falta pitada: el caso de la reanudación pendiente no se cubre ({mobs} turbas)");
     }
 }

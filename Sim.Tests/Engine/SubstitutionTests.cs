@@ -52,6 +52,24 @@ public sealed class SubstitutionTests
         throw new Xunit.Sdk.XunitException("ninguna semilla lesiona a un frágil con margen: el escenario Brutal ya no es brutal");
     }
 
+    /// <summary>
+    /// BX-10: una lesión en el último tick del partido no deja decisión. La sustitución entraría en el tick siguiente, que
+    /// ya no existe; antes se ofrecía una pausa sin efecto y, al repetir el partido con ella, el momento perdía la marca de
+    /// decisión. Se recorta el partido real para que acabe en el tick de la lesión.
+    /// </summary>
+    [Fact]
+    public void AnInjuryOnTheLastTickLeavesNoDecision()
+    {
+        var (setup, _, result, point) = FirstDecisionPoint();
+        var events = result.Events.Where(e => e.Tick <= point.Tick && e.Type != EventType.MatchEnd).ToList();
+        var end = result.Events.Last(e => e.Type == EventType.MatchEnd);
+        events.Add(end with { Tick = point.Tick });
+        var cut = result with { Events = events };
+
+        Assert.NotNull(SubstitutionPoints.Pending(setup, result, 0, Catalog));
+        Assert.Null(SubstitutionPoints.Pending(setup, cut, 0, Catalog));
+    }
+
     [Fact]
     public void TheSubstituteEntersTheTickAfterTheDepartureAndTheEventsBeforeAreIdentical()
     {

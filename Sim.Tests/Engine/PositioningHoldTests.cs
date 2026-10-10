@@ -55,7 +55,10 @@ public sealed class PositioningHoldTests
         // El control, sobre el motor sin arranque (ADR 0185): el arranque también quita la oscilación —es otro remedio del
         // mismo síntoma—, y con él encendido el control dejaba de ver la que la sostenida tiene que quitar (medido: 27,6 %).
         var off = OscillationProbeTests.Measure(AccelerationTests.WithAccel(OscillationProbeTests.WithHold(Catalog, 0), 0), 1, Matches);
-        var on = OscillationProbeTests.Measure(Catalog, 1, Matches);
+        // Los datos, sobre 120 partidos (10 oct 2026, BX-10): con 40 el porcentaje bailaba ±1 punto de un conjunto de
+        // semillas a otro (11,9 / 12,7 / 14,3 % en 1-40, 41-80 y 81-120 con el mismo motor) y el tope está a esa distancia.
+        // Con la intercepción en la máxima aproximación: 15,8 / 13,5 / 14,9 %, 14,7 % juntos, contra 13,0 % antes.
+        var on = OscillationProbeTests.Measure(Catalog, 1, 3 * Matches);
         OscillationProbeTests.Report(_output, "sin sostener", off);
         OscillationProbeTests.Report(_output, "datos", on);
 

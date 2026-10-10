@@ -2348,6 +2348,14 @@ internal sealed class MatchEngine : IPerkWorld
         }
     }
 
+    /// <summary>Dónde está el balón en vuelo tras <paramref name="elapsed"/> ticks: la misma recta y la misma comba que
+    /// <c>UpdateFlight</c> (ADR 0135 paso 2), para mirar un tick por delante sin moverlo (BX-10).</summary>
+    private (Vec2 Position, float Z) FlightPointAt(int elapsed)
+    {
+        float t = _ball.FlightTicksTotal <= 0 ? 1f : Math.Min(1f, elapsed / (float)_ball.FlightTicksTotal);
+        return (Vec2.Lerp(_ball.FlightOrigin, _ball.FlightTarget, t), (_ball.FlightTargetZ * t) + (_ball.FlightArc * 4f * t * (1f - t)));
+    }
+
     private bool TryIntercept()
     {
         var passer = _ball.Passer;
@@ -2374,6 +2382,22 @@ internal sealed class MatchEngine : IPerkWorld
             if (distanceToBall >= pass.InterceptRadiusCells)
             {
                 continue;
+            }
+
+            // BX-10: la tirada, en la MÁXIMA APROXIMACIÓN. Tirando al entrar en el radio, tres de cada cuatro se hacían
+            // entre 0,6 y 0,9 casillas, con el factor de cercanía del paso 2 de AZ-B casi en ×1, y el balón atravesaba
+            // después el cuerpo sin otra tirada (medido: al 20 % de los rivales les pasaba a menos de 0,3, y sólo el 6 %
+            // de las tiradas se hacían ahí). El vuelo está fijado de antemano, así que se mira dónde estará el balón el
+            // tick siguiente: si va a estar más cerca, se espera; si no, éste es el punto más cercano y se tira aquí, con
+            // el balón donde está. También al entrar en el cuerpo y en el último tick. Sigue siendo una tirada por rival
+            // y pase, y no guarda estado: un jugador que no podía tocar el balón vuelve a mirar desde donde esté.
+            if (distanceToBall > player.BodyRadiusCentiCells / 100f && _ball.FlightTicksLeft > 0)
+            {
+                var (next, nextZ) = FlightPointAt(_ball.FlightTicksTotal - _ball.FlightTicksLeft + 1);
+                if (ReachDistance(player.Position, next, nextZ) < distanceToBall)
+                {
+                    continue;
+                }
             }
 
             _ball.InterceptAttempted[i] = true;
