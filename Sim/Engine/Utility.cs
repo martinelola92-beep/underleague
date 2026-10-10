@@ -1244,8 +1244,13 @@ internal static class Utility
             return;
         }
 
+        // BX-8: en el saque de puerta el balón está muerto y los rivales fuera del área (ADR 0143 §3), así que
+        // el peligro —que mide dónde está el balón, no quién amenaza— no describe ninguna amenaza. Con su bono
+        // el despeje ganaba el 89 % de los saques y el rival se quedaba el 92 % de ellos. Sin él, despejar es
+        // el tercer caso de la ADR 0141 §2: lo que queda cuando ni el pase corto ni el largo son seguros.
+        bool goalKick = ctx.RestartTakerIndex == p.Index && ctx.RestartTakerKind == RestartKind.GoalKick;
         eval.Context = context.ClearBase
-            + (context.ClearDangerBonusPerCenti * danger)
+            + (goalKick ? 0 : context.ClearDangerBonusPerCenti * danger)
             + (context.ClearPressureBonusPerCenti * ctx.Pressure[p.Index]);
     }
 
@@ -1362,8 +1367,29 @@ internal static class Utility
             return;
         }
 
-        eval.Target = target.Position;
+        // Acotado al campo y a la banda jugable, como el resto de destinos calculados (ADR 0175): con el marcado pegado
+        // a su línea de fondo, el punto del lado de la portería caería fuera (revisión independiente de BX-13).
+        eval.Target = ClampToPlay(ctx, MarkPoint(p, target));
         eval.Context = -(context.MarkDistancePenaltyPerCell * Centi(Vec2.Distance(p.Position, target.Position)) / 100);
+    }
+
+    /// <summary>
+    /// BX-13: dónde se pone el que marca. Del lado de su portería y pegado al cuerpo del marcado, a la suma de los dos
+    /// radios, no ENCIMA de él. Con el centro del rival por destino, el marcador llegaba, los cuerpos se solapaban, la
+    /// separación (ADR 0020) los apartaba y el marcador volvía a entrar: los dos temblaban ±0,08 casillas por tick, y el
+    /// que protegía el balón también (medido: la deriva del destino deshacía el 75 % de sus inversiones, el marcaje el
+    /// 42 %). En contacto la entrada sigue a mano (<c>tackleDistanceMaxCells</c> 1, contra radios de 0,56 a 0,76).
+    /// </summary>
+    internal static Vec2 MarkPoint(MatchPlayer p, MatchPlayer target)
+    {
+        var toGoal = Pitch.GoalCenter(1 - p.Team) - target.Position;
+        float length = toGoal.Length;
+        if (length <= 0.01f)
+        {
+            return target.Position;
+        }
+
+        return target.Position + (toGoal * ((p.BodyRadius + target.BodyRadius) / length));
     }
 
     private static MatchPlayer? NearestOpponent(UtilityContext ctx, MatchPlayer p)
@@ -1822,7 +1848,11 @@ internal static class Utility
             }
 
             float distance = Vec2.Distance(p.Position, mate.Position);
-            if (distance <= minCells || (p.IsOutfield && distance > maxCells))
+            // BX-8: el portero se salta el tope sólo en el pase LARGO, como dice el resumen de arriba. La
+            // condición era `p.IsOutfield && …` para las dos bandas, así que su «pase corto» —la base más
+            // alta de la tabla— iba al compañero más adelantado: 9,7 casillas de mediana en el saque de
+            // puerta, con la física del pase corto, y el 76 % acababa en balón suelto.
+            if (distance <= minCells || ((p.IsOutfield || !longPass) && distance > maxCells))
             {
                 continue;
             }
@@ -1847,6 +1877,15 @@ internal static class Utility
 
             int advance = Centi((mate.Position.X - p.Position.X) * direction);
             int rank = p.IsOutfield ? advance - (Centi(distance) * 20 / 100) : advance;
+
+            // BX-8 (segunda revisión): el saque largo del portero no tiene tope (decisión del revisor), pero más allá
+            // del alcance del pase largo de los demás cada casilla de más deja de valer como avance. Sin esto el
+            // portero buscaba siempre al más adelantado (~9,7 casillas) y el rival se quedaba el ~62 %. Medido sobre
+            // 325 saques largos: a 5-8 casillas se conserva el 60 %, a 8-11 el 32 %.
+            if (!p.IsOutfield && longPass && distance > maxCells)
+            {
+                rank -= Centi(distance - maxCells);
+            }
 
             // AZ-B paso 3: el pasillo PUNTÚA, nunca descarta. Un pasillo tapado del todo vale como
             // retroceder passBlockedLaneRankPenalty centésimas de casilla al comparar receptores.

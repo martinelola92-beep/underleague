@@ -283,10 +283,68 @@ Hay 4 rojas, y ninguna es nueva frente a la base de BX-10:
 - Hermano sin ficha: la falta a favor dentro del área propia (`RestartAllows` → `_ => true`), donde el despeje cobra
   el peligro con el balón muerto.
 
+## El receptor del saque largo (10 oct, noche)
+
+**Medición antes de tocar (Regla A).** Sonda desechable sobre 325 saques largos (200 partidos):
+- El espacio alrededor del receptor al sacar **no predice** que se conserve. Con 3 casillas o más libres se conserva
+  el 26 %, menos que apretado.
+- La distancia sí: a 5-8 casillas, 60 %; a 8-11, 32 %.
+- La tirada de éxito del pase apenas depende de la distancia: 77 % menos 1,05 puntos por casilla.
+
+**Causa (CONFIRMED con el arreglo):** el portero puntúa al receptor sólo por lo adelantado que está
+(`rank = advance`, sin coste por distancia). El balón al más adelantado se iba a menudo por la línea de fondo:
+112 de 325 saques largos acababan en una reanudación, casi siempre a favor del rival.
+
+**Revisión de diseño (`game-design-review`):**
+1. **Qué ve el jugador:** el portero lanza siempre al más lejano, y el rival se queda el balón o el saque.
+2. **Qué decide hoy:** nada.
+3. **Qué debería decidir:** que la colocación cuente; un compañero alcanzable gana a uno en la línea de fondo.
+4. **Regla:** ADR 0141 §2, y «sin tope» (decisión del revisor, ADR 0030). No se crea ninguna regla.
+5. **Sistema:** `Utility.EvaluatePass`, sólo el `rank` del portero en el pase largo. No hay dato nuevo: usa
+   `longPassMaxCells`, el alcance del pase largo de los demás.
+6. **Alternativas:**
+   - (A) el coste por distancia de los jugadores de campo (0,2 por casilla): casi no reordena, porque en el saque el
+     avance es casi la distancia;
+   - (B) puntuar el espacio del receptor: la medida dice que no predice;
+   - (C) **elegida:** más allá de 8 casillas cada casilla de más deja de valer como avance.
+   - Sigue sin haber tope: si no hay nadie mejor, el saque llega a donde llega.
+7. **Trade-off:** menos balones directos a la delantera tras el saque, y por tanto menos ocasiones de saque largo.
+8. **Estrategia:** colocar un compañero a media distancia y libre pasa a tener valor.
+9. **Degeneración:** que el saque acabe junto al área propia. No pasa: la distancia mediana casi no cambia (8-11
+   casillas sigue siendo lo normal). Cambia a quién elige el portero.
+10. **Demostración:** abajo.
+
+**Resultado:**
+- Saques largos conservados, con el instrumento del test (`TheKeepersLongGoalKickLooksForAKeepableReceiver`, 200
+  partidos, contando las reanudaciones): 126 de 326 (39 %) → 161 de 321 (50 %).
+- Sin contar las reanudaciones, las dos versiones conservan lo mismo (56 % y 58 %): la pérdida estaba en el balón
+  que salía del campo.
+- `TheKeepersLongGoalKickHasNoRangeCap` sigue verde.
+- Balance (`--runs 3000`, semillas 1 y 2, base = la rama con BX-13):
+  - goles +0,01 / +0,03; tiros +0,1;
+  - `betterTeamWinRate_human_60_vs_human_40` 90,0 → 90,6 con la semilla 1. Es ruido de borde: con la semilla 2 está
+    fuera en las dos versiones.
+- Puerta de jefes, semillas 1 y 2: `eternal_crown` sin cambio (12,3/11,6, 37,2/35,3, 39,6/39,9). Sigue rojo.
+
 ## Estado (10 oct 2026, tarde): en la rama `bx8-saque-de-puerta`, puesta sobre `main` con BX-10
 
-No se fusiona a `main` mientras siga rojo `PositioningHoldTests` (BX-13) y sin decidir el receptor del saque largo.
 Para cerrar:
-1. `game-design-review` del receptor del pase largo del portero, con sonda: ¿cambia el resultado según la colocación?
-2. BX-13 (oscilación), que tiene que bajar del 15 % con BX-8 dentro.
-3. Mecanismo de `eternal_crown`, y luego recalibrar con ADR (RT-057) o aceptar la curva.
+1. ~~`game-design-review` del receptor del pase largo del portero~~: hecho (arriba).
+2. ~~BX-13 (oscilación)~~: 12,3 % con BX-8 dentro, `PositioningHoldTests` verde.
+3. ~~Mecanismo de `eternal_crown`~~: recalibrado, ADR 0193 (calidad 31 → 25, mecanismo LIKELY).
+
+## Tercera revisión independiente (rama entera, 10 oct, noche): fusionable; lo que queda abierto
+
+- **DESIGN CLAIM NOT PROVEN, reducida pero no cerrada: el saque sigue sin ser una decisión.**
+  - El portero saca largo casi siempre; sólo el 7 % de los saques van a ≤ 8 casillas.
+  - Lo que se ganó (39 → 50 %) es «menos balones por la línea de fondo», no «un receptor más alcanzable».
+  - El test se llama ahora `TheKeepersLongGoalKickGoesOutForTheRivalLessOften`; antes, `LooksForAKeepableReceiver`,
+    que prometía más de lo que mide.
+  - Que la colocación decida el saque sigue sin demostrar.
+- **Peso de IA en el código, no en `/data`.** La pendiente de c904c54 (una centésima de avance por centésima de
+  distancia) sigue el precedente del `* 20 / 100` de los jugadores de campo, que tampoco está en datos (RT-096).
+- `TheKeepersLongGoalKickHasNoRangeCap` exige ahora que pasen de 8 casillas al menos la mitad de los saques largos
+  (hoy el 93 %), no uno solo.
+- **Hermano sin medir:** el pase largo de un jugador de campo hacia un delantero pegado a la línea de fondo puede
+  irse fuera igual que el saque.
+- `runWinRate_noMarket` empeora con la ADR 0193; es deuda de la economía, anotada allí.

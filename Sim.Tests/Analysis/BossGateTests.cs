@@ -7,6 +7,8 @@ using Underleague.Sim.Run;
 using Underleague.Sim.Run.Bosses;
 using Underleague.Sim.Tests.Run;
 
+using Xunit.Abstractions;
+
 namespace Underleague.Sim.Tests.Analysis;
 
 /// <summary>
@@ -42,7 +44,7 @@ namespace Underleague.Sim.Tests.Analysis;
 /// </summary>
 [Trait("Category", "Gate")]
 [Collection("Gate")]
-public sealed class BossGateTests
+public sealed class BossGateTests(ITestOutputHelper output)
 {
     /// <summary>Plantillas distintas por celda.</summary>
     private static readonly int Rosters = GateScale.Of(64);
@@ -85,6 +87,12 @@ public sealed class BossGateTests
             .Where(m => m.Name.StartsWith(BossGateMetrics.GatePrefix, StringComparison.Ordinal))
             .ToList();
         Assert.Equal(12, rows.Count);
+
+        // Las doce celdas, también las que están en banda: con sólo los fallos no se ve cuánto margen queda.
+        foreach (var r in rows)
+        {
+            output.WriteLine($"{r.Name}={r.Value:F2} (banda {Band(r)})");
+        }
 
         var offenders = rows
             .Where(r => !Within(r.Value, r.RangeMin, r.RangeMax))

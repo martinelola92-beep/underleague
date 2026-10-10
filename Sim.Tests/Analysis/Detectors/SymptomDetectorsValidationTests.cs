@@ -506,7 +506,12 @@ public sealed class SymptomDetectorsValidationTests
     public void RealTraceHasExplainedKickoffJumpsAndRestartWindows()
     {
         var catalog = TestData.LoadCatalog();
-        var result = Simulator.Run(TestMatches.Reference(catalog, 7), 7, catalog, SimConfig.Default with { Trace = true });
+
+        // El primer partido de referencia desde la semilla 7 con algún gol: la reposición tras gol es la que se mide, y
+        // un 0-0 no la tiene (BX-8, 10 oct: con el saque de puerta arreglado la semilla 7 dejó de tener ninguna).
+        var result = Enumerable.Range(7, 30)
+            .Select(s => Simulator.Run(TestMatches.Reference(catalog, (ulong)s), (ulong)s, catalog, SimConfig.Default with { Trace = true }))
+            .First(r => r.Events.Any(e => e.Type == EventType.Goal));
         var t = DetectorTrace.From(result);
 
         // Un partido de verdad repone los equipos al menos una vez (saque inicial o tras gol): el instrumento
