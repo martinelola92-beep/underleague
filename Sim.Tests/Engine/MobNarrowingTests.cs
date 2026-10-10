@@ -54,9 +54,12 @@ public sealed class MobNarrowingTests
     // alcance del pase largo de los demás. Antes de renovarlas, la rama sin ese cambio pasaba las seis. Valores anteriores
     // (BX-13): 12691147532711590805 / 35 / 7100685951800060898 y, con las reglas apagadas, 10879708632611334143 / 36 /
     // 4325700001235719816.
+    // Y otra vez, sólo la de TODOS los partidos (1708902294630956746 -> 2589647808657858224), por acotar el punto de marcaje de
+    // BX-13 a la banda jugable (ClampToPlay): las del reglamentario no cambian, así que sólo actúa en la turba, que estrecha
+    // la banda (ADR 0175).
     private const ulong RegulationOnlyBefore = 11802565828531529863UL;
     private const int RegulationOnlyMatches = 35;
-    private const ulong EveryMatchBefore = 1708902294630956746UL;
+    private const ulong EveryMatchBefore = 2589647808657858224UL;
 
     // Las mismas tres huellas con las reglas de las ADR 0184/0186 apagadas (positioningHoldBonus = 0, BV-B apagada) y las
     // bases de lesión de antes: el motor de antes de la ADR 0184 más los arreglos sin dato posteriores (BO-A).

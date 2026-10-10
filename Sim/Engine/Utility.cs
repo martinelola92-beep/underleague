@@ -1367,7 +1367,9 @@ internal static class Utility
             return;
         }
 
-        eval.Target = MarkPoint(p, target);
+        // Acotado al campo y a la banda jugable, como el resto de destinos calculados (ADR 0175): con el marcado pegado
+        // a su línea de fondo, el punto del lado de la portería caería fuera (revisión independiente de BX-13).
+        eval.Target = ClampToPlay(ctx, MarkPoint(p, target));
         eval.Context = -(context.MarkDistancePenaltyPerCell * Centi(Vec2.Distance(p.Position, target.Position)) / 100);
     }
 

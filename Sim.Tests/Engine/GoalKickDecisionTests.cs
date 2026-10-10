@@ -209,7 +209,9 @@ public sealed class GoalKickDecisionTests
         }
 
         Assert.True(longPasses > 0, "la muestra debía tener saques largos del portero");
-        Assert.True(beyond > 0, $"ninguno de {longPasses} saques largos del portero pasó de {longRange} casillas: ¿tiene tope?");
+        // Hoy pasan de 8 casillas el 93 % de los saques largos (305 de 328 en 200 partidos, revisión independiente): exigir sólo
+        // uno dejaba verde un tope casi total. La mitad es una cota que un tope real no puede cumplir.
+        Assert.True(beyond * 2 >= longPasses, $"sólo {beyond} de {longPasses} saques largos del portero pasaron de {longRange} casillas: ¿tiene tope?");
     }
 
     /// <summary>
@@ -219,7 +221,7 @@ public sealed class GoalKickDecisionTests
     /// (39 %) y 161 de 321 después (50 %). El suelo, 44 %, queda a unos dos errores típicos de cada lado.
     /// </summary>
     [Fact]
-    public void TheKeepersLongGoalKickLooksForAKeepableReceiver()
+    public void TheKeepersLongGoalKickGoesOutForTheRivalLessOften()
     {
         int kicks = 0;
         int kept = 0;
