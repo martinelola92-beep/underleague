@@ -22,6 +22,9 @@ viva anotada.
 
 | Id | Título | Estado |
 |---|---|---|
+| [BX-10](./BX-10.md) | El balón pasa al lado de un jugador solo y no lo coge | **Arreglada en `/Sim`** (10 oct): la intercepción del pase se tira en la máxima aproximación (antes, al entrar en el radio: el factor de cercanía de AZ-B paso 2 no llegaba) |
+| [BX-10b](./BX-10b.md) | La barrera del saque no aparta al rival pegado a la línea de fondo | Abierta: causa CONFIRMED (`SlideAlongPitchToClear` sólo desliza por la banda); sin daño en el alcance real, eximida con cota en el test |
+| [BX-10c](./BX-10c.md) | El bloqueo del tiro tira al entrar en el radio y mide en el plano | Abierta, hermano de BX-10 sin evidencia de activación como síntoma |
 | [BA-E](./BA-E.md) | Goles sin ángulo | Abierta, medida (A RECHAZADA por la ADR 0111, C disponible). **Vía nueva 23 sep**: la acción «centrar» del §7 de `plan-altura-del-balon.md` le da al delantero la alternativa que a la vía B le faltaba |
 | [BA-J](./BA-J.md) | Tras una parada, el equipo defensor debería replegarse | **Implementada** 30 sep ([ADR 0178](../decisiones/0178-la-parada-se-asienta.md)): pausa del portero (15 ticks) y repliegue de quien tiró (20); cifras provisionales, baja la sangre ~8 % |
 | [BR-A](./BR-A.md) | Guardar o salir a mitad de partido no reproduce el partido al volver (RT-061) | **Cerrada en `/Sim` y `/Game`** (2 oct, [ADR 0183](../decisiones/0183-salir-a-mitad-de-partido-reproduce-el-partido.md)): el guardado lleva el estado de antes del partido y sus decisiones (esquema 9); capturas por xvfb del flujo salir-y-volver en `Game/screenshots/reanudar-*.png` |

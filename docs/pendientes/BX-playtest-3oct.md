@@ -29,6 +29,9 @@ Capturas: `capturas/playtest-3oct-saque-portero.png` (saque de puerta al centro,
   - Al despejar de volea el clip de golpeo baja las manos y el balón pasa por el pie antes de volar (`portero-0-19`):
     se lee como un despeje, se deja.
 - **BX-10** A menudo el balón pasa al lado de un jugador solo y no lo coge (probabilidad de captura o intercepción).
+  **Arreglada (10 oct), `/Sim`**: la tirada de intercepción se hacía al entrar el balón en el radio del rival, así que el
+  factor de cercanía de AZ-B paso 2 casi nunca actuaba y el balón le atravesaba el cuerpo. Ahora se tira en la máxima
+  aproximación; intercepción 5,9-6,7 % → 7,6-8,8 % de los pases, todo en banda. Detalle en [BX-10](./BX-10.md).
 - **BX-11** ¿Puede lesionarse gravemente un jugador en el minuto 0?
   **Respondida (9 oct), sin cambio de código.**
   - Dentro del partido, una lesión grave sólo sale de una entrada o una falta. Los únicos perks con efecto `injure`
