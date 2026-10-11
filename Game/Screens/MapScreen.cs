@@ -383,8 +383,10 @@ public partial class MapScreen : Control
 
             // El alto de la fila lo manda el detalle: un rival con nombre largo ocupa tres líneas y la
             // fila siguiente no puede montársele encima.
-            var detail = Widgets.Body(row, DetailOf(node), new Vector2(36f, 32f), 316f, Style.TextDim);
-            row.CustomMinimumSize = new Vector2(356f, 36f + detail.Size.Y);
+            // El marco de tinta del botón se pinta por fuera de su rectángulo: con el detalle a 32 px tapaba la primera
+            // línea (captura `mapa`, 11 oct 2026). Seis píxeles de aire.
+            var detail = Widgets.Body(row, DetailOf(node), new Vector2(36f, 38f), 316f, Style.TextDim);
+            row.CustomMinimumSize = new Vector2(356f, 42f + detail.Size.Y);
         }
     }
 
