@@ -58,7 +58,12 @@ renders y no pastillas»*. Todo lo hecho, las fuentes y licencias, el pipeline (
   en medio del nombre; el detalle del mapa ya no lo tapa el botón; el informe da una fila por perk; las descripciones
   ya no enseñan contadores internos, dicen lo que pagan a la run y quién lesiona (BY-A, con revisión independiente).
 - **Siguiente paso**:
-  1. ~~BX-7~~ hecho.
+  1. ~~BX-7~~ hecho. **Decisiones pendientes del revisor (11 oct):** economía del mercado, opciones A-D en
+     `docs/analisis/economia-mercado-2026-10-11.md`; `betterTeamWinRate` (BV-C, ya fuera en la base en 3 de 4 semillas).
+  1b. Sin decisión: hermanos de BY-A que quedan (detector de fugas sólo camelCase; cifras de oro sin medir); el salto
+     de hasta 2 casillas de la barrera en el primer tick del saque de la turba (BX-7, hermano de BC-A); el portero puede
+     sacar rasgos de campo («Goleador»: `PlayerGenerator.PickTraits` no mira el puesto; cambiarlo mueve el RNG de
+     todas las plantillas). `EvaluatePress` descartado como causa del temblor (BX-13: sin activación).
   2. Hermanos abiertos, de más a menos visible:
      - `EvaluatePress` al centro del poseedor (BX-13);
      - BX-10c, el bloqueo del tiro;
