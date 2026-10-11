@@ -62,7 +62,10 @@ renders y no pastillas»*. Todo lo hecho, las fuentes y licencias, el pipeline (
      - BX-10b, la barrera en la línea de fondo;
      - el bono de peligro tras blocar;
      - la falta a favor dentro del área propia (BX-8).
-  3. `runWinRate_noMarket` fuera de techo (economía; ADR 0193 la agrava).
+  3. `runWinRate_noMarket` fuera de techo (economía; ADR 0193 la agrava). **Medido el 11 oct**
+     (`docs/analisis/economia-mercado-2026-10-11.md`): el número de perks casi no mueve el partido (Spender compra el
+     doble que Contextual y gana menos); el techo del 5 % no se alcanza con precios. **Decisión del revisor**: opciones
+     A-D, recomendada A + B.
   4. Que el revisor juegue: el saque de puerta y el repliegue (BX-8, BX-13) se ven en la retransmisión.
 - **Trampa nueva**: importar recursos abre el editor, que re-sangra los `.cs` con tabuladores. Usa
   `tools/arte/importar.sh`, nunca `godot --import` a pelo.
