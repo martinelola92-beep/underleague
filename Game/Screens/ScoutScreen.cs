@@ -432,7 +432,8 @@ public partial class ScoutScreen : Control
 
         // El once con el que se juega, que es lo que el jugador cambia si el número no le gusta. Hasta la
         // ADR 0134 esta lista enseñaba la alineación GUARDADA, así que decía una cosa y saltaba al campo
-        // otra; ahora es el once efectivo y el que entra de oficio va marcado, porque de eso trataba BC-H.
+        // otra; ahora es el once efectivo y el que entra de oficio va marcado, porque de eso trataba BC-H. Sin la
+        // casilla «(2,2)»: es un dato interno, y dónde juega cada uno ya lo dicen su puesto y la pizarra (11 oct 2026).
         var starters = new List<string>();
         foreach (var slot in effective.Lineup.Slots)
         {
@@ -441,7 +442,7 @@ public partial class ScoutScreen : Control
             {
                 bool filled = effective.FilledIds.Contains(player.Id);
                 starters.Add($"{player.Name} · {UiText.Get("ui.pos." + player.Position)} · "
-                    + $"{UiText.Get("ui.state." + player.PhysicalState)} · ({slot.HomeCell.Column},{slot.HomeCell.Row})"
+                    + UiText.Get("ui.state." + player.PhysicalState)
                     + (filled ? " · " + UiText.Get("ui.scout.startersFilled") : string.Empty));
             }
         }
