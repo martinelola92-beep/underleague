@@ -100,8 +100,10 @@ public sealed class GoalKickDecisionTests
         int outfield = 0;
 
         // El blocaje se toma en el estado Holding (la parada con el balón en las manos): el portero que recoge un balón
-        // que ha salido va a sacar de puerta, y su primera decisión ya es el saque (medido, semilla 4).
-        for (ulong seed = 1; seed <= 40 && (goalKicks < 5 || caught < 5 || pickedUp < 5 || outfield < 5); seed++)
+        // que ha salido va a sacar de puerta, y su primera decisión ya es el saque (medido, semilla 4). Tope de 120 semillas y no
+        // 40 desde BX-10b (11 oct 2026): las recogidas se quedaron en 3 con 40 al mover las semillas; el barrido para en cuanto
+        // los cuatro casos tienen muestra.
+        for (ulong seed = 1; seed <= 120 && (goalKicks < 5 || caught < 5 || pickedUp < 5 || outfield < 5); seed++)
         {
             var setup = TestMatches.Reference(Catalog, seed);
             var trace = Simulator.Run(setup, seed, Catalog, new SimConfig(CollectLog: false, Trace: true)).Trace!;

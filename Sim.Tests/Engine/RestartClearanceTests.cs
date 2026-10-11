@@ -130,7 +130,6 @@ public sealed class RestartClearanceTests
         var samplesByKind = new Dictionary<string, int>();
         var violationsByKind = new Dictionary<string, int>();
         float worst = float.MaxValue;
-        int pinnedOnGoalLine = 0;
         foreach (var kind in ClearanceRestartDetails)
         {
             samplesByKind[kind] = 0;
@@ -207,23 +206,6 @@ public sealed class RestartClearanceTests
                             continue;
                         }
 
-                        // TERCERA (10 oct 2026, BX-10 al mover las semillas): un rival pegado a la LÍNEA DE FONDO con la falta
-                        // a menos de la barrera de ella. SlideAlongPitchToClear sólo desliza por la banda (eje X), así que aquí
-                        // se queda donde lo deja el campo: medido en la semilla 121, falta a 1,24 de la línea y el rival en
-                        // x = 0 a 1,24. Sigue fuera del alcance real de Tackle/Block, que es lo que esta prueba protege; el
-                        // deslizamiento por el otro eje es docs/pendientes/BX-10b.md.
-                        // Acotada: a más del alcance real con margen de 0,03 y, como mucho, en cuatro fotogramas de toda la muestra.
-                        if (IsPinnedOnTheGoalLine(position, ball, Catalog.Tuning.Restart.RestartClearanceCells)
-                            && Vec2.Distance(position, ball) >= actionRangeFloor - 0.07f)
-                        {
-                            if (Vec2.Distance(position, ball) < actionRangeFloor)
-                            {
-                                pinnedOnGoalLine++;
-                            }
-
-                            continue;
-                        }
-
                         nearest = Math.Min(nearest, Vec2.Distance(position, ball));
                     }
 
@@ -242,7 +224,6 @@ public sealed class RestartClearanceTests
             }
         }
 
-        Assert.True(pinnedOnGoalLine <= 4, $"{pinnedOnGoalLine} fotogramas con un rival en la línea de fondo dentro del margen: el defecto de SlideAlongPitchToClear (BX-10b) ya no es un caso aislado");
         foreach (var kind in ClearanceRestartDetails.Where(k => k != "corner"))
         {
             Assert.True(samplesByKind[kind] > 0, $"ninguna muestra de distancia para '{kind}': la prueba no cubre nada");
@@ -253,6 +234,113 @@ public sealed class RestartClearanceTests
             Assert.True(
                 violationsByKind[kind] == 0,
                 $"{violationsByKind[kind]} de {samplesByKind[kind]} fotogramas de '{kind}' con un rival a menos de {actionRangeFloor} casillas del balón -alcance real de Tackle/Block- (peor distancia medida: {worst:F2})");
+        }
+    }
+
+    /// <summary>
+    /// BX-10b: durante la cuenta atrás, con el balón quieto, ningún rival está dentro de la barrera, tampoco pegado a una
+    /// línea. El único que puede estarlo es el portero en su área (RF-057b manda sobre la barrera, ver arriba). Antes del
+    /// arreglo, <c>SlideAlongPitchToClear</c> fallaba de dos maneras:
+    /// <list type="bullet">
+    /// <item>sólo deslizaba por la banda, nunca por la línea de fondo;</item>
+    /// <item>el deslizamiento caía justo sobre la circunferencia, el redondeo lo dejaba a 1,99999 y se daba por fallido.</item>
+    /// </list>
+    /// Medido en estos 400 partidos: 328 fotogramas de rival dentro, todos sobre una línea, el peor a 0,94 del balón; después, 0.
+    /// </summary>
+    [Fact]
+    public void DuringTheCountdownNoRivalIsInsideTheClearance()
+    {
+        float clearance = Catalog.Tuning.Restart.RestartClearanceCells;
+        int frames = 0;
+        var inside = new List<string>();
+        for (ulong seed = 1; seed <= 400; seed++)
+        {
+            var trace = Simulator.Run(TestMatches.Reference(Catalog, seed), seed, Catalog, new SimConfig(CollectLog: false, Trace: true)).Trace!;
+            for (int f = 1; f < trace.FrameCount; f++)
+            {
+                var kind = trace.RestartAt(f);
+                int taker = trace.RestartTakerAt(f);
+                // Desde el segundo fotograma: en el primero la barrera aún no ha actuado sobre quien estaba allí.
+                if (kind is not (RestartKind.FreeKick or RestartKind.ThrowIn or RestartKind.Corner or RestartKind.GoalKick)
+                    || trace.RestartAt(f - 1) != kind || taker < 0)
+                {
+                    continue;
+                }
+
+                frames++;
+                var ball = trace.BallAt(f);
+                for (int p = 0; p < trace.Players.Count; p++)
+                {
+                    if (trace.Players[p].Team == trace.Players[taker].Team || !trace.OnPitchAt(f, p))
+                    {
+                        continue;
+                    }
+
+                    var position = trace.PositionAt(f, p);
+                    if (trace.Players[p].Role == Underleague.Sim.Model.Position.Goalkeeper
+                        && Underleague.Sim.Model.Pitch.IsInArea(position, trace.Players[p].Team))
+                    {
+                        continue;
+                    }
+
+                    float distance = Vec2.Distance(position, ball);
+                    if (distance < clearance - 0.05f)
+                    {
+                        inside.Add($"semilla {seed}, fotograma {f}: ({position.X:F2}, {position.Y:F2}) a {distance:F2}");
+                    }
+                }
+            }
+        }
+
+        Assert.True(frames > 10_000, $"muestra escasa: {frames} fotogramas de cuenta atrás");
+        Assert.True(inside.Count == 0, $"{inside.Count} fotogramas de rival dentro de la barrera: {string.Join("; ", inside.Take(5))}");
+    }
+
+    /// <summary>
+    /// BX-10b (revisión independiente): casos conocidos de la barrera contra las cuatro líneas del campo (Regla J). Un rival
+    /// pegado a la línea con el balón a menos de la barrera de ella acaba a la distancia de la barrera, deslizado por la
+    /// línea; también si está alineado con el balón, en las dos bandas por igual (antes, en y = 7 se quedaba a 1,0).
+    /// </summary>
+    [Theory]
+    [InlineData(1.24f, 3.0f, 0f, 3.5f)]    // línea de fondo izquierda, por encima del balón
+    [InlineData(1.24f, 3.0f, 0f, 3.0f)]    // línea de fondo izquierda, alineado
+    [InlineData(14.76f, 3.0f, 16f, 3.0f)]  // línea de fondo derecha, alineado
+    [InlineData(1.0f, 0f, 0.3f, 0f)]       // banda de abajo, alineado
+    [InlineData(1.0f, 7f, 0.3f, 7f)]       // banda de arriba, alineado
+    [InlineData(15.0f, 7f, 15.7f, 7f)]     // banda de arriba, alineado, al otro lado
+    [InlineData(8.0f, 0.5f, 8.0f, 0f)]     // banda de abajo, en la vertical del balón
+    public void TheClearancePushesARivalOnALineOutToItsFullDistance(float ballX, float ballY, float rivalX, float rivalY)
+    {
+        var engine = new MatchEngine(TestMatches.Reference(Catalog, 5), 5, Catalog, SimConfig.Default);
+        var point = new Vec2(ballX, ballY);
+        engine.BeginRestartForTest(RestartKind.FreeKick, 0, point, 20);
+        int rival = engine.OutfieldIndexForTest(1, 2);
+        engine.PlaceForTest(rival, new Vec2(rivalX, rivalY));
+
+        engine.EnforceRestartClearanceForTest();
+
+        var position = engine.PlayerAtForTest(rival).Position;
+        float clearance = Catalog.Tuning.Restart.RestartClearanceCells;
+        Assert.True(Vec2.Distance(position, point) >= clearance - 0.011f, $"el rival se quedó en ({position.X:F2}, {position.Y:F2}), a {Vec2.Distance(position, point):F2} del balón");
+        Assert.True(position.X is >= 0f and <= 16f && position.Y is >= 0f and <= 7f, "la barrera no saca a nadie del campo");
+    }
+
+    /// <summary>
+    /// BX-10b (revisión independiente): la barrera no saca al portero de su área (RF-057b manda sobre ella). Una falta
+    /// pegada al área deja al portero dentro de la barrera, y así se queda.
+    /// </summary>
+    [Fact]
+    public void TheClearanceNeverTakesTheGoalkeeperOutOfHisArea()
+    {
+        var engine = new MatchEngine(TestMatches.Reference(Catalog, 5), 5, Catalog, SimConfig.Default);
+        int keeper = Enumerable.Range(0, 14).First(i => engine.PlayerAtForTest(i).Team == 1 && !engine.PlayerAtForTest(i).IsOutfield);
+        var area = engine.PlayerAtForTest(keeper).Position;
+        foreach (var point in new[] { new Vec2(area.X - 1.0f, area.Y), new Vec2(area.X - 0.6f, area.Y + 0.4f), new Vec2(area.X - 1.2f, area.Y - 1.0f) })
+        {
+            engine.BeginRestartForTest(RestartKind.FreeKick, 0, point, 20);
+            engine.PlaceForTest(keeper, area);
+            engine.EnforceRestartClearanceForTest();
+            Assert.True(Underleague.Sim.Model.Pitch.IsInArea(engine.PlayerAtForTest(keeper).Position, 1), $"el portero salió de su área con la falta en ({point.X:F2}, {point.Y:F2})");
         }
     }
 
@@ -321,13 +409,6 @@ public sealed class RestartClearanceTests
         }
 
         return -1;
-    }
-
-    /// <summary>¿Está el jugador en la línea de fondo, con el balón a menos de la barrera de ella?</summary>
-    private static bool IsPinnedOnTheGoalLine(Vec2 position, Vec2 ball, float clearance)
-    {
-        float columns = Underleague.Sim.Model.Pitch.Columns;
-        return (position.X < 0.01f && ball.X < clearance) || (position.X > columns - 0.01f && ball.X > columns - clearance);
     }
 
     /// <summary>

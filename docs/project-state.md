@@ -68,7 +68,8 @@ renders y no pastillas»*. Todo lo hecho, las fuentes y licencias, el pipeline (
      - `EvaluatePress` al centro del poseedor (BX-13), sin activación;
      - ~~BX-10c, el bloqueo del tiro~~: **hecho (11 oct)**, alcance en esfera (ADR 0135); la máxima aproximación, descartada en el tiro;
        queda el portero en el plano (resto del paso 3 de la ADR 0135, con su bucle de realimentación);
-     - BX-10b, la barrera en la línea de fondo;
+     - ~~BX-10b, la barrera en la línea de fondo~~: **hecho (11 oct)**, y su hermano del redondeo en la banda; rivales dentro
+       de la barrera en la cuenta atrás 328 → 0 fotogramas en 400 partidos;
      - ~~el bono de peligro tras blocar~~: **hecho (11 oct, BX-8c)**, sin bono con el área cerrada (ADR 0152); despeje
        tras blocar 86 → 11 %, conservado 34 → 63 %;
        deja roja `elf_out_of_zone` en la puerta (45,34), LIKELY ruido con 4 semillas (CAT-J);

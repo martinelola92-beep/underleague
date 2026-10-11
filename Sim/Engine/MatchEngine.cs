@@ -6401,7 +6401,10 @@ internal sealed class MatchEngine : IPerkWorld
             // rival en la línea de banda exacta (y = 0,00)—. La barrera de BB-B existe precisamente para
             // que nadie pueda entrar ni cargar durante la reanudación, así que un hueco de 4 centésimas es
             // el hueco entero. Se desliza POR la línea hasta cumplir la distancia en vez de conformarse.
-            player.Position = SlideAlongPitchToClear(center, corrected, clearance);
+            //
+            // El portero no se desliza (BX-10b, revisión independiente): ya está acotado a su área, y deslizarlo podía sacarlo
+            // de ella. RF-057b manda sobre la barrera, como arriba.
+            player.Position = player.IsOutfield ? SlideAlongPitchToClear(center, corrected, clearance) : corrected;
 
             // ADR 0185: con el arranque, la velocidad es de dónde parte el paso siguiente. Ponerla a cero aquí, cada tick
             // de la cuenta atrás, dejaba al que la barrera aparta arrancando siempre desde parado: medido, un delantero
@@ -6427,36 +6430,75 @@ internal sealed class MatchEngine : IPerkWorld
     /// <summary>
     /// Si acotar al campo dejó el punto dentro de la barrera, lo desliza <b>por la línea</b> hasta la
     /// distancia pedida (ADR 0142). Es el mismo punto de la circunferencia de exclusión, pero buscado por
-    /// el eje que el campo no ha recortado.
+    /// un eje que el campo no ha recortado: primero por la banda (eje X, la Y fija) y, si no basta, por la línea de
+    /// fondo (eje Y, la X fija; BX-10b: un rival pegado a la línea de fondo con una falta a menos de la barrera de ella
+    /// se quedaba a 1,24 del balón con la barrera en 2,0, porque sólo existía el primer deslizamiento).
     ///
     /// <para>Si ni siquiera deslizando se llega —el balón está tan pegado a la esquina que la barrera no
-    /// cabe en el campo—, se devuelve lo mejor de los dos, que es lo único honesto: la geometría no da más
+    /// cabe en el campo—, se devuelve el punto, que es lo único honesto: la geometría no da más
     /// de sí y la alternativa sería sacar a un jugador del campo.</para>
     /// </summary>
     private Vec2 SlideAlongPitchToClear(Vec2 center, Vec2 point, float clearance)
     {
-        float distance = Vec2.Distance(point, center);
-        if (distance >= clearance)
+        if (Vec2.Distance(point, center) >= clearance - SlideToleranceCells)
         {
             return point;
         }
 
-        float dy = point.Y - center.Y;
-        float remaining = (clearance * clearance) - (dy * dy);
+        var alongTouchline = SlideOnAxis(center, point, clearance, alongX: true);
+        if (Vec2.Distance(alongTouchline, center) >= clearance - SlideToleranceCells)
+        {
+            return alongTouchline;
+        }
+
+        var alongGoalLine = SlideOnAxis(center, point, clearance, alongX: false);
+        return Vec2.Distance(alongGoalLine, center) >= clearance - SlideToleranceCells ? alongGoalLine : point;
+    }
+
+    /// <summary>
+    /// Holgura de redondeo de la barrera (BX-10b). El deslizamiento cae justo sobre la circunferencia, y en coma flotante
+    /// a menudo queda a 1,99999 de una barrera de 2: comparar con <c>&gt;= clearance</c> a secas lo daba por fallido y
+    /// devolvía al jugador a donde estaba, sobre la banda a 1,7-1,9 del balón tick tras tick (medido con contadores
+    /// provisionales: 2812 correcciones fallidas sobre la banda en 2000 partidos). Y un hueco por debajo de ella no es un
+    /// hueco: no se desliza por él.
+    /// </summary>
+    private const float SlideToleranceCells = 0.01f;
+
+    /// <summary>
+    /// El punto de la circunferencia de exclusión que se alcanza moviendo <paramref name="point"/> sólo por un eje, o el
+    /// propio punto si por ese eje no se llega. SIEMPRE hacia el lado en el que el jugador ya está. Probar también el lado
+    /// contrario cerraba más huecos pero cruzaba al jugador por delante del balón: medido, un salto de 3,85 casillas en un
+    /// solo fotograma, que es justo el defecto que BA-K arregló en el render. Una barrera no puede teletransportar a nadie;
+    /// si por su lado no se cumple, se deja lo que había y se documenta.
+    ///
+    /// <para>Salvo si está ALINEADO con el balón en ese eje: entonces no tiene lado, ninguno de los dos le cruza por
+    /// delante, y se prueban los dos. Antes iba siempre hacia +, y en la banda de arriba (y = 7, donde el saque de banda
+    /// pone el balón) se salía del campo y se quedaba a 1,0 (revisión independiente de BX-10b).</para>
+    /// </summary>
+    private Vec2 SlideOnAxis(Vec2 center, Vec2 point, float clearance, bool alongX)
+    {
+        float fixedOffset = alongX ? point.Y - center.Y : point.X - center.X;
+        float remaining = (clearance * clearance) - (fixedOffset * fixedOffset);
         if (remaining <= 0f)
         {
             return point;
         }
 
-        // SIEMPRE hacia el lado en el que el jugador ya está. Probar también el lado contrario cerraba
-        // más huecos pero cruzaba al jugador por delante del balón: medido, un salto de 3,85 casillas en
-        // un solo fotograma, que es justo el defecto que BA-K arregló en el render. Una barrera no puede
-        // teletransportar a nadie; si por su lado no se cumple, se deja lo que había y se documenta.
-        float dx = MathF.Sqrt(remaining);
-        float sign = point.X >= center.X ? 1f : -1f;
-        var slid = InBand(Utility.ClampToPitch(new Vec2(center.X + (sign * dx), point.Y)));
-        return Vec2.Distance(slid, center) >= clearance ? slid : point;
+        float slide = MathF.Sqrt(remaining);
+        float side = alongX ? point.X - center.X : point.Y - center.Y;
+        var first = SlideTo(center, point, slide, alongX, side >= 0f ? 1f : -1f);
+        if (MathF.Abs(side) > SlideToleranceCells || Vec2.Distance(first, center) >= clearance - SlideToleranceCells)
+        {
+            return first;
+        }
+
+        return SlideTo(center, point, slide, alongX, side >= 0f ? -1f : 1f);
     }
+
+    private Vec2 SlideTo(Vec2 center, Vec2 point, float slide, bool alongX, float sign) =>
+        InBand(Utility.ClampToPitch(alongX
+            ? new Vec2(center.X + (sign * slide), point.Y)
+            : new Vec2(point.X, center.Y + (sign * slide))));
 
     private MatchPlayer? SelectTaker(RestartKind kind, int team, Vec2 point)
     {
