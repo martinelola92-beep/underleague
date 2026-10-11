@@ -276,10 +276,9 @@ public partial class OptionCard : Control
     }
 
     /// <summary>
-    /// Envuelve el nombre en líneas (ver <see cref="_titleLines"/>): la primera al ancho que le deja la
-    /// fila del distintivo y el precio; el resto —solo si hace falta más de una— al ancho entero de la
-    /// carta, que es mucho más generoso. Dos pasadas de <see cref="Style.Wrap"/> en vez de una sola al
-    /// ancho estrecho, para que un nombre de tres palabras no parta cada una en su propia línea.
+    /// Envuelve el nombre en líneas (ver <see cref="_titleLines"/>): si cabe entero en la fila del distintivo y el
+    /// precio, va ahí; si no, esa fila queda sin nombre y el nombre entero se envuelve debajo, al ancho de la carta
+    /// (11 oct 2026: partirlo alrededor del precio se leía «Perro de 11 oro / presa»).
     /// </summary>
     private void RecomputeTitleLines(Font font, float width)
     {
@@ -320,7 +319,7 @@ public partial class OptionCard : Control
 
         // Si el nombre no cabe entero en la fila del precio, va entero debajo. Partirlo alrededor del precio se leía
         // «Perro de 11 oro / presa» o «Reliquia 36 oro / del mártir» (captura `mercado`, 11 oct 2026): el precio se
-        // metía en medio del nombre. La carta crece lo mismo, una línea.
+        // metía en medio del nombre. Si el nombre necesita varias líneas al ancho entero, la carta crece una más que antes.
         _titleLines.Add(string.Empty);
         _titleLines.AddRange(Style.Wrap(font, _title, size, continuationWidth));
     }
