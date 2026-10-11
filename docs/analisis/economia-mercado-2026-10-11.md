@@ -22,7 +22,8 @@ Jefes, todas las doctrinas con mercado juntas frente a sin mercado: acto 1 70 % 
 
 ## Lo que dice
 
-1. **CONFIRMED (en esta muestra): el número de perks casi no mueve el partido.** Spender tiene 2,4 perks más en
+1. **LIKELY (consistente en las dos semillas, sin experimento que lo aísle del resto del gasto): el número de perks
+   casi no mueve el partido.** Spender tiene 2,4 perks más en
    titulares que Contextual y gana 4,2 puntos *menos*; sin mercado, con la mitad de perks, gana la liga del acto 1
    y 2 igual que con mercado. Encaja con la ADR 0087 (ningún perk negativo, valor frente al control pequeño) y con
    la ADR 0085 (el valor de un perk se lee al horizonte y la run no lo nota).
