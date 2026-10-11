@@ -59,7 +59,10 @@ public sealed class MobNarrowingTests
     // la banda (ADR 0175).
     private const ulong RegulationOnlyBefore = 11802565828531529863UL;
     private const int RegulationOnlyMatches = 35;
-    private const ulong EveryMatchBefore = 2589647808657858224UL;
+    // Y otra vez, sólo la de TODOS los partidos (2589647808657858224 -> 16912896484881689970), por BX-7 (11 oct 2026): en el
+    // saque de centro que abre la turba, quien vuelve desde campo contrario rodea la barrera en vez de quedarse clavado en su
+    // borde. Las del reglamentario no cambian (el rodeo sólo actúa en campo contrario, y tras un gol nadie anda desde allí).
+    private const ulong EveryMatchBefore = 16912896484881689970UL;
 
     // Las mismas tres huellas con las reglas de las ADR 0184/0186 apagadas (positioningHoldBonus = 0, BV-B apagada) y las
     // bases de lesión de antes: el motor de antes de la ADR 0184 más los arreglos sin dato posteriores (BO-A).
@@ -72,7 +75,8 @@ public sealed class MobNarrowingTests
     // accelTicks 0. Con esa comprobación condicionada otra vez al arranque, la huella vieja vuelve (comprobado).
     private const ulong RegulationOnlyBeforeAdr0184PlusBoA = 5672238047937891983UL;
     private const int RegulationOnlyMatchesBeforeAdr0184PlusBoA = 37;
-    private const ulong EveryMatchBeforeAdr0184PlusBoA = 13589622101850632235UL;
+    // BX-7 (11 oct 2026), lo mismo con las reglas apagadas: 13589622101850632235 -> 4527772544229341512.
+    private const ulong EveryMatchBeforeAdr0184PlusBoA = 4527772544229341512UL;
 
     private const float Eps = 0.001f;
 

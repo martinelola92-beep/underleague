@@ -101,7 +101,10 @@ public sealed class EmergentChainTests
 
         // La cadena no es una rareza estadística: las piezas nuevas ocurren varias veces por muestra.
         Assert.True(clearances > Matches / 10, $"despejes demasiado raros para encadenar nada: {clearances} en {Matches} partidos");
-        Assert.True(duels > Matches / 10, $"duelos aéreos demasiado raros: {duels} en {Matches} partidos");
+        // Los duelos aéreos van de ~20 a ~40 por cada 200 partidos según el bloque de semillas (BX-7, 11 oct 2026: 2.000
+        // partidos, bloques de 200 entre 19 y 43). El suelo de 1 por cada 10 caía a dos desviaciones de la media y una turba
+        // distinta lo tumbaba. Es una prueba de existencia, no una banda: 1 de cada 20.
+        Assert.True(duels > Matches / 20, $"duelos aéreos demasiado raros: {duels} en {Matches} partidos");
         Assert.True(parries > Matches / 20, $"rechaces demasiado raros: {parries} en {Matches} partidos");
     }
 

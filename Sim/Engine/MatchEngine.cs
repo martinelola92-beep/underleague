@@ -802,7 +802,7 @@ internal sealed class MatchEngine : IPerkWorld
 
                 if (player.OnPitch && player.State is not PlayerState.Celebrating)
                 {
-                    WalkTo(player, _restartSpot[player.Index]);
+                    WalkTo(player, RestartWalkWaypoint(player, _restartSpot[player.Index]));
                 }
 
                 continue;
@@ -2069,6 +2069,97 @@ internal sealed class MatchEngine : IPerkWorld
     /// llegar, <see cref="ResolveRestart"/> le pone en el punto en el ultimo tick. El salto residual es como
     /// mucho lo que le quedara por andar, en vez de la distancia entera.</para>
     /// </summary>
+    /// <summary>
+    /// BX-7: por dónde anda hacia su sitio un jugador del equipo que NO saca mientras la barrera de la reanudación
+    /// (<see cref="EnforceRestartClearance"/>) le aparta del balón. <see cref="WalkTo"/> va en línea recta, y si su sitio
+    /// queda detrás del balón —el saque de centro que abre la turba, con gente repartida por el campo contrario— la recta
+    /// cruza el círculo de la barrera: la barrera le devuelve al borde cada tick y se quedaba clavado hasta el tope de
+    /// espera (<c>kickoffMaxWaitTicks</c>). Medido: 12 de 71 turbas en las semillas 1..200, 13 s de saque parado, y en las
+    /// doce un jugador congelado en el borde en campo contrario. Ahora rodea el círculo por el lado que le acerca a su
+    /// sitio, como hace cualquiera en un campo de verdad. Si la recta no cruza el círculo, el destino no cambia (y el paso
+    /// es exactamente el de antes).
+    /// </summary>
+    private Vec2 RestartWalkWaypoint(MatchPlayer player, Vec2 destination)
+    {
+        float clearance = _tuning.Restart.RestartClearanceCells;
+        // Sólo el saque de centro recoloca andando (ADR 0147) y sólo en él tiene sentido «campo contrario».
+        if (player.Team == _restartTeam || clearance <= 0f || _pendingRestart != RestartKind.Kickoff)
+        {
+            return destination;
+        }
+
+        // Sólo quien todavía está en campo contrario tiene que cruzar: el que espera en su campo pegado a la barrera (su
+        // casilla de saque cae dentro de ella, círculo 1,4 < barrera 2,0) no rodea nada, y así el reinicio tras un gol,
+        // que ya coloca a todos en su campo, queda byte a byte igual.
+        float middle = Pitch.Columns / 2f;
+        bool inRivalHalf = Pitch.AttackDirection(player.Team) > 0 ? player.Position.X > middle : player.Position.X < middle;
+        if (!inRivalHalf)
+        {
+            return destination;
+        }
+
+        return DetourAroundDisc(player.Position, destination, _ball.Position, clearance + RestartDetourMarginCells);
+    }
+
+    /// <summary>Holgura del rodeo de BX-7 sobre el radio de la barrera, para que el paso no roce el borde.</summary>
+    private const float RestartDetourMarginCells = 0.05f;
+
+    /// <summary>
+    /// BX-7: el punto al que dirigirse para ir de <paramref name="from"/> a <paramref name="to"/> sin atravesar el disco de
+    /// centro <paramref name="center"/> y radio <paramref name="radius"/>. Si el destino cae dentro del disco, se apunta a
+    /// su proyección en el borde (que es donde la barrera lo dejará). Devuelve <paramref name="to"/> tal cual si la recta
+    /// no entra en el disco. Función pura.
+    /// </summary>
+    internal static Vec2 DetourAroundDisc(Vec2 from, Vec2 to, Vec2 center, float radius)
+    {
+        var target = to;
+        var fromTarget = to - center;
+        float targetDistance = fromTarget.Length;
+        if (targetDistance < radius && targetDistance > 0.0001f)
+        {
+            target = center + (fromTarget * (radius / targetDistance));
+        }
+
+        var path = target - from;
+        float pathSquared = (path.X * path.X) + (path.Y * path.Y);
+        if (pathSquared <= 0.000001f)
+        {
+            return to;
+        }
+
+        var toCenter = center - from;
+        float t = ((toCenter.X * path.X) + (toCenter.Y * path.Y)) / pathSquared;
+        if (t <= 0f || t >= 1f || Vec2.Distance(from + (path * t), center) >= radius)
+        {
+            return to;
+        }
+
+        var radial = from - center;
+        float distance = radial.Length;
+        if (distance <= 0.0001f)
+        {
+            return to;
+        }
+
+        var u = radial * (1f / distance);
+
+        // Lado del rodeo: hacia donde gira el destino visto desde el centro (sentido antihorario si el producto cruzado es
+        // positivo). Alineado exactamente detrás, se elige siempre el mismo lado (determinista).
+        float cross = (radial.X * fromTarget.Y) - (radial.Y * fromTarget.X);
+        float side = cross >= 0f ? 1f : -1f;
+        if (distance <= radius)
+        {
+            // Ya en el borde: andar por la tangente; la barrera le mantiene en el círculo y desliza.
+            return from + (new Vec2(-u.Y * side, u.X * side) * radius);
+        }
+
+        // Fuera: al punto de tangencia del lado elegido. Sin trigonometría (docs/determinismo.md: sólo las cuatro
+        // operaciones y MathF.Sqrt en /Sim): el ángulo de tangencia tiene coseno radio/distancia.
+        float cos = radius / distance;
+        float sin = MathF.Sqrt(MathF.Max(0f, 1f - (cos * cos))) * side;
+        return center + (new Vec2((u.X * cos) - (u.Y * sin), (u.X * sin) + (u.Y * cos)) * radius);
+    }
+
     /// <summary>
     /// Lleva a un jugador hacia un punto a su velocidad normal, sin decidir (BC-A, generalizado por la
     /// ADR 0147). Es <see cref="WalkRestartTaker"/> aplicado al resto del equipo durante una reanudación
