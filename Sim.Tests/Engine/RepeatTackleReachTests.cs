@@ -77,15 +77,29 @@ public sealed class RepeatTackleReachTests
     /// lo lleva. La regla no depende de la semilla: la fijan con valores conocidos
     /// <see cref="AnEscapedTackleNeverLeavesTheOwnerOutOfACarrierState"/> y el censo de abajo, que sí corre con los datos.</para>
     /// </summary>
+    /// <para>BZ-B (11 oct 2026): `run:130` dejó de disparar Arrollador al cambiar las trayectorias (la barrera se anda), como
+    /// le pasa a cualquier caso fijado por semilla. El test busca ahora los partidos de run en los que dispara entre las 1500
+    /// primeras semillas (las tres medidas eran 130, 155 y 393; se para al encontrar tres) y exige el comportamiento en todos.</para>
     [Fact]
     public void TheRealCaseNoLongerFreezes()
     {
         var catalog = AccelerationTests.WithAccel(Catalog, 0);
-        var (setup, seed, config) = WorstCaseProbeTests.Build("run", 130, catalog);
-        var result = Simulator.Run(setup, seed, catalog, config);
-        Assert.Contains(result.Events, e => e.Type == EventType.PerkTriggered && e.Detail == "steamroller");
-        Assert.Equal(0, OwnerOutOfCarrierFrames(result));
-        Assert.Empty(SymptomDetectors.Freeze(DetectorTrace.From(result), out _));
+        int triggered = 0;
+        for (ulong s = 1; s <= 1500 && triggered < 3; s++)
+        {
+            var (setup, seed, config) = WorstCaseProbeTests.Build("run", s, catalog);
+            var result = Simulator.Run(setup, seed, catalog, config);
+            if (!result.Events.Any(e => e.Type == EventType.PerkTriggered && e.Detail == "steamroller"))
+            {
+                continue;
+            }
+
+            triggered++;
+            Assert.Equal(0, OwnerOutOfCarrierFrames(result));
+            Assert.Empty(SymptomDetectors.Freeze(DetectorTrace.From(result), out _));
+        }
+
+        Assert.True(triggered > 0, "Arrollador no disparó en ninguna de las 1500 primeras runs: el caso real no se reproduce");
     }
 
     /// <summary>

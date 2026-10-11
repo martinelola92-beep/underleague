@@ -39,6 +39,30 @@ public sealed class PostMatchViewRefereeTests
         throw new InvalidOperationException($"no se encontró una semilla con faltas no señaladas del equipo {team} en 60 intentos");
     }
 
+    /// <summary>
+    /// Las no señaladas del equipo mientras hay árbitro: en la turba no lo hay (ADR 0145, RF-055d) y el informe no las cuenta
+    /// (ADR 0158 §4). Contarlas todas sólo funcionaba mientras la semilla elegida no llegaba a la turba; con BZ-B (11 oct
+    /// 2026) la del emparejamiento brutal llega, y el test esperaba 12 donde el informe, con razón, decía 4.
+    /// </summary>
+    private static int UnseenWhileTheRefereeIsThere(MatchResult result, int team)
+    {
+        int count = 0;
+        foreach (var e in result.Events)
+        {
+            if (e.Type == EventType.RefereeLeaves)
+            {
+                break;
+            }
+
+            if (e.Type == EventType.Foul && e.Detail == "unseen" && e.Team == team)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
     private static PostMatchReport Report(MatchResult result, MatchSetup setup, ulong seed)
     {
         var playback = new MatchPlayback(Node(), setup, result, seed);
@@ -58,7 +82,7 @@ public sealed class PostMatchViewRefereeTests
         var (result, setup, seed) = MatchWithUnseenFoulsFrom(TestMatches.Brutal(Catalog), team: 1);
         var report = Report(result, setup, seed);
 
-        int expected = result.Events.Count(e => e.Type == EventType.Foul && e.Detail == "unseen" && e.Team == 1);
+        int expected = UnseenWhileTheRefereeIsThere(result, team: 1);
         Assert.True(expected > 0);
         Assert.Equal(expected, report.Referee.UnseenFoulsAgainst);
         Assert.Equal(0, report.Referee.UnseenFoulsFor);
@@ -79,7 +103,7 @@ public sealed class PostMatchViewRefereeTests
         var (result, setup, seed) = MatchWithUnseenFoulsFrom(reversed, team: 0);
         var report = Report(result, setup, seed);
 
-        int expected = result.Events.Count(e => e.Type == EventType.Foul && e.Detail == "unseen" && e.Team == 0);
+        int expected = UnseenWhileTheRefereeIsThere(result, team: 0);
         Assert.True(expected > 0);
         Assert.Equal(expected, report.Referee.UnseenFoulsFor);
         Assert.Equal(0, report.Referee.UnseenFoulsAgainst);

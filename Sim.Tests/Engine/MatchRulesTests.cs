@@ -776,7 +776,10 @@ public sealed class MatchRulesTests
                 // ADR 0147: la ventana sale del DATO, no de un 12 cableado. Cuando `freeKickTicks` pasó
                 // de 8 a 20 —la pausa graduada—, este test dejó de ver un solo saque de falta de 558 y lo
                 // llamó regresión del motor: no lo era, era que la reanudación ya no cabía en su ventana.
-                int window = Catalog.Tuning.Restart.FreeKickTicks + 4;
+                // BZ-B: y la falta puede esperar a que los rivales salgan andando de la barrera. Medido en 200 partidos: la
+                // falta más larga, 30 ticks con su espera (mediana 26). Con el tope de espera entero (180) la ventana se comía
+                // la falta siguiente y emparejaba faltas no señaladas con saques que no eran suyos.
+                int window = Catalog.Tuning.Restart.FreeKickTicks + 15;
                 for (int j = i + 1; j < events.Count && events[j].Tick <= e.Tick + window; j++)
                 {
                     if (events[j].Type != EventType.Recovery)

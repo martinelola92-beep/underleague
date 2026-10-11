@@ -238,37 +238,34 @@ public sealed class RestartClearanceTests
     }
 
     /// <summary>
-    /// BX-10b: durante la cuenta atrás, con el balón quieto, ningún rival está dentro de la barrera, tampoco pegado a una
-    /// línea. El único que puede estarlo es el portero en su área (RF-057b manda sobre la barrera, ver arriba). Antes del
-    /// arreglo, <c>SlideAlongPitchToClear</c> fallaba de dos maneras:
-    /// <list type="bullet">
-    /// <item>sólo deslizaba por la banda, nunca por la línea de fondo;</item>
-    /// <item>el deslizamiento caía justo sobre la circunferencia, el redondeo lo dejaba a 1,99999 y se daba por fallido.</item>
-    /// </list>
-    /// Medido en estos 400 partidos: 328 fotogramas de rival dentro, todos sobre una línea, el peor a 0,94 del balón; después, 0.
+    /// BX-10b y BZ-B: cuando se saca, ningún rival está dentro de la barrera, tampoco pegado a una línea. Desde BZ-B los rivales
+    /// salen de ella ANDANDO durante la cuenta atrás y la reanudación espera a que esté limpia, así que lo que se exige es el
+    /// fotograma del saque, no todos los de la cuenta atrás. La holgura es la de la espera (0,1: la separación de cuerpos devuelve
+    /// unas centésimas hacia dentro a quien llega al borde). El portero en su área queda fuera (RF-057b, ver arriba). Medido
+    /// en estos 400 partidos antes de BX-10b: 328 fotogramas de rival dentro, todos sobre una línea, el peor a 0,94.
     /// </summary>
     [Fact]
-    public void DuringTheCountdownNoRivalIsInsideTheClearance()
+    public void WhenTheRestartIsTakenNoRivalIsInsideTheClearance()
     {
         float clearance = Catalog.Tuning.Restart.RestartClearanceCells;
-        int frames = 0;
+        int takes = 0;
         var inside = new List<string>();
         for (ulong seed = 1; seed <= 400; seed++)
         {
             var trace = Simulator.Run(TestMatches.Reference(Catalog, seed), seed, Catalog, new SimConfig(CollectLog: false, Trace: true)).Trace!;
+            // El fotograma del saque: la espera se comprueba en ese tick, después de que los que salen andando hayan dado su paso.
             for (int f = 1; f < trace.FrameCount; f++)
             {
-                var kind = trace.RestartAt(f);
-                int taker = trace.RestartTakerAt(f);
-                // Desde el segundo fotograma: en el primero la barrera aún no ha actuado sobre quien estaba allí.
+                var kind = trace.RestartAt(f - 1);
+                int taker = trace.RestartTakerAt(f - 1);
                 if (kind is not (RestartKind.FreeKick or RestartKind.ThrowIn or RestartKind.Corner or RestartKind.GoalKick)
-                    || trace.RestartAt(f - 1) != kind || taker < 0)
+                    || trace.RestartAt(f) == kind || taker < 0)
                 {
                     continue;
                 }
 
-                frames++;
-                var ball = trace.BallAt(f);
+                takes++;
+                var ball = trace.BallAt(f - 1);
                 for (int p = 0; p < trace.Players.Count; p++)
                 {
                     if (trace.Players[p].Team == trace.Players[taker].Team || !trace.OnPitchAt(f, p))
@@ -284,16 +281,64 @@ public sealed class RestartClearanceTests
                     }
 
                     float distance = Vec2.Distance(position, ball);
-                    if (distance < clearance - 0.05f)
+                    if (distance < clearance - 0.11f)
                     {
-                        inside.Add($"semilla {seed}, fotograma {f}: ({position.X:F2}, {position.Y:F2}) a {distance:F2}");
+                        inside.Add($"semilla {seed}, fotograma {f} ({kind}): ({position.X:F2}, {position.Y:F2}) a {distance:F2}");
                     }
                 }
             }
         }
 
-        Assert.True(frames > 10_000, $"muestra escasa: {frames} fotogramas de cuenta atrás");
-        Assert.True(inside.Count == 0, $"{inside.Count} fotogramas de rival dentro de la barrera: {string.Join("; ", inside.Take(5))}");
+        Assert.True(takes > 2000, $"muestra escasa: {takes} saques");
+        Assert.True(inside.Count == 0, $"{inside.Count} rivales dentro de la barrera al sacar: {string.Join("; ", inside.Take(5))}");
+    }
+
+    /// <summary>
+    /// BZ-B (decisión del revisor del 24 sep 2026: «en todas las paradas de juego… sin teletransportes»): en la cuenta atrás de
+    /// banda, puerta, córner y falta nadie se desplaza en un fotograma más de lo que se anda. Antes la barrera colocaba de
+    /// golpe a quien estaba dentro, casi siempre al infractor de la falta, a veces tumbado. Medido en estos 200 partidos: antes,
+    /// 1956 saltos de más de 0,3 casillas en 503 849 fotogramas (0,39 %), hasta 2,08. Después quedan los del saque de puerta,
+    /// que no se anda (pendiente del revisor, `docs/pendientes/BZ-B.md`), y ninguno de la barrera en banda, córner y falta.
+    /// La cota (1 de cada 5000) separa las dos versiones por un orden de magnitud; la de abajo exige cero donde se anda.
+    /// <para>Al sacar, que es lo que protege BB-B, lo vigila <see cref="WhenTheRestartIsTakenNoRivalIsInsideTheClearance"/>,
+    /// que pasa en las dos versiones: es la guarda de que esperar no rompe la barrera.</para>
+    /// </summary>
+    [Fact]
+    public void NobodyJumpsDuringTheCountdownOfARestartWithClearance()
+    {
+        int frames = 0;
+        int over = 0;
+        float worst = 0f;
+        for (ulong seed = 1; seed <= 200; seed++)
+        {
+            var trace = Simulator.Run(TestMatches.Reference(Catalog, seed), seed, Catalog, new SimConfig(CollectLog: false, Trace: true)).Trace!;
+            for (int f = 1; f < trace.FrameCount; f++)
+            {
+                if (trace.RestartAt(f) is not (RestartKind.FreeKick or RestartKind.ThrowIn or RestartKind.Corner or RestartKind.GoalKick))
+                {
+                    continue;
+                }
+
+                for (int p = 0; p < trace.Players.Count; p++)
+                {
+                    if (!trace.OnPitchAt(f, p) || !trace.OnPitchAt(f - 1, p))
+                    {
+                        continue;
+                    }
+
+                    float step = Vec2.Distance(trace.PositionAt(f - 1, p), trace.PositionAt(f, p));
+                    frames++;
+                    worst = Math.Max(worst, step);
+                    if (step > 0.3f)
+                    {
+                        over++;
+                    }
+                }
+            }
+        }
+
+        Assert.True(frames > 100_000, $"muestra escasa: {frames} fotogramas");
+        Assert.True(over * 5000 < frames, $"{over} de {frames} fotogramas con un salto de más de 0,3 casillas (máximo {worst:F2}): la barrera vuelve a colocar de golpe");
     }
 
     /// <summary>
@@ -342,6 +387,88 @@ public sealed class RestartClearanceTests
             engine.EnforceRestartClearanceForTest();
             Assert.True(Underleague.Sim.Model.Pitch.IsInArea(engine.PlayerAtForTest(keeper).Position, 1), $"el portero salió de su área con la falta en ({point.X:F2}, {point.Y:F2})");
         }
+    }
+
+    /// <summary>
+    /// BZ-B: donde la barrera se anda (banda, córner y falta), ninguna barrera coloca de golpe a nadie en la cuenta atrás. Se
+    /// excluye el fotograma en que se pita (el derribo del propio contacto puede mover a alguien ~0,3) y se exige cero.
+    /// </summary>
+    [Fact]
+    public void WhereTheClearanceIsWalkedNobodyIsPlacedByIt()
+    {
+        float clearance = Catalog.Tuning.Restart.RestartClearanceCells;
+        var placed = new List<string>();
+        int frames = 0;
+        for (ulong seed = 1; seed <= 200; seed++)
+        {
+            var trace = Simulator.Run(TestMatches.Reference(Catalog, seed), seed, Catalog, new SimConfig(CollectLog: false, Trace: true)).Trace!;
+            for (int f = 2; f < trace.FrameCount; f++)
+            {
+                var kind = trace.RestartAt(f);
+                if (kind is not (RestartKind.FreeKick or RestartKind.ThrowIn or RestartKind.Corner) || trace.RestartAt(f - 1) != kind)
+                {
+                    continue;
+                }
+
+                var ball = trace.BallAt(f);
+                for (int p = 0; p < trace.Players.Count; p++)
+                {
+                    if (!trace.OnPitchAt(f, p) || !trace.OnPitchAt(f - 1, p))
+                    {
+                        continue;
+                    }
+
+                    frames++;
+                    float step = Vec2.Distance(trace.PositionAt(f - 1, p), trace.PositionAt(f, p));
+                    // La firma de la colocación de golpe: un paso de más de lo que se anda que deja al jugador en el borde.
+                    if (step > 0.3f && MathF.Abs(Vec2.Distance(trace.PositionAt(f, p), ball) - clearance) < 0.02f)
+                    {
+                        placed.Add($"semilla {seed}, fotograma {f} ({kind}): jugador {trace.Players[p].Id}, {step:F2}");
+                    }
+                }
+            }
+        }
+
+        Assert.True(frames > 50_000, $"muestra escasa: {frames} fotogramas");
+        Assert.True(placed.Count == 0, $"{placed.Count} colocaciones de golpe: {string.Join("; ", placed.Take(5))}");
+    }
+
+    /// <summary>
+    /// BZ-B: esperar a que se salga andando de la barrera no alarga sin fin la reanudación. Ninguna llega al tope de espera
+    /// (<c>kickoffMaxWaitTicks</c>), y la falta, la que espera (el infractor está casi siempre dentro), dura como mucho su
+    /// cuenta atrás más 20 ticks. Medido en estos 200 partidos: mediana 26, máximo 30, sobre 20 de cuenta atrás.
+    /// </summary>
+    [Fact]
+    public void WaitingForTheClearanceNeverReachesTheCap()
+    {
+        var restart = Catalog.Tuning.Restart;
+        var longest = new Dictionary<RestartKind, int>();
+        for (ulong seed = 1; seed <= 200; seed++)
+        {
+            var trace = Simulator.Run(TestMatches.Reference(Catalog, seed), seed, Catalog, new SimConfig(CollectLog: false, Trace: true)).Trace!;
+            int run = 0;
+            for (int f = 1; f < trace.FrameCount; f++)
+            {
+                var kind = trace.RestartAt(f);
+                if (kind != RestartKind.None && trace.RestartAt(f - 1) == kind)
+                {
+                    run++;
+                    continue;
+                }
+
+                var previous = trace.RestartAt(f - 1);
+                if (previous is RestartKind.FreeKick or RestartKind.ThrowIn or RestartKind.Corner)
+                {
+                    longest[previous] = Math.Max(longest.GetValueOrDefault(previous), run + 1);
+                }
+
+                run = 0;
+            }
+        }
+
+        Assert.True(longest.GetValueOrDefault(RestartKind.FreeKick) > 0, "ninguna falta en 200 partidos");
+        Assert.True(longest[RestartKind.FreeKick] <= restart.FreeKickTicks + 20, $"una falta duró {longest[RestartKind.FreeKick]} ticks");
+        Assert.True(longest.Values.All(v => v < restart.KickoffMaxWaitTicks), $"alguna reanudación llegó al tope de espera: {string.Join(", ", longest.Select(x => $"{x.Key} {x.Value}"))}");
     }
 
     /// <summary>

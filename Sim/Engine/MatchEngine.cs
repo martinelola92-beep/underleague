@@ -169,6 +169,17 @@ internal sealed class MatchEngine : IPerkWorld
     private int _closedArea = -1;
 
     /// <summary>
+    /// BZ-B: ¿se sale de la barrera ANDANDO en este tick? Durante la cuenta atrás de banda, córner y falta, el rival que está
+    /// dentro de la barrera anda hasta su salida y el que quiere entrar se queda en el borde (<see cref="Move"/>), en vez de
+    /// que <see cref="EnforceRestartClearance"/> lo coloque de golpe. Se fija una vez por tick, como el área cerrada.
+    /// <para>El saque de puerta NO, pendiente de decisión del revisor: incluirlo baja el saque largo conservado del portero de
+    /// 47,7 a 43,7 % (1800 partidos, ~3 ET); sin él, 46,6 % (~0,85 ET). No es la espera ni quedarse quieto en el borde
+    /// (medido: sin cada una de las dos, igual de bajo); la causa no está aislada. Allí quedan 22 saltos en 200 partidos,
+    /// hasta 1,29 (`docs/pendientes/BZ-B.md`).</para>
+    /// </summary>
+    private bool _clearanceWalk;
+
+    /// <summary>
     /// A dónde va cada jugador durante la reanudación en curso (ADR 0147), o <c>null</c> si esta
     /// reanudación no recoloca a nadie. Es la generalización de lo que BC-A hizo sólo para el saque de
     /// centro: en vez de «todos a su casilla-hogar», <b>cada reanudación dice dónde va cada uno</b>.
@@ -737,6 +748,8 @@ internal sealed class MatchEngine : IPerkWorld
         // ADR 0151: durante la celebración de un gol nadie camina —ni el sacador ni el equipo—; el reinicio
         // los coloca a todos de golpe cuando termina.
         bool celebratingGoal = wasRestarting && _goalCelebrationTicks > 0;
+        _clearanceWalk = wasRestarting && !celebratingGoal && !_restartRepositions && IsClearanceRestart(_pendingRestart)
+            && _pendingRestart != RestartKind.GoalKick;
 
         for (int i = 0; i < _players.Length; i++)
         {
@@ -827,7 +840,11 @@ internal sealed class MatchEngine : IPerkWorld
         // se va a recolocar de todas formas: ResetTeamsAfterGoal aplica la barrera en el tick del reinicio.
         if ((wasRestarting && IsClearanceRestart(_pendingRestart) && !celebratingGoal) || _restartClearanceOwner is not null)
         {
-            EnforceRestartClearance();
+            // BZ-B: en la cuenta atrás de las que se andan no se coloca a nadie de golpe: todos salen andando, en Move.
+            if (!_clearanceWalk)
+            {
+                EnforceRestartClearance();
+            }
         }
 
         // BI-F: EN UN SAQUE DE PUERTA LOS RIVALES ESTÁN FUERA DEL ÁREA. Es la regla del fútbol y era lo
@@ -879,9 +896,12 @@ internal sealed class MatchEngine : IPerkWorld
                 //
                 // El tope existe para que un derribado, que no anda, no congele el partido; y el reloj del
                 // partido está parado mientras tanto (_clockTick), así que esperar no cuesta fútbol.
-                if (_restartRepositions
-                    && _restartWaitTicks < _tuning.Restart.KickoffMaxWaitTicks
-                    && !EveryoneInPlace())
+                // BZ-B: las demás reanudaciones con barrera esperan igual a que la barrera esté limpia, porque los rivales
+                // salen andando (decisión del revisor del 24 sep: «sin teletransportes» en todas las paradas). Mismo tope
+                // que el saque de centro. Si se agota, la colocación de golpe de siempre queda de red de seguridad (como
+                // BA-D con el sacador): no se saca con un rival dentro (BB-B).
+                bool waits = _restartRepositions ? !EveryoneInPlace() : _clearanceWalk && !ClearanceRespected();
+                if (waits && _restartWaitTicks < _tuning.Restart.KickoffMaxWaitTicks)
                 {
                     _restartWaitTicks++;
                     _restartTicksLeft = 1;
@@ -889,6 +909,11 @@ internal sealed class MatchEngine : IPerkWorld
                 else
                 {
                     _restartWaitTicks = 0;
+                    if (_clearanceWalk && waits)
+                    {
+                        EnforceRestartClearance();
+                    }
+
                     ResolveRestart();
                 }
             }
@@ -1954,6 +1979,30 @@ internal sealed class MatchEngine : IPerkWorld
     private void Move(MatchPlayer player, bool dribbling)
     {
         Vec2 target = InBand(Utility.ClampToZone(player, player.TargetPoint));
+
+        // BZ-B: la barrera de la reanudación también se respeta ANDANDO. El que está dentro va a su salida; el que no, no
+        // pone el destino dentro. Va ANTES de las reglas del área (la del portero, RF-057b, y la cerrada, ADR 0152), que
+        // mandan sobre la barrera: medido cuando el saque de puerta se andaba, la salida de la barrera ponía gente dentro del
+        // área (KeeperAreaTests: 14 saques). Hoy el saque de puerta no se anda, pero el orden sigue siendo el de la regla.
+        bool clearanceWalks = WalksTheClearance(player);
+        if (clearanceWalks)
+        {
+            float clearance = _tuning.Restart.RestartClearanceCells;
+            if (Vec2.Distance(player.Position, _ball.Position) < clearance - SlideToleranceCells)
+            {
+                target = ClearanceExit(player.Position);
+            }
+            else if (Vec2.Distance(target, _ball.Position) < clearance)
+            {
+                // El que ya está en el borde y quiere entrar se queda donde está, esperando el saque. Llevarlo al punto del
+                // borde de su destino lo hacía correr a lo largo de la barrera, y dos que querían entrar por el mismo sitio
+                // se empujaban de un lado a otro (medido: una racha de 16 fotogramas de baile, DancingTeammatesTests).
+                target = Vec2.Distance(player.Position, _ball.Position) < clearance + ClearanceHoldCells
+                    ? player.Position
+                    : ClearanceExit(target);
+            }
+        }
+
         if (!player.IsOutfield)
         {
             target = Utility.ClampToArea(target, player.Team, _context.KeeperExitCells[player.Team]);
@@ -1978,6 +2027,18 @@ internal sealed class MatchEngine : IPerkWorld
             : player.Position + (delta * (step / distance));
 
         next = InBandFrom(Utility.ClampToPitch(next), player.Position);
+
+        // BZ-B, lo mismo con la barrera: el que está fuera no la corta de camino; el paso se proyecta a su borde.
+        if (clearanceWalks)
+        {
+            float clearance = _tuning.Restart.RestartClearanceCells;
+            if (Vec2.Distance(next, _ball.Position) < clearance
+                && Vec2.Distance(player.Position, _ball.Position) >= clearance - SlideToleranceCells)
+            {
+                next = ClearanceExit(next);
+            }
+        }
+
         if (!player.IsOutfield)
         {
             next = Utility.ClampToArea(next, player.Team, _context.KeeperExitCells[player.Team]);
@@ -6428,6 +6489,62 @@ internal sealed class MatchEngine : IPerkWorld
     }
 
     /// <summary>
+    /// BZ-B: ¿anda este jugador la barrera en este tick? Un rival en el campo, durante la cuenta atrás de una reanudación con
+    /// barrera que no recoloca (<see cref="_clearanceWalk"/>). El portero también (revisión independiente: era el único que
+    /// seguía saltando en las faltas, 14 de 18 saltos): su destino se acota luego a su área, porque RF-057b manda sobre la
+    /// barrera, y por eso <see cref="ClearanceRespected"/> no le espera.
+    /// </summary>
+    private bool WalksTheClearance(MatchPlayer player) =>
+        _clearanceWalk && player.OnPitch && player.Team != _restartTeam;
+
+    /// <summary>
+    /// El punto de la barrera por el que sale quien está en <paramref name="from"/>: en la recta desde el balón, acotado al
+    /// campo y, si el campo lo recorta, deslizado por la línea (ADR 0142, BX-10b). Es la misma salida para la colocación de
+    /// golpe de <see cref="EnforceRestartClearance"/> y para quien sale andando (BZ-B).
+    /// </summary>
+    private Vec2 ClearanceExit(Vec2 from)
+    {
+        float clearance = _tuning.Restart.RestartClearanceCells;
+        Vec2 center = _ball.Position;
+        var offset = from - center;
+        float distance = offset.Length;
+        var direction = distance > 0.001f ? offset * (1f / distance) : new Vec2(-Pitch.AttackDirection(_restartTeam), 0f);
+        Vec2 corrected = InBand(Utility.ClampToPitch(center + (direction * clearance)));
+        return SlideAlongPitchToClear(center, corrected, clearance);
+    }
+
+    /// <summary>
+    /// BZ-B: ¿está la barrera limpia para sacar? Ningún rival de campo dentro, salvo uno al que la geometría no deja salir
+    /// (una esquina, ADR 0142). El derribado cuenta: está dentro y, en cuanto se levante, sale andando. El portero en su
+    /// área no cuenta (RF-057b).
+    /// </summary>
+    private bool ClearanceRespected()
+    {
+        // La holgura de la espera no es la de redondeo: quien llega andando al borde se queda a 1,94-1,99 de una barrera de
+        // 2, porque la separación de cuerpos (ADR 0020) lo vuelve a meter unas centésimas cada tick contra los que ya
+        // están allí. Medido: con la holgura de 0,01, el 1 % de las faltas y varios córners agotaban el tope de espera
+        // con alguien así. 0,1 deja a cualquiera muy lejos del alcance real de la entrada (1,0) y del bloqueo (1,2).
+        float clearance = _tuning.Restart.RestartClearanceCells - ClearanceWaitToleranceCells;
+        for (int i = 0; i < _players.Length; i++)
+        {
+            var player = _players[i];
+            if (!player.OnPitch || !player.IsOutfield || player.Team == _restartTeam
+                || player.State is PlayerState.Injured or PlayerState.SentOff
+                || Vec2.Distance(player.Position, _ball.Position) >= clearance)
+            {
+                continue;
+            }
+
+            if (Vec2.Distance(ClearanceExit(player.Position), _ball.Position) >= clearance)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>
     /// Si acotar al campo dejó el punto dentro de la barrera, lo desliza <b>por la línea</b> hasta la
     /// distancia pedida (ADR 0142). Es el mismo punto de la circunferencia de exclusión, pero buscado por
     /// un eje que el campo no ha recortado: primero por la banda (eje X, la Y fija) y, si no basta, por la línea de
@@ -6463,6 +6580,16 @@ internal sealed class MatchEngine : IPerkWorld
     /// hueco: no se desliza por él.
     /// </summary>
     private const float SlideToleranceCells = 0.01f;
+
+    /// <summary>
+    /// BZ-B: a menos de esto del borde de la barrera, el rival que quiere entrar se para en vez de buscar el borde. Es un
+    /// paso largo andando (el máximo medido en la cuenta atrás, ~0,25) con margen: desde ahí, quedarse quieto o ir al borde
+    /// se ven igual.
+    /// </summary>
+    private const float ClearanceHoldCells = 0.5f;
+
+    /// <summary>Holgura de la espera de la barrera (BZ-B): ver <see cref="ClearanceRespected"/>.</summary>
+    private const float ClearanceWaitToleranceCells = 0.1f;
 
     /// <summary>
     /// El punto de la circunferencia de exclusión que se alcanza moviendo <paramref name="point"/> sólo por un eje, o el
