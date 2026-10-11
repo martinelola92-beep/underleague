@@ -88,6 +88,11 @@ public sealed record CardRow(int PlayerId, string PlayerName, MatchSide Side, bo
 /// causadas al rival, recuperaciones, paradas y eventos que un perk anuló. No es una atribución causal
 /// —un tick puede tener dos perks activos— y por eso se enseña como "en sus activaciones", que es
 /// exactamente lo que el dato dice. Es la diferencia entre un informe que enseña y uno que inventa.</para>
+///
+/// <para><b>Una fila por perk, no por portador</b> (11 oct 2026): la racial de los siete orcos salía siete veces, todas
+/// iguales, y enterraba los perks que sí hicieron algo. Con varios portadores, <see cref="Carriers"/> dice cuántos,
+/// <see cref="OwnerId"/>/<see cref="OwnerName"/> son los del primero por id, las activaciones se suman y la contribución
+/// se mide sobre la UNIÓN de sus ticks (sumar contaría dos veces lo que cae en un tick compartido).</para>
 /// </summary>
 public sealed record PerkReportRow(
     string PerkId,
@@ -100,7 +105,8 @@ public sealed record PerkReportRow(
     int InjuriesCaused,
     int Recoveries,
     int Saves,
-    int Cancellations);
+    int Cancellations,
+    int Carriers = 1);
 
 /// <summary>Un objeto equipado que entró en el partido (RF-075..078, RT-043).</summary>
 /// <param name="Effects">Efectos aplicados de verdad; 0 si el portador no cumple la restricción de raza.</param>
@@ -485,6 +491,9 @@ public static class PostMatchView
         var ownIds = TeamPlayerIds(setup, ownTeam);
         var rows = new List<PerkReportRow>();
 
+        // Portadores propios con activaciones, agrupados por perk en orden de aparición del resumen (determinista).
+        var owners = new Dictionary<string, List<(int OwnerId, int Activations)>>(StringComparer.Ordinal);
+        var order = new List<string>();
         for (int i = 0; i < report.PerksSummary.Count; i++)
         {
             var entry = report.PerksSummary[i];
@@ -493,22 +502,46 @@ public static class PostMatchView
                 continue;
             }
 
-            var ticks = ActivationTicks(report.PerkActivations, entry.PerkId, entry.OwnerId);
+            if (!owners.TryGetValue(entry.PerkId, out var list))
+            {
+                list = new List<(int, int)>();
+                owners[entry.PerkId] = list;
+                order.Add(entry.PerkId);
+            }
+
+            list.Add((entry.OwnerId, entry.Activations));
+        }
+
+        foreach (string perkId in order)
+        {
+            var carriers = owners[perkId];
+            carriers.Sort(static (a, b) => a.OwnerId.CompareTo(b.OwnerId));
+
+            var ticks = new HashSet<int>();
+            int activations = 0;
+            foreach (var (ownerId, count) in carriers)
+            {
+                ticks.UnionWith(ActivationTicks(report.PerkActivations, perkId, ownerId));
+                activations += count;
+            }
+
             var contribution = Contribution(events, ticks, ownTeam);
-            var perk = catalog.Perks.Find(entry.PerkId);
+            var perk = catalog.Perks.Find(perkId);
+            int firstOwner = carriers[0].OwnerId;
 
             rows.Add(new PerkReportRow(
-                entry.PerkId,
-                perk is null ? entry.PerkId : NameIn(perk.Name, templates.Language),
+                perkId,
+                perk is null ? perkId : NameIn(perk.Name, templates.Language),
                 perk is null ? string.Empty : DescriptionGenerator.Describe(perk, templates, catalog.Perks, runEffects),
-                entry.OwnerId,
-                names.GetValueOrDefault(entry.OwnerId) ?? string.Empty,
-                entry.Activations,
+                firstOwner,
+                names.GetValueOrDefault(firstOwner) ?? string.Empty,
+                activations,
                 contribution.Goals,
                 contribution.Injuries,
                 contribution.Recoveries,
                 contribution.Saves,
-                contribution.Cancellations));
+                contribution.Cancellations,
+                carriers.Count));
         }
 
         rows.Sort(static (a, b) =>
