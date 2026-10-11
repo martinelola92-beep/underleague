@@ -23,11 +23,10 @@ frases que prometían otra cosa (Herencia nombraba «su vinculado» y recibe el 
 
 ## Hermanos abiertos (revisión independiente)
 
-- La condición de Taquillero se lee «si el portador lleva 0 bajas propias» (`stat(owner,'down')==0`): debería decir
-  que acaba de pie.
-- Pagar el hierro: «el portador +10 de bono a la probabilidad de lesión», sin verbo.
-- El disparador `DEATH` no distingue alcance: con `actor` es la muerte del portador y se dice «en una muerte», igual
-  que con `team`. Mismo patrón que `INJURY`.
+- ~~La condición de Taquillero se lee «0 bajas propias»~~: ahora «0 lesiones o muertes» (estadístico `down`).
+- ~~Seis perks de `modifyTraitScalar` sin verbo~~ (Pagar el hierro, Kamikaze, Cañón…): «el portador suma +10 de…».
+- ~~`DEATH` no distinguía alcance~~: secciones opcionales `triggersOwn` («si muere») y `triggersTeam` («cuando muere
+  un compañero»), con vuelta a `triggers` si falta la clave.
 - El detector de fugas sólo ve camelCase: un id en snake_case o de una palabra no lo vería.
 - Las cifras de `counter-gold.json` y `death-gold.json` están marcadas «a ojo, pendientes de medición» y ahora se
   enseñan como promesa (Regla H): el texto sigue al dato, el dato sigue sin medir.

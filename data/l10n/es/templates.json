@@ -43,7 +43,7 @@
     "modifyLeashPerCounterDivided": "{target} {valuePerCounter:+} de correa por cada {counterDivisor} de {counter} (máximo {maxValue}) durante {duration}",
     "injure": "lesiona a {target}",
     "relocate": "{target} se reubica {point}",
-    "modifyTraitScalar": "{target} {value:+} de {scalar}",
+    "modifyTraitScalar": "{target} suma {value:+} de {scalar}",
     "shiftHomeForward": "{target} adelanta {value:abs} casillas su casilla-hogar en el sentido de ataque de su equipo",
     "shiftHomeBackward": "{target} retrasa {value:abs} casillas su casilla-hogar en el sentido de ataque de su equipo",
     "modifyZoneShape": "{target} amplía {value:abs} casillas su zona de acción hacia {dimension}",
@@ -486,7 +486,7 @@
     "tacklesWon": "entradas ganadas",
     "shots": "tiros",
     "saves": "paradas",
-    "down": "bajas propias"
+    "down": "lesiones o muertes"
   },
   "families": {
     "wall": "La Muralla",
@@ -540,6 +540,12 @@
     "cowardly": "nunca saca roja, ni siquiera con la segunda amarilla",
     "corrupt": "en el campo pita como cualquier otro; el soborno es otra historia",
     "incorruptible": "en el campo pita como cualquier otro, y no hay soborno que le mueva"
+  },
+  "triggersOwn": {
+    "DEATH": "si muere"
+  },
+  "triggersTeam": {
+    "DEATH": "cuando muere un compañero"
   },
   "triggersReceived": {
     "TACKLE": "cuando le entran",

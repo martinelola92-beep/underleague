@@ -52,6 +52,8 @@ public static class DescriptionGenerator
     private const string ScalarsSection = "scalars";
     private const string ZoneDimensionsSection = "zoneDimensions";
     private const string RunEffectsSection = "runEffects";
+    private const string TriggersOwn = "triggersOwn";
+    private const string TriggersTeam = "triggersTeam";
 
     /// <summary>Descripción completa del perk en el idioma pedido (RT-035).</summary>
     public static string Describe(PerkDefinition perk, string language, Catalog catalog)
@@ -81,9 +83,15 @@ public static class DescriptionGenerator
         // lo contrario de cuándo funciona. RT-035 no protege de esto por sí solo: genera el texto del
         // dato, y si el dato tiene dos puntos de vista hay que leer los dos.
         string triggerKey = EventTypeNames.ToUpperSnake(perk.Trigger);
-        string trigger = perk.Scope == PerkScope.Opponent
-            ? templates.Get(TriggersReceived, triggerKey)
-            : templates.Get(Triggers, triggerKey);
+        string trigger = perk.Scope switch
+        {
+            PerkScope.Opponent => templates.Get(TriggersReceived, triggerKey),
+
+            // BY-A: «en una muerte» decía lo mismo para la muerte del portador (actor) que para la de un compañero (team).
+            PerkScope.Actor => templates.Find(TriggersOwn, triggerKey) ?? templates.Get(Triggers, triggerKey),
+            PerkScope.Team => templates.Find(TriggersTeam, triggerKey) ?? templates.Get(Triggers, triggerKey),
+            _ => templates.Get(Triggers, triggerKey),
+        };
         string condition = perk.CompiledCondition.Ast is { } ast ? DescribeCondition(ast, templates) : string.Empty;
         string separator = templates.Get(Layout, "effectSeparator");
         string finalSeparator = templates.Get(Layout, "effectFinalSeparator");

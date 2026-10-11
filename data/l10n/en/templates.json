@@ -43,7 +43,7 @@
     "modifyLeashPerCounterDivided": "{target} {valuePerCounter:+} leash per {counterDivisor} {counter} (max {maxValue}) for {duration}",
     "injure": "injures {target}",
     "relocate": "{target} relocates {point}",
-    "modifyTraitScalar": "{target} {value:+} {scalar}",
+    "modifyTraitScalar": "{target} gets {value:+} {scalar}",
     "shiftHomeForward": "{target} advances their home cell {value:abs} cells in their team's attacking direction",
     "shiftHomeBackward": "{target} pulls back their home cell {value:abs} cells in their team's attacking direction",
     "modifyZoneShape": "{target} extends their action zone {value:abs} cells {dimension}",
@@ -486,7 +486,7 @@
     "tacklesWon": "tackles won",
     "shots": "shots",
     "saves": "saves",
-    "down": "own casualties"
+    "down": "injuries or deaths"
   },
   "families": {
     "wall": "The Wall",
@@ -540,6 +540,12 @@
     "cowardly": "never shows red, not even on a second yellow",
     "corrupt": "calls it like anyone else on the pitch; the bribe is another story",
     "incorruptible": "calls it like anyone else on the pitch, and no bribe moves him"
+  },
+  "triggersOwn": {
+    "DEATH": "if they die"
+  },
+  "triggersTeam": {
+    "DEATH": "when a teammate dies"
   },
   "triggersReceived": {
     "TACKLE": "when tackled",

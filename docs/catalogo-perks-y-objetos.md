@@ -108,8 +108,8 @@ No cuentan para ningún maestro ni cierran nada.
 | **Sin florituras** | `no_nonsense` | Común | 1 | relleno | — | Al empezar el partido, el portador multiplica por 1,5 sus opciones de interceptar. |
 | **Comodín** | `odd_job` | Común | 1 | relleno | — | Al empezar el partido, el portador +1 de correa durante el partido. |
 | **Doble pivote** | `pivot_duo` | Común | 1 | relleno | — | Al empezar el partido, el compañero de su izquierda y compañero de su derecha multiplica por 2 sus opciones de robar el balón. |
-| **Descomposición lenta** | `slow_decay` | Común | 1 | relleno | solo No-muertos | Al empezar el partido, el portador +25 de resistencia porcentual a la fatiga. |
-| **Pulso lento** | `slow_pulse` | Común | 1 | relleno | — | Al empezar el partido, el portador +10 de bono de calidad de tiro. |
+| **Descomposición lenta** | `slow_decay` | Común | 1 | relleno | solo No-muertos | Al empezar el partido, el portador suma +25 de resistencia porcentual a la fatiga. |
+| **Pulso lento** | `slow_pulse` | Común | 1 | relleno | — | Al empezar el partido, el portador suma +10 de bono de calidad de tiro. |
 | **Portero líbero** | `sweeper_keeper` | Común | 1 | relleno | solo portero | Al recuperar el balón, el jugador +2 de correa durante la jugada. |
 | **Máquina de publicidad** | `ad_machine` | Poco común | 1 | relleno | — | Cuando lesiona a un rival, el club cobra 8 de oro. |
 | **Lector de la batalla** | `battle_reader` | Poco común | 1 | relleno | — | Al empezar el partido, el portador multiplica por 2 sus opciones de interceptar por cada partido (hasta 4 veces). |
@@ -133,7 +133,7 @@ No cuentan para ningún maestro ni cierran nada.
 | **Línea adelantada** | `high_line` | Poco común | 1 | relleno | solo Defender | Al empezar el partido, el portador adelanta 2 casillas su casilla-hogar en el sentido de ataque de su equipo. |
 | **Disparador de presión alta** | `high_press_trigger` | Poco común | 1 | condicional | — | Al fallar un pase, el equipo multiplica por 2 sus opciones de interceptar. |
 | **Árbitro casero** | `home_ref` | Poco común | 1 | condicional | — | Al hacer falta, criterio del árbitro +10. |
-| **Pagar el hierro** | `iron_price` | Poco común | 1 | relleno | — | Cuando lesiona a un rival, el portador +10 de bono a la probabilidad de lesión. |
+| **Pagar el hierro** | `iron_price` | Poco común | 1 | relleno | — | Cuando lesiona a un rival, el portador suma +10 de bono a la probabilidad de lesión. |
 | **Lector de carriles** | `lane_reader` | Poco común | 1 | relleno | — | Al recuperar el balón, el jugador multiplica por 2 sus opciones de interceptar por cada recuperación (hasta 5 veces). |
 | **Seguro de vida** | `life_insurance` | Poco común | 1 | condicional | — | Si muere, el club cobra 8 de oro. |
 | **Pies ligeros** | `light_feet` | Poco común | 1 | relleno | solo Elfos | Al empezar el partido, el portador multiplica por 2 su resistencia a las intercepciones. |
@@ -144,14 +144,14 @@ No cuentan para ningún maestro ni cierran nada.
 | **Caño** | `nutmeg` | Poco común | 1 | condicional | — | Al encarar, el rival cae derribado. |
 | **A bocajarro** | `point_blank` | Poco común | 1 | condicional | — | Al rechazarse su tiro, el portador repite la jugada en el mismo instante. |
 | **Curtido en mil batallas** | `road_warrior` | Poco común | 1 | condicional | — | Al recuperar el balón, el equipo multiplica por 3 sus opciones de robar el balón. |
-| **Hombro con hombro** | `shoulder_to_shoulder` | Poco común | 1 | relleno | solo Enanos | Al empezar el partido, el portador +30 de bono porcentual a los compañeros adyacentes. |
+| **Hombro con hombro** | `shoulder_to_shoulder` | Poco común | 1 | relleno | solo Enanos | Al empezar el partido, el portador suma +30 de bono porcentual a los compañeros adyacentes. |
 | **El muro que grita** | `shouting_wall` | Poco común | 1 | relleno | solo portero | Al empezar el partido, el equipo -1 de correa durante el partido. |
 | **Jugador de equipo** | `squad_player` | Poco común | 1 | condicional | — | Al empezar el partido, el equipo multiplica por 1,5 sus opciones de pasar. |
 | **Hacer de todo** | `stand_in` | Poco común | 1 | relleno | solo Humanos | En una lesión, el portador +1 de correa durante el partido. |
 | **Curtido** | `tough_hide` | Poco común | 1 | rompe-reglas | — | Al empezar el partido, el portador no paga la clínica por sus lesiones leves. |
 | **Morder el tobillo** | `ankle_bite` | Raro | 1 | condicional | — | Al entrar, lesiona a el rival y el portador multiplica por 4 sus opciones de hacer falta. |
 | **Embestida de toro** | `bull_rush` | Raro | 1 | condicional | — | Al entrar, el portador repite la jugada en el mismo instante. |
-| **Cañón** | `cannon` | Raro | 2 | relleno | — | Al empezar el partido, el portador +3 de casillas de alcance de tiro. |
+| **Cañón** | `cannon` | Raro | 2 | relleno | — | Al empezar el partido, el portador suma +3 de casillas de alcance de tiro. |
 | **Embestida** | `charge` | Raro | 2 | condicional | — | Al entrar, el portador repite la jugada en el mismo instante. |
 | **Marcha sin fin** | `deathless_march` | Raro | 2 | relleno | solo No-muertos | Al empezar el partido, el equipo multiplica por 1,5 sus opciones de robar el balón por cada partido (hasta 3 veces). |
 | **Doble disparo** | `double_shot` | Raro | 2 | condicional | — | Al rechazarse su tiro, el portador repite la jugada en el mismo instante. |
@@ -160,7 +160,7 @@ No cuentan para ningún maestro ni cierran nada.
 | **Gigante amable** | `gentle_giant` | Raro | 2 | condicional | solo Orcos | Al empezar el partido, el compañero de delante multiplica por 2 sus opciones de interceptar. |
 | **Herencia** | `inheritance` | Raro | 2 | condicional | — | Si muere, el compañero de su columna hereda el 20 % de cada atributo suyo, hasta +2 por atributo. |
 | **Puerta de hierro** | `iron_gate` | Raro | 2 | rompe-reglas | solo Enanos | En una lesión, anula la lesión. |
-| **Kamikaze** | `kamikaze` | Raro | 2 | relleno | — | Al empezar el partido, el portador +15 de bono a la entrada dura y el portador +20 de bono a la probabilidad de lesión. |
+| **Kamikaze** | `kamikaze` | Raro | 2 | relleno | — | Al empezar el partido, el portador suma +15 de bono a la entrada dura y el portador suma +20 de bono a la probabilidad de lesión. |
 | **Último hombre** | `last_man` | Raro | 2 | condicional | solo Defender | Cuando un tiro rival va a puerta, el portador se interpone en la trayectoria y se queda con el balón el 20 % de las veces. |
 | **Correa curtida** | `long_leash_legacy` | Raro | 2 | relleno | — | Al empezar el partido, el portador +1 de correa por cada 4 de partido (máximo 2) durante el partido. |
 | **Bloque bajo** | `low_block` | Raro | 1 | relleno | — | Al empezar el partido, el equipo -2 de correa durante el partido. |
@@ -171,10 +171,10 @@ No cuentan para ningún maestro ni cierran nada.
 | **Sombra** | `shadow` | Raro | 2 | relleno | solo Midfielder | Al empezar el partido, el portador retrasa 1 casillas su casilla-hogar en el sentido de ataque de su equipo. |
 | **Lengua de plata** | `silver_tongue` | Raro | 1 | rompe-reglas | — | Al ver una tarjeta, anula la tarjeta. |
 | **Arrollador** | `steamroller` | Raro | 2 | condicional | — | Al recuperar el balón, el portador repite la jugada en el mismo instante. |
-| **Superviviente** | `survivor` | Raro | 2 | relleno | — | En una muerte, el portador divide por 1,3 sus opciones de lesionarse por cada compañero muerto (hasta 3 veces). |
+| **Superviviente** | `survivor` | Raro | 2 | relleno | — | Cuando muere un compañero, el portador divide por 1,3 sus opciones de lesionarse por cada compañero muerto (hasta 3 veces). |
 | **Hombre libre** | `free_man` | Legendario | 3 | rompe-reglas | — | Al empezar el partido, ningún marcador rival quiere hacerse cargo de el portador. |
 | **Mano de dios** | `hand_of_god` | Legendario | 3 | rompe-reglas | solo portero | Al marcar, anula el gol. |
-| **Prohibido morir** | `no_dying` | Legendario | 3 | rompe-reglas | — | En una muerte, anula la muerte. |
+| **Prohibido morir** | `no_dying` | Legendario | 3 | rompe-reglas | — | Si muere, anula la muerte. |
 | **Partecráneos** ☠ | `skullsplitter` | Legendario | 3 | rompe-reglas | etiqueta `Dirty` | Al entrar, el equipo rival multiplica por 3 sus opciones de lesionarse. |
 
 ## Perks letales ☠

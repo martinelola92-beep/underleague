@@ -191,6 +191,10 @@ public static class DataLoader
         // (PerkRunEffects): sin esto la descripción enseñaba el contador interno («+1 al contador boxOfficeMatches»).
         "runEffects",
 
+        // Disparadores contados desde el portador cuando el alcance lo cambia (BY-A): DEATH con alcance actor es SU muerte
+        // («si muere») y con alcance team la de un compañero. Opcionales: sin la clave se usa la de «triggers».
+        "triggersOwn", "triggersTeam",
+
         // ADR 0158: la línea que explica el rasgo de un árbitro en el ojeo (RT-035: tampoco se escribe a
         // mano en C#).
         "refereeTraits",
