@@ -1640,8 +1640,12 @@ internal static class Utility
 
     /// <summary>
     /// Presión al poseedor (ADR 0022, §2.3): objetivo el rival que lleva el balón, sea jugador de campo o
-    /// el portero en su salida, con un extra si es el portero dentro de su área —el momento en que la
-    /// presión gana el balón en zona de gol—.
+    /// el portero en su salida, con un extra si es el portero dentro de su área.
+    ///
+    /// <para>BX-8d: desde la ADR 0152 esa área está cerrada mientras el portero tiene el balón, así que el extra ya no
+    /// gana el balón en zona de gol: <c>Move</c> deja a quien aprieta en el borde. Medido (400 partidos con el grito
+    /// «¡A por él!» forzado): pone a un delantero en el borde, la imagen que pide la ADR 0178, y no cambia la
+    /// conservación del balón (63,1 % sin él, 63,4 % con él). Sin el grito casi no se activa.</para>
     /// </summary>
     private static void EvaluatePress(UtilityContext ctx, MatchPlayer p, ref Eval eval)
     {

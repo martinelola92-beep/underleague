@@ -65,14 +65,15 @@ renders y no pastillas»*. Todo lo hecho, las fuentes y licencias, el pipeline (
      sacar rasgos de campo («Goleador»: `PlayerGenerator.PickTraits` no mira el puesto; cambiarlo mueve el RNG de
      todas las plantillas). `EvaluatePress` descartado como causa del temblor (BX-13: sin activación).
   2. Hermanos abiertos, de más a menos visible:
-     - `EvaluatePress` al centro del poseedor (BX-13);
+     - `EvaluatePress` al centro del poseedor (BX-13), sin activación;
      - BX-10c, el bloqueo del tiro;
      - BX-10b, la barrera en la línea de fondo;
      - ~~el bono de peligro tras blocar~~: **hecho (11 oct, BX-8c)**, sin bono con el área cerrada (ADR 0152); despeje
        tras blocar 86 → 11 %, conservado 34 → 63 %;
        deja roja `elf_out_of_zone` en la puerta (45,34), LIKELY ruido con 4 semillas (CAT-J);
-     - hermano nuevo de BX-8c: `EvaluatePress` premia apretar al portero dentro de su área cerrada (`pressGoalkeeperExitBonus`),
-       con otra definición del área; sin ficha (ver `docs/pendientes/BX-8c.md`); tiros −0,35 por partido (7,76-7,94; si cruzan 7, ficha y medición antes de tocar la banda);
+     - ~~hermano nuevo de BX-8c, `EvaluatePress` y el área cerrada~~: **cerrado sin cambio (11 oct, BX-8d)**. Sin el
+       grito no se activa; con «¡A por él!» pone a un delantero en el borde y la conservación no cambia (63,1 / 63,4 %).
+     - tiros −0,35 por partido tras BX-8c (7,76-7,94): si cruzan 7, ficha y medición antes de tocar la banda;
      - ~~la falta a favor dentro del área propia~~: **hecho (11 oct, BX-8b)**, el despeje no cobra el peligro con el
        balón muerto; despejes en faltas del tercio propio 12 de 63 → 0 y balón conservado 68 → 80 %.
   3. `runWinRate_noMarket` fuera de techo (economía; ADR 0193 la agrava). **Medido el 11 oct**

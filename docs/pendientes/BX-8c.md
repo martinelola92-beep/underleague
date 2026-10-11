@@ -146,10 +146,8 @@ CAT-J. No se mueve ninguna banda.
 ## Queda abierto
 
 - El portero con el balón **fuera** de su área sigue cobrando el peligro. Es casi inexistente (1 en 200 partidos).
-- **Hermano nuevo, `EvaluatePress`** (`Utility.cs`, señalado por la segunda revisión): tercer lector del área del portero,
-  con otra definición (posición del portador, no del balón) y la intención contraria: suma `pressGoalkeeperExitBonus`
-  (200) por apretar al portero dentro de su área, que el motor cierra. Ya existía; es también la medición pendiente de
-  «la presión alta encuentra al portero jugando corto». Sin ficha propia todavía.
+- ~~**Hermano nuevo, `EvaluatePress`**~~: cerrado sin cambio en [BX-8d](./BX-8d.md). Con el grito «¡A por él!» pone
+  a un delantero en el borde del área, y la conservación del balón no cambia.
 - Hermano de instrumento: `Danger`, `Pressure` y el área cerrada que usa `Move` se calculan una vez al principio del
   tick y se leen dentro de él. Ya era así antes; ahora se sabe que una decisión a mitad de tick puede ver un dato viejo.
   El despeje ya no; el desalojo del área (`Move`, `InOpenPlay`) sí, con un tick de retraso.
