@@ -157,10 +157,11 @@ public static class RewardView
 
         var templates = catalog.Localization.Get(language);
         var options = RewardSystem.Options(state, node, catalog, economy, items);
+        var runEffects = PerkRunEffectsBuilder.Build(catalog.Perks, economy);
         var views = new List<RewardOptionView>(options.Count);
         for (int i = 0; i < options.Count; i++)
         {
-            views.Add(Describe(state, catalog, templates, items, options[i], i, language));
+            views.Add(Describe(state, catalog, templates, items, options[i], i, language, runEffects));
         }
 
         int cost = economy.RerollCost(state.RerollsUsed);
@@ -184,7 +185,8 @@ public static class RewardView
         ItemCatalog items,
         RewardOption option,
         int index,
-        string language)
+        string language,
+        PerkRunEffects runEffects)
     {
         switch (option)
         {
@@ -206,7 +208,7 @@ public static class RewardView
                     perk.Id,
                     perk.Name.Es,
                     perk.Rarity,
-                    DescriptionGenerator.Describe(perk, templates, catalog.Perks),
+                    DescriptionGenerator.Describe(perk, templates, catalog.Perks, runEffects),
                     string.Empty,
                     NeedsCarrier: true,
                     carriers,

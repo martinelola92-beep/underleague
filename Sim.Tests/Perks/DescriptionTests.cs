@@ -327,6 +327,14 @@ public sealed class DescriptionTests
                 templates.Get("effects", key);
             }
 
+            // Lo que un perk de contador aislado paga a la run (PerkRunEffects), y la frase sin disparador de la reventa.
+            foreach (var key in new[] { "counterGold", "deathGold", "resale", "inheritance" })
+            {
+                templates.Get("runEffects", key);
+            }
+
+            templates.Get("layout", "plainNoTrigger");
+
             foreach (var key in new[]
             {
                 "actor", "target", "opponent", "owner", "adjacent", "team", "opposingTeam",

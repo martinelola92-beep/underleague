@@ -51,6 +51,7 @@ public static class DescriptionGenerator
     private const string PointsSection = "points";
     private const string ScalarsSection = "scalars";
     private const string ZoneDimensionsSection = "zoneDimensions";
+    private const string RunEffectsSection = "runEffects";
 
     /// <summary>Descripción completa del perk en el idioma pedido (RT-035).</summary>
     public static string Describe(PerkDefinition perk, string language, Catalog catalog)
@@ -65,7 +66,11 @@ public static class DescriptionGenerator
     /// id (ADR 0051): hay que traducirlos a sus nombres, porque el jugador no lee identificadores
     /// (RT-073). Un maestro que solo cierra líneas, y cualquier perk normal, se describen sin él.
     /// </summary>
-    public static string Describe(PerkDefinition perk, DescriptionTemplates templates, PerkCatalog? perks = null)
+    /// <param name="runEffects">
+    /// Lo que los perks de contador aislado hacen a la run (oro, reventa, herencia), con las cifras de <c>data/economy</c>.
+    /// Sin él, esos perks se describen por su contador.
+    /// </param>
+    public static string Describe(PerkDefinition perk, DescriptionTemplates templates, PerkCatalog? perks = null, PerkRunEffects? runEffects = null)
     {
         ArgumentNullException.ThrowIfNull(perk);
         ArgumentNullException.ThrowIfNull(templates);
@@ -115,6 +120,26 @@ public static class DescriptionGenerator
         }
 
         string text = templates.Get(Layout, "plain");
+
+        // Un perk cuyo único efecto es llevar la cuenta (addCounter) se describe por lo que esa cuenta paga a la run, si
+        // se conoce (PerkRunEffects): «el club cobra 3 de oro» en vez de «+1 al contador boxOfficeMatches».
+        if (runEffects?.For(perk.Id) is { } runEffect
+            && perk.ElseEffects.Count == 0
+            && perk.Effects.All(e => e.Type == EffectType.AddCounter))
+        {
+            string phrase = templates.Get(RunEffectsSection, runEffect.TemplateKey);
+            foreach (var (name, value) in runEffect.Values)
+            {
+                phrase = Replace(phrase, "{" + name + "}", value.ToString(CultureInfo.InvariantCulture));
+            }
+
+            effects.Clear().Append(phrase);
+            if (!runEffect.WithTrigger)
+            {
+                text = templates.Get(Layout, "plainNoTrigger");
+            }
+        }
+
         text = Replace(text, "{trigger}", trigger);
         text = Replace(text, "{effects}", effects.ToString());
 

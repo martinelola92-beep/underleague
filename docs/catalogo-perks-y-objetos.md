@@ -100,18 +100,18 @@ No cuentan para ningún maestro ni cierran nada.
 
 | Nombre | id | Rareza | Acto | Tipo | Requisitos | Qué hace |
 |---|---|---|---|---|---|---|
-| **Taquillero** | `box_office` | Común | 1 | relleno | — | Al terminar el partido, +1 al contador boxOfficeMatches. |
+| **Taquillero** | `box_office` | Común | 1 | relleno | — | Al terminar el partido, el club cobra 3 de oro. |
 | **Presión diagonal** | `diagonal_press` | Común | 1 | relleno | — | Al entrar, el compañero en diagonal hacia delante y compañero en diagonal hacia atrás multiplica por 2 sus opciones de robar el balón. |
 | **Teatrero** | `diver` | Común | 1 | relleno | — | Cuando le hacen falta, criterio del árbitro +10. |
 | **Pulmones de hierro** | `iron_lungs` | Común | 1 | relleno | — | Al empezar el partido, el portador +3 de resistencia por cada partido (máximo 10) durante el partido. |
-| **Ídolo local** | `local_idol` | Común | 1 | relleno | solo Forward | Al marcar, +1 al contador localIdolGoals. |
+| **Ídolo local** | `local_idol` | Común | 1 | relleno | solo Forward | Al marcar, el club cobra 5 de oro. |
 | **Sin florituras** | `no_nonsense` | Común | 1 | relleno | — | Al empezar el partido, el portador multiplica por 1,5 sus opciones de interceptar. |
 | **Comodín** | `odd_job` | Común | 1 | relleno | — | Al empezar el partido, el portador +1 de correa durante el partido. |
 | **Doble pivote** | `pivot_duo` | Común | 1 | relleno | — | Al empezar el partido, el compañero de su izquierda y compañero de su derecha multiplica por 2 sus opciones de robar el balón. |
 | **Descomposición lenta** | `slow_decay` | Común | 1 | relleno | solo No-muertos | Al empezar el partido, el portador +25 de resistencia porcentual a la fatiga. |
 | **Pulso lento** | `slow_pulse` | Común | 1 | relleno | — | Al empezar el partido, el portador +10 de bono de calidad de tiro. |
 | **Portero líbero** | `sweeper_keeper` | Común | 1 | relleno | solo portero | Al recuperar el balón, el jugador +2 de correa durante la jugada. |
-| **Máquina de publicidad** | `ad_machine` | Poco común | 1 | relleno | — | Cuando le lesionan, +1 al contador adMachineInjuries. |
+| **Máquina de publicidad** | `ad_machine` | Poco común | 1 | relleno | — | Cuando lesiona a un rival, el club cobra 8 de oro. |
 | **Lector de la batalla** | `battle_reader` | Poco común | 1 | relleno | — | Al empezar el partido, el portador multiplica por 2 sus opciones de interceptar por cada partido (hasta 4 veces). |
 | **Sangre en el agua** | `blood_in_the_water` | Poco común | 1 | condicional | solo Orcos | En una lesión, el equipo multiplica por 1,5 sus opciones de robar el balón. |
 | **Olfato de sangre** | `blood_scent` | Poco común | 1 | condicional | — | Al empezar el partido, el portador prefiere entrar al rival que ya está derribado. |
@@ -133,12 +133,12 @@ No cuentan para ningún maestro ni cierran nada.
 | **Línea adelantada** | `high_line` | Poco común | 1 | relleno | solo Defender | Al empezar el partido, el portador adelanta 2 casillas su casilla-hogar en el sentido de ataque de su equipo. |
 | **Disparador de presión alta** | `high_press_trigger` | Poco común | 1 | condicional | — | Al fallar un pase, el equipo multiplica por 2 sus opciones de interceptar. |
 | **Árbitro casero** | `home_ref` | Poco común | 1 | condicional | — | Al hacer falta, criterio del árbitro +10. |
-| **Pagar el hierro** | `iron_price` | Poco común | 1 | relleno | — | Cuando le lesionan, el portador +10 de bono a la probabilidad de lesión. |
+| **Pagar el hierro** | `iron_price` | Poco común | 1 | relleno | — | Cuando lesiona a un rival, el portador +10 de bono a la probabilidad de lesión. |
 | **Lector de carriles** | `lane_reader` | Poco común | 1 | relleno | — | Al recuperar el balón, el jugador multiplica por 2 sus opciones de interceptar por cada recuperación (hasta 5 veces). |
-| **Seguro de vida** | `life_insurance` | Poco común | 1 | condicional | — | En una muerte, +1 al contador lifeInsuranceClaims. |
+| **Seguro de vida** | `life_insurance` | Poco común | 1 | condicional | — | En una muerte, el club cobra 8 de oro. |
 | **Pies ligeros** | `light_feet` | Poco común | 1 | relleno | solo Elfos | Al empezar el partido, el portador multiplica por 2 su resistencia a las intercepciones. |
 | **Guardameta clásico** | `line_keeper` | Poco común | 1 | relleno | solo portero | Al empezar el partido, el portador -2 de correa durante el partido. |
-| **Préstamo** | `loan` | Poco común | 1 | rompe-reglas | — | Al empezar el partido, +1 al contador loanMatches. |
+| **Préstamo** | `loan` | Poco común | 1 | rompe-reglas | — | Se revende por el 100 % de su valor, sin la rebaja habitual. |
 | **Líder nato** | `natural_leader` | Poco común | 1 | condicional | etiqueta `Leader` | Al empezar el partido, el equipo multiplica por 3 sus opciones de robar el balón. |
 | **No vuelve** | `never_tracks_back` | Poco común | 1 | condicional | solo Forward | Al empezar el partido, el portador quiere replegarse más y el portador quiere buscar espacio más. |
 | **Caño** | `nutmeg` | Poco común | 1 | condicional | — | Al encarar, el rival cae derribado. |
@@ -156,9 +156,9 @@ No cuentan para ningún maestro ni cierran nada.
 | **Marcha sin fin** | `deathless_march` | Raro | 2 | relleno | solo No-muertos | Al empezar el partido, el equipo multiplica por 1,5 sus opciones de robar el balón por cada partido (hasta 3 veces). |
 | **Doble disparo** | `double_shot` | Raro | 2 | condicional | — | Al rechazarse su tiro, el portador repite la jugada en el mismo instante. |
 | **Terremoto** | `earthquake` | Raro | 2 | condicional | — | Al entrar, los rivales adyacentes cae derribado. |
-| **Sed acumulada** | `gathering_thirst` | Raro | 2 | relleno | — | Cuando le lesionan, el portador multiplica por 1,3 sus opciones de lesionar por cada gatheringThirstVictims (hasta 3 veces). |
+| **Sed acumulada** | `gathering_thirst` | Raro | 2 | relleno | — | Cuando lesiona a un rival, el portador multiplica por 1,3 sus opciones de lesionar por cada rival lesionado (hasta 3 veces). |
 | **Gigante amable** | `gentle_giant` | Raro | 2 | condicional | solo Orcos | Al empezar el partido, el compañero de delante multiplica por 2 sus opciones de interceptar. |
-| **Herencia** | `inheritance` | Raro | 2 | condicional | — | En una muerte, +1 al contador inheritanceClaims. |
+| **Herencia** | `inheritance` | Raro | 2 | condicional | — | En una muerte, su vinculado hereda el 20 % de cada atributo del muerto, hasta +2 por atributo. |
 | **Puerta de hierro** | `iron_gate` | Raro | 2 | rompe-reglas | solo Enanos | En una lesión, anula la lesión. |
 | **Kamikaze** | `kamikaze` | Raro | 2 | relleno | — | Al empezar el partido, el portador +15 de bono a la entrada dura y el portador +20 de bono a la probabilidad de lesión. |
 | **Último hombre** | `last_man` | Raro | 2 | condicional | solo Defender | Cuando un tiro rival va a puerta, el portador se interpone en la trayectoria y se queda con el balón el 20 % de las veces. |
@@ -171,7 +171,7 @@ No cuentan para ningún maestro ni cierran nada.
 | **Sombra** | `shadow` | Raro | 2 | relleno | solo Midfielder | Al empezar el partido, el portador retrasa 1 casillas su casilla-hogar en el sentido de ataque de su equipo. |
 | **Lengua de plata** | `silver_tongue` | Raro | 1 | rompe-reglas | — | Al ver una tarjeta, anula la tarjeta. |
 | **Arrollador** | `steamroller` | Raro | 2 | condicional | — | Al recuperar el balón, el portador repite la jugada en el mismo instante. |
-| **Superviviente** | `survivor` | Raro | 2 | relleno | — | En una muerte, el portador divide por 1,3 sus opciones de lesionarse por cada survivorLosses (hasta 3 veces). |
+| **Superviviente** | `survivor` | Raro | 2 | relleno | — | En una muerte, el portador divide por 1,3 sus opciones de lesionarse por cada compañero muerto (hasta 3 veces). |
 | **Hombre libre** | `free_man` | Legendario | 3 | rompe-reglas | — | Al empezar el partido, ningún marcador rival quiere hacerse cargo de el portador. |
 | **Mano de dios** | `hand_of_god` | Legendario | 3 | rompe-reglas | solo portero | Al marcar, anula el gol. |
 | **Prohibido morir** | `no_dying` | Legendario | 3 | rompe-reglas | — | En una muerte, anula la muerte. |

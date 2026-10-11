@@ -6,6 +6,7 @@ using Underleague.Sim.Engine;
 using Underleague.Sim.Perks;
 using Underleague.Sim.Run;
 using Underleague.Sim.Run.Bosses;
+using Underleague.Sim.Run.Systems.Economy;
 using Underleague.Sim.Run.Systems.Items;
 
 // Punto de entrada de /Balance (docs/fase0-diseno.md §4, docs/balance.md). Sin paquetes NuGet, parseo
@@ -34,7 +35,7 @@ try
     {
         // --describe [es|en]: catálogo de perks con descripción generada y distribución RF-069
         // (docs/fase1-diseno.md §8). No toca reference.json ni simula ningún partido.
-        RunDescribe(catalog, language);
+        RunDescribe(catalog, language, dataFiles);
         return 0;
     }
 
@@ -841,9 +842,10 @@ static IReadOnlyList<string> ResolveBuildIds(IReadOnlyList<string> requested, IR
 }
 
 /// <summary>--describe [es|en] (docs/fase1-diseno.md §8): catálogo completo con descripción generada y distribución RF-069.</summary>
-static void RunDescribe(Catalog catalog, string language)
+static void RunDescribe(Catalog catalog, string language, IReadOnlyDictionary<string, string> dataFiles)
 {
     var templates = catalog.Localization.Get(language);
+    var runEffects = PerkRunEffectsBuilder.Build(catalog.Perks, EconomyLoader.FromJson(dataFiles));
     var perks = catalog.Perks.All;
 
     string[] headers = { "id", "rareza", "tipo", "disparador", "descripcion" };
@@ -854,7 +856,7 @@ static void RunDescribe(Catalog catalog, string language)
             p.Rarity.ToString(),
             p.Kind.ToString(),
             p.Trigger.ToString(),
-            DescriptionGenerator.Describe(p, templates),
+            DescriptionGenerator.Describe(p, templates, catalog.Perks, runEffects),
         })
         .ToList();
 

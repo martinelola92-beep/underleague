@@ -187,6 +187,10 @@ public static class DataLoader
         // rasgo de modifyTraitScalar (C4) y las tres direcciones de modifyZoneShape (C8).
         "scalars", "zoneDimensions",
 
+        // Lo que un perk de contador aislado paga a la run (oro, reventa, herencia), con las cifras de data/economy
+        // (PerkRunEffects): sin esto la descripción enseñaba el contador interno («+1 al contador boxOfficeMatches»).
+        "runEffects",
+
         // ADR 0158: la línea que explica el rasgo de un árbitro en el ojeo (RT-035: tampoco se escribe a
         // mano en C#).
         "refereeTraits",

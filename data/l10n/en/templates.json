@@ -2,6 +2,7 @@
   "_doc": "Plantillas de descripción de perks, objetos y consumibles (RT-035). El texto de un efecto NO se escribe a mano: se compone desde el propio dato con estas plantillas, así que descripción y efecto no pueden divergir. Marcadores: {trigger} {condition} {effects} {limit} {target} {who} {tag} {attribute} {duration} {probability} {counter} {value:+} {value:+%} {valuePerCounter:+} {maxValue} {counterDivisor} {ticks} {event} {n} {position} {zone} {detail} {a} {b} {point} {scalar} {dimension} {markTag}. Las claves de 'conditions' son el nombre de la función y, para las funciones que devuelven un número o texto, el nombre más el sufijo de la comparación (Lt, Le, Gt, Ge, Eq, Ne). Secciones del rediseño espacial (paquete S): 'links' nombra las relaciones direccionales de la ADR 0021 (marcador {link}), 'immunities' los efectos de tipo immunity, 'points' el punto simbólico de un efecto relocate (marcador {point}), y 'startZones', 'startFlanks' y 'stats' los literales de las funciones startsIn, startsOn y stat (marcadores {startZone}, {startFlank}, {stat}, {cells}). Los valores porcentuales se escriben y se leen en puntos porcentuales enteros. Las claves con sufijo 'Hint' de 'startZones' y 'startFlanks' NO las usa el generador: son la explicación larga que la pantalla de Equipo enseña en un tooltip al pasar el ratón por el nombre de la zona dentro de la descripción de un perk (AW-F).",
   "layout": {
     "plain": "{trigger}, {effects}.",
+    "plainNoTrigger": "{effects}.",
     "conditionLine": "\nCondition: {condition}.",
     "limitLine": "\nLimit: {limit}.",
     "riskLine": "\nRisk: {risk}.",
@@ -386,6 +387,12 @@
     "mob": "mob",
     "refereeLeaves": "referee leaves"
   },
+  "runEffects": {
+    "counterGold": "the club earns {gold} gold",
+    "deathGold": "the club earns {gold} gold",
+    "resale": "sells for {percent}% of its value, without the usual cut",
+    "inheritance": "their linked teammate inherits {percent}% of each of the dead player's attributes, up to +{max} each"
+  },
   "counters": {
     "matches": "match",
     "injuries": "injury",
@@ -414,7 +421,9 @@
     "bruisedKnucklesFouls": "foul",
     "captainsVoiceMatches": "match",
     "scarVeteranMatches": "match",
-    "quickStudyPasses": "pass"
+    "quickStudyPasses": "pass",
+    "gatheringThirstVictims": "opponent injured",
+    "survivorLosses": "fallen teammate"
   },
   "links": {
     "beside": "partner in their column",
@@ -535,7 +544,7 @@
   "triggersReceived": {
     "TACKLE": "when tackled",
     "FOUL": "when fouled",
-    "INJURY": "when injured",
+    "INJURY": "when they injure an opponent",
     "DRIBBLE_ATTEMPTED": "when taken on"
   },
   "training": {

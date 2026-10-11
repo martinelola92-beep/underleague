@@ -142,6 +142,7 @@ public static class MarketView
             players.Add(PlayerRow(MercenaryCategory, i, offers.Mercenaries[i].Player, 0, state, catalog, templates, youth: false, mercenary: true));
         }
 
+        var runEffects = PerkRunEffectsBuilder.Build(catalog.Perks, economy);
         var perkRows = new List<MarketRow>(offers.Perks.Count);
         for (int i = 0; i < offers.Perks.Count; i++)
         {
@@ -154,7 +155,7 @@ public static class MarketView
                 perk.Id,
                 perk.Name.Es,
                 string.Empty,
-                DescriptionGenerator.Describe(perk, templates, catalog.Perks),
+                DescriptionGenerator.Describe(perk, templates, catalog.Perks, runEffects),
                 perk.Rarity,
                 offer.Price,
                 state.Gold >= offer.Price,

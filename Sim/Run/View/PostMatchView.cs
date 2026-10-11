@@ -266,7 +266,7 @@ public static class PostMatchView
             report.WentToGoldenGoal,
             report.Forfeit,
             MatchLogView.Minute(report.ClockTicks, regulationTicks),
-            PerkRows(report, events, catalog, templates, names, own, playback.Setup),
+            PerkRows(report, events, catalog, templates, names, own, playback.Setup, economy is null ? null : PerkRunEffectsBuilder.Build(catalog.Perks, economy)),
             ItemRows(report, items, templates, names, own),
             Casualties(events, names, playback.Setup, own, regulationTicks, catalog, stateAfterMatch, items, language),
             Cards(events, names, own, regulationTicks),
@@ -479,7 +479,8 @@ public static class PostMatchView
         DescriptionTemplates templates,
         IReadOnlyDictionary<int, string> names,
         int ownTeam,
-        MatchSetup setup)
+        MatchSetup setup,
+        PerkRunEffects? runEffects)
     {
         var ownIds = TeamPlayerIds(setup, ownTeam);
         var rows = new List<PerkReportRow>();
@@ -499,7 +500,7 @@ public static class PostMatchView
             rows.Add(new PerkReportRow(
                 entry.PerkId,
                 perk is null ? entry.PerkId : NameIn(perk.Name, templates.Language),
-                perk is null ? string.Empty : DescriptionGenerator.Describe(perk, templates, catalog.Perks),
+                perk is null ? string.Empty : DescriptionGenerator.Describe(perk, templates, catalog.Perks, runEffects),
                 entry.OwnerId,
                 names.GetValueOrDefault(entry.OwnerId) ?? string.Empty,
                 entry.Activations,
