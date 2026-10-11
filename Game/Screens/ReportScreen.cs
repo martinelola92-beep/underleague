@@ -289,7 +289,9 @@ public partial class ReportScreen : Control
                 0,
                 UiText.Get("ui.reward.badgePerk"),
                 Style.Accent,
-                UiText.Get("ui.report.perkRow", perk.PerkName, perk.OwnerName),
+                perk.Carriers > 1
+                    ? UiText.Get("ui.report.perkRowMany", perk.PerkName, perk.Carriers)
+                    : UiText.Get("ui.report.perkRow", perk.PerkName, perk.OwnerName),
                 UiText.Get(perk.Activations == 1 ? "ui.report.activationOne" : "ui.report.activations", perk.Activations),
                 Contribution(perk),
                 perk.Description,

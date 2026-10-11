@@ -549,6 +549,7 @@ public static class UiText
         ["ui.report.perks"] = "PERKS ACTIVADOS",
         ["ui.report.perksNone"] = "ningún perk tuyo llegó a activarse en este partido",
         ["ui.report.perkRow"] = "{0} · lo lleva {1}",
+        ["ui.report.perkRowMany"] = "{0} · lo llevan {1} jugadores",
         ["ui.report.activations"] = "{0} activaciones",
         ["ui.report.activationOne"] = "1 activación",
         ["ui.report.contribution"] = "en sus activaciones: {0}",
