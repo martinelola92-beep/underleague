@@ -81,13 +81,14 @@ public sealed class GoalKickDecisionTests
         Assert.True(checkedPasses > 0, "la muestra debía tener algún pase corto de saque de puerta");
     }
     /// <summary>
-    /// Revisión independiente de BX-8: el bono de peligro se quita SÓLO en el saque de puerta. En el saque el despeje
+    /// Revisión independiente de BX-8: el bono de peligro se quita SÓLO con el balón muerto (saque de puerta y, desde
+    /// BX-8b, falta a favor; el resto de reanudaciones no admite despejar). En el saque el despeje
     /// queda en base más presión; con el balón en juego en su área (tras blocar) sigue cobrando el peligro, que ahí sí
     /// puede ser un rechace. Umbrales: base 150, presión 3 por centésima (tope 450 sin peligro); el portero en su área
     /// tiene peligro de 90 y pico (volcado de BX-8), así que con el bono pasa de 500.
     /// </summary>
     [Fact]
-    public void OnlyTheGoalKickDropsTheDangerBonusOfTheClearance()
+    public void OnlyTheDeadBallDropsTheDangerBonusOfTheClearance()
     {
         var context = Catalog.Ai.Context;
         int withoutDanger = context.ClearBase + (context.ClearPressureBonusPerCenti * 100);
@@ -133,6 +134,43 @@ public sealed class GoalKickDecisionTests
         }
 
         Assert.True(goalKicks >= 5 && openPlay >= 5, $"muestra corta: {goalKicks} saques y {openPlay} balones en juego del portero");
+    }
+
+    /// <summary>
+    /// BX-8b, hermano de BX-8: en la falta a favor dentro del tercio propio el balón también está muerto y el peligro
+    /// (que mide dónde está el balón) tampoco describe amenaza: la barrera deja al rival a dos casillas. Medido con una
+    /// sonda de 200 partidos antes del arreglo: el sacador despejaba 12 de 63 faltas desde su tercio y conservaba el
+    /// 33 %, frente al 93 % del pase corto desde las mismas posiciones; después, 0 de 65. El techo del 5 % separa las dos
+    /// versiones sin exigir el cero, porque el despeje sigue siendo legal (ADR 0143) y es el último recurso de la
+    /// ADR 0141 §2.
+    /// </summary>
+    [Fact]
+    public void AFreeKickInTheOwnThirdIsNotAClearanceByDefault()
+    {
+        int kicks = 0;
+        int clears = 0;
+        for (ulong seed = 1; seed <= 200; seed++)
+        {
+            var trace = Simulator.Run(TestMatches.Reference(Catalog, seed), seed, Catalog, new SimConfig(CollectLog: false, Trace: true)).Trace!;
+            for (int f = 0; f + 1 < trace.FrameCount; f++)
+            {
+                int taker = trace.RestartTakerAt(f);
+                if (trace.RestartAt(f) != RestartKind.FreeKick || trace.RestartAt(f + 1) == RestartKind.FreeKick || taker < 0
+                    || Pitch.ZoneOf(trace.PositionAt(f, taker), trace.Players[taker].Team) != Zone.Own)
+                {
+                    continue;
+                }
+
+                kicks++;
+                if (trace.ActionAt(f + 1, taker) == PlayerAction.Clear)
+                {
+                    clears++;
+                }
+            }
+        }
+
+        Assert.True(kicks >= 40, $"la muestra debía tener faltas a favor en el tercio propio: {kicks}");
+        Assert.True(clears * 100 < kicks * 5, $"el sacador despejó {clears} de {kicks} faltas en su tercio (antes de BX-8b, 12 de 63)");
     }
 
     /// <summary>

@@ -88,6 +88,14 @@ public sealed class GoalResetTests
             var trace = result.Trace!;
             foreach (var goal in result.Events.Where(e => e.Type == EventType.Goal && e.Detail == "goal"))
             {
+                // Los dos goles sin reinicio que exime el test de arriba (el del final y el que abre la turba). Faltaba
+                // aquí: con BX-8b la semilla de la muestra dio con uno y First() reventaba.
+                if (result.Events.Any(e => e.Tick >= goal.Tick && e.Tick < goal.Tick + Catalog.Tuning.States.CelebratingTicks
+                        && e.Type is EventType.MatchEnd or EventType.MobStart))
+                {
+                    continue;
+                }
+
                 var reset = result.Events.First(e => e.Type == EventType.TeamsReset && e.Tick > goal.Tick);
 
                 // Desde el primer paso de la celebración (del fotograma del gol al siguiente) hasta el

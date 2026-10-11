@@ -218,7 +218,7 @@ Fusionado sobre `main` después de BX-10, la intercepción en la máxima aproxim
 
 Tests que pedía la revisión, añadidos en `GoalKickDecisionTests`. Los cuatro primeros fallan sin el cambio de
 `Utility.cs`, y la segunda revisión lo reprodujo:
-- `OnlyTheGoalKickDropsTheDangerBonusOfTheClearance`, con el volcado de utilidad: en el saque, el despeje no pasa de
+- `OnlyTheDeadBallDropsTheDangerBonusOfTheClearance`, con el volcado de utilidad: en el saque, el despeje no pasa de
   base más presión (450); sin el cambio cobra 620. Tras blocar, con el balón en juego, sigue cobrando el peligro.
 - `TheKeepersTeamKeepsTheBallAfterAGoalKickOftenEnough`: el equipo del portero conserva ≥ 25 % de los saques; sin el
   cambio, 5 de 100.
@@ -281,7 +281,7 @@ Hay 4 rojas, y ninguna es nueva frente a la base de BX-10:
 - La comba de la ADR 0152 (BN-A), sin medir.
 - Los pesos del portero, calibrados sobre el fallo.
 - Hermano sin ficha: la falta a favor dentro del área propia (`RestartAllows` → `_ => true`), donde el despeje cobra
-  el peligro con el balón muerto.
+  el peligro con el balón muerto. **Ficha y arreglo: [BX-8b](./BX-8b.md)** (11 oct).
 
 ## El receptor del saque largo (10 oct, noche)
 

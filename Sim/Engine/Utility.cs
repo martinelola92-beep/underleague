@@ -1248,9 +1248,14 @@ internal static class Utility
         // el peligro —que mide dónde está el balón, no quién amenaza— no describe ninguna amenaza. Con su bono
         // el despeje ganaba el 89 % de los saques y el rival se quedaba el 92 % de ellos. Sin él, despejar es
         // el tercer caso de la ADR 0141 §2: lo que queda cuando ni el pase corto ni el largo son seguros.
-        bool goalKick = ctx.RestartTakerIndex == p.Index && ctx.RestartTakerKind == RestartKind.GoalKick;
+        // BX-8b: lo mismo vale para la falta a favor en el tercio propio, el otro balón muerto que admite despejar
+        // (RestartAllows): el sacador despejaba 12 de 63 y conservaba el 33 %, frente al 93 % del pase corto desde
+        // las mismas posiciones. La amenaza real, el rival que aprieta, la sigue diciendo la presión.
+        // Vale para cualquier sacador porque hoy sólo el saque de puerta y la falta admiten despejar (RestartAllows): si otra
+        // reanudación pasa a admitirlo, hereda esta exención.
+        bool deadBall = ctx.RestartTakerIndex == p.Index;
         eval.Context = context.ClearBase
-            + (goalKick ? 0 : context.ClearDangerBonusPerCenti * danger)
+            + (deadBall ? 0 : context.ClearDangerBonusPerCenti * danger)
             + (context.ClearPressureBonusPerCenti * ctx.Pressure[p.Index]);
     }
 

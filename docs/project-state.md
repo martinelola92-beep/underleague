@@ -68,8 +68,9 @@ renders y no pastillas»*. Todo lo hecho, las fuentes y licencias, el pipeline (
      - `EvaluatePress` al centro del poseedor (BX-13);
      - BX-10c, el bloqueo del tiro;
      - BX-10b, la barrera en la línea de fondo;
-     - el bono de peligro tras blocar;
-     - la falta a favor dentro del área propia (BX-8).
+     - el bono de peligro tras blocar (único hermano de BX-8 que queda);
+     - ~~la falta a favor dentro del área propia~~: **hecho (11 oct, BX-8b)**, el despeje no cobra el peligro con el
+       balón muerto; despejes en faltas del tercio propio 12 de 63 → 0 y balón conservado 68 → 80 %.
   3. `runWinRate_noMarket` fuera de techo (economía; ADR 0193 la agrava). **Medido el 11 oct**
      (`docs/analisis/economia-mercado-2026-10-11.md`): el número de perks casi no mueve el partido (Spender compra el
      doble que Contextual y gana menos); el techo del 5 % no se alcanza con precios. **Decisión del revisor**: opciones
