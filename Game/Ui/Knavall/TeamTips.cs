@@ -97,7 +97,7 @@ public static class TeamTips
                 met ? Ink.GreenLight : new Color("ff8a7a")));
         }
 
-        return new Tip(UiText.Name(perk.Name), DescriptionGenerator.Describe(perk, state.Templates), Glyph.Perk, lines);
+        return new Tip(UiText.Name(perk.Name), DescriptionGenerator.Describe(perk, state.Templates, state.Catalog.Perks, state.RunEffects), Glyph.Perk, lines);
     }
 
     public static Tip Racial(TeamState state, PerkDefinition perk) =>

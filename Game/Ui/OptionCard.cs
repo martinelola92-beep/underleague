@@ -318,9 +318,11 @@ public partial class OptionCard : Control
             return;
         }
 
-        _titleLines.Add(firstPass[0]);
-        string remainder = string.Join(" ", firstPass.GetRange(1, firstPass.Count - 1));
-        _titleLines.AddRange(Style.Wrap(font, remainder, size, continuationWidth));
+        // Si el nombre no cabe entero en la fila del precio, va entero debajo. Partirlo alrededor del precio se leía
+        // «Perro de 11 oro / presa» o «Reliquia 36 oro / del mártir» (captura `mercado`, 11 oct 2026): el precio se
+        // metía en medio del nombre. La carta crece lo mismo, una línea.
+        _titleLines.Add(string.Empty);
+        _titleLines.AddRange(Style.Wrap(font, _title, size, continuationWidth));
     }
 
     /// <summary>Recalcula el alto según el estado; el contenedor se recoloca solo.</summary>

@@ -4,6 +4,7 @@ using Underleague.Game.Autoload;
 using Underleague.Sim.Data;
 using Underleague.Sim.Generation;
 using Underleague.Sim.Model;
+using Underleague.Sim.Perks;
 using Underleague.Sim.Placement;
 using Underleague.Sim.Random;
 using Underleague.Sim.Run;
@@ -36,7 +37,16 @@ public sealed class TeamState
         Team = team;
         Templates = catalog.Localization.Get(Language);
         _run = run;
+        RunEffects = run?.Systems?.Economy is { } economy
+            ? Underleague.Sim.Run.Systems.Economy.PerkRunEffectsBuilder.Build(catalog.Perks, economy)
+            : null;
     }
+
+    /// <summary>
+    /// Lo que los perks de contador aislado pagan a la run (oro, reventa, herencia), para que su descripción diga la
+    /// cifra y no el contador interno. Null sin una run detrás (equipo de pruebas, rival del ojeo).
+    /// </summary>
+    public PerkRunEffects? RunEffects { get; }
 
     private readonly RunController? _run;
 

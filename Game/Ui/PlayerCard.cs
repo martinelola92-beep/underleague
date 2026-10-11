@@ -216,7 +216,7 @@ public partial class PlayerCard : Control
             var perk = catalog.Perks.Find(id);
             if (perk is not null)
             {
-                perkLines.Add(perk.Name.Es + ": " + DescriptionGenerator.Describe(perk, templates));
+                perkLines.Add(perk.Name.Es + ": " + DescriptionGenerator.Describe(perk, templates, catalog.Perks, state.RunEffects));
 
                 // Cuántos de la plantilla llevan ya la etiqueta que cuenta el perk (RF-012d, BB-J): se sabe
                 // antes de comprar o de alinear a nadie, no solo tras leer su descripción.

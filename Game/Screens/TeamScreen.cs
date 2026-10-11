@@ -1145,7 +1145,7 @@ public partial class TeamScreen : Control
 
         string Line(PerkDefinition perk)
         {
-            string text = DescriptionGenerator.Describe(perk, _state.Templates).Replace("\n", " ");
+            string text = DescriptionGenerator.Describe(perk, _state.Templates, _state.Catalog.Perks, _state.RunEffects).Replace("\n", " ");
             string body = ZoneHintText.Markup(text, _state.Templates) ?? text.Replace("[", "[lb]");
             return "[b]" + UiText.Name(perk.Name) + ":[/b] " + body;
         }
@@ -1867,7 +1867,7 @@ public partial class TeamScreen : Control
             foreach (string id in player.Perks)
             {
                 if (_state.Catalog.Perks.Find(id) is { } perk
-                    && ZoneHintText.Spans(DescriptionGenerator.Describe(perk, _state.Templates), _state.Templates) is { Count: > 0 } spans)
+                    && ZoneHintText.Spans(DescriptionGenerator.Describe(perk, _state.Templates, _state.Catalog.Perks, _state.RunEffects), _state.Templates) is { Count: > 0 } spans)
                 {
                     OnCardZoneHint(spans[0].Kind, spans[0].Key);
                     return;
@@ -1924,7 +1924,7 @@ public partial class TeamScreen : Control
             foreach (string id in player.Perks)
             {
                 if (_state.Catalog.Perks.Find(id) is { } perk
-                    && ZoneHintText.Mentions(DescriptionGenerator.Describe(perk, _state.Templates), _state.Templates))
+                    && ZoneHintText.Mentions(DescriptionGenerator.Describe(perk, _state.Templates, _state.Catalog.Perks, _state.RunEffects), _state.Templates))
                 {
                     return player.Id;
                 }
