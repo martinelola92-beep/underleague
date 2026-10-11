@@ -133,6 +133,7 @@ public static class DescriptionGenerator
                 phrase = Replace(phrase, "{" + name + "}", value.ToString(CultureInfo.InvariantCulture));
             }
 
+            phrase = Replace(phrase, "{links}", links);
             effects.Clear().Append(phrase);
             if (!runEffect.WithTrigger)
             {

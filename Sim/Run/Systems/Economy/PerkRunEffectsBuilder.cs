@@ -23,26 +23,49 @@ public static class PerkRunEffectsBuilder
             }
 
             var effect = perk.Effects[0];
+            if (perk.Effects.Any(e => !string.Equals(e.Counter, effect.Counter, StringComparison.Ordinal)))
+            {
+                throw new InvalidOperationException($"perk {perk.Id}: varios contadores en un perk de contador aislado; PerkRunEffects describe uno");
+            }
+
             int counterRate = economy.CounterGold.RateFor(effect.Counter);
             int deathGold = economy.DeathGold.RateFor(perk.Id);
             int resale = economy.PerkResale.PercentFor(perk.Id);
             var inheritance = economy.Inheritance.RateFor(perk.Id);
 
+            var found = new List<PerkRunEffect>(1);
             if (counterRate > 0)
             {
-                byPerk[perk.Id] = new PerkRunEffect("counterGold", true, [new("gold", counterRate * effect.Value)]);
+                // Paga delta × tarifa del partido (GoldCalculator.CounterGoldRows): por activación, el valor del efecto.
+                found.Add(new PerkRunEffect("counterGold", true, [new("gold", counterRate * effect.Value)]));
             }
-            else if (deathGold > 0)
+
+            if (deathGold > 0)
             {
-                byPerk[perk.Id] = new PerkRunEffect("deathGold", true, [new("gold", deathGold)]);
+                // Una vez por muerte DEL PORTADOR, dentro o fuera del partido (DeathConsequences): «si muere», no «en una muerte».
+                found.Add(new PerkRunEffect("deathGold", false, [new("gold", deathGold)]));
             }
-            else if (resale > 0)
+
+            if (resale > 0)
             {
-                byPerk[perk.Id] = new PerkRunEffect("resale", false, [new("percent", resale)]);
+                // Es un MÍNIMO sobre el porcentaje por estado físico (MarketSystem.ResaleStatePercent): sano no cambia nada.
+                found.Add(new PerkRunEffect("resale", false, [new("percent", resale)]));
             }
-            else if (inheritance is { } rate)
+
+            if (inheritance is { } rate)
             {
-                byPerk[perk.Id] = new PerkRunEffect("inheritance", true, [new("percent", rate.Percent), new("max", rate.MaxPerAttribute)]);
+                // Recibe el enlace del propio perk (DeathConsequences.LinkedTeammate): la plantilla lo nombra con {links}.
+                found.Add(new PerkRunEffect("inheritance", false, [new("percent", rate.Percent), new("max", rate.MaxPerAttribute)]));
+            }
+
+            if (found.Count > 1)
+            {
+                throw new InvalidOperationException($"perk {perk.Id}: aparece en {found.Count} tablas de data/economy; PerkRunEffects describe una");
+            }
+
+            if (found.Count == 1)
+            {
+                byPerk[perk.Id] = found[0];
             }
         }
 

@@ -389,9 +389,9 @@
   },
   "runEffects": {
     "counterGold": "el club cobra {gold} de oro",
-    "deathGold": "el club cobra {gold} de oro",
-    "resale": "se revende por el {percent} % de su valor, sin la rebaja habitual",
-    "inheritance": "su vinculado hereda el {percent} % de cada atributo del muerto, hasta +{max} por atributo"
+    "deathGold": "si muere, el club cobra {gold} de oro",
+    "resale": "al venderlo, ni lesionado ni muerto se cobra por menos del {percent} % de su precio",
+    "inheritance": "si muere, el {links} hereda el {percent} % de cada atributo suyo, hasta +{max} por atributo"
   },
   "counters": {
     "matches": "partido",

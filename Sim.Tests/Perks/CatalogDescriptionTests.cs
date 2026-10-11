@@ -43,9 +43,9 @@ public sealed partial class CatalogDescriptionTests
     [InlineData("box_office", "Al terminar el partido, el club cobra 3 de oro.")]
     [InlineData("local_idol", "Al marcar, el club cobra 5 de oro.")]
     [InlineData("ad_machine", "Cuando lesiona a un rival, el club cobra 8 de oro.")]
-    [InlineData("life_insurance", "En una muerte, el club cobra 8 de oro.")]
-    [InlineData("loan", "Se revende por el 100 % de su valor, sin la rebaja habitual.")]
-    [InlineData("inheritance", "En una muerte, su vinculado hereda el 20 % de cada atributo del muerto, hasta +2 por atributo.")]
+    [InlineData("life_insurance", "Si muere, el club cobra 8 de oro.")]
+    [InlineData("loan", "Al venderlo, ni lesionado ni muerto se cobra por menos del 100 % de su precio.")]
+    [InlineData("inheritance", "Si muere, el compañero de su columna hereda el 20 % de cada atributo suyo, hasta +2 por atributo.")]
     public void ARunEffectPerkSaysWhatTheRunGets(string perkId, string expected)
     {
         string text = DescriptionGenerator.Describe(Catalog.Perks.Get(perkId), Catalog.Localization.Get("es"), Catalog.Perks, RunEffects);

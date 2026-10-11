@@ -135,10 +135,10 @@ No cuentan para ningún maestro ni cierran nada.
 | **Árbitro casero** | `home_ref` | Poco común | 1 | condicional | — | Al hacer falta, criterio del árbitro +10. |
 | **Pagar el hierro** | `iron_price` | Poco común | 1 | relleno | — | Cuando lesiona a un rival, el portador +10 de bono a la probabilidad de lesión. |
 | **Lector de carriles** | `lane_reader` | Poco común | 1 | relleno | — | Al recuperar el balón, el jugador multiplica por 2 sus opciones de interceptar por cada recuperación (hasta 5 veces). |
-| **Seguro de vida** | `life_insurance` | Poco común | 1 | condicional | — | En una muerte, el club cobra 8 de oro. |
+| **Seguro de vida** | `life_insurance` | Poco común | 1 | condicional | — | Si muere, el club cobra 8 de oro. |
 | **Pies ligeros** | `light_feet` | Poco común | 1 | relleno | solo Elfos | Al empezar el partido, el portador multiplica por 2 su resistencia a las intercepciones. |
 | **Guardameta clásico** | `line_keeper` | Poco común | 1 | relleno | solo portero | Al empezar el partido, el portador -2 de correa durante el partido. |
-| **Préstamo** | `loan` | Poco común | 1 | rompe-reglas | — | Se revende por el 100 % de su valor, sin la rebaja habitual. |
+| **Préstamo** | `loan` | Poco común | 1 | rompe-reglas | — | Al venderlo, ni lesionado ni muerto se cobra por menos del 100 % de su precio. |
 | **Líder nato** | `natural_leader` | Poco común | 1 | condicional | etiqueta `Leader` | Al empezar el partido, el equipo multiplica por 3 sus opciones de robar el balón. |
 | **No vuelve** | `never_tracks_back` | Poco común | 1 | condicional | solo Forward | Al empezar el partido, el portador quiere replegarse más y el portador quiere buscar espacio más. |
 | **Caño** | `nutmeg` | Poco común | 1 | condicional | — | Al encarar, el rival cae derribado. |
@@ -158,7 +158,7 @@ No cuentan para ningún maestro ni cierran nada.
 | **Terremoto** | `earthquake` | Raro | 2 | condicional | — | Al entrar, los rivales adyacentes cae derribado. |
 | **Sed acumulada** | `gathering_thirst` | Raro | 2 | relleno | — | Cuando lesiona a un rival, el portador multiplica por 1,3 sus opciones de lesionar por cada rival lesionado (hasta 3 veces). |
 | **Gigante amable** | `gentle_giant` | Raro | 2 | condicional | solo Orcos | Al empezar el partido, el compañero de delante multiplica por 2 sus opciones de interceptar. |
-| **Herencia** | `inheritance` | Raro | 2 | condicional | — | En una muerte, su vinculado hereda el 20 % de cada atributo del muerto, hasta +2 por atributo. |
+| **Herencia** | `inheritance` | Raro | 2 | condicional | — | Si muere, el compañero de su columna hereda el 20 % de cada atributo suyo, hasta +2 por atributo. |
 | **Puerta de hierro** | `iron_gate` | Raro | 2 | rompe-reglas | solo Enanos | En una lesión, anula la lesión. |
 | **Kamikaze** | `kamikaze` | Raro | 2 | relleno | — | Al empezar el partido, el portador +15 de bono a la entrada dura y el portador +20 de bono a la probabilidad de lesión. |
 | **Último hombre** | `last_man` | Raro | 2 | condicional | solo Defender | Cuando un tiro rival va a puerta, el portador se interpone en la trayectoria y se queda con el balón el 20 % de las veces. |

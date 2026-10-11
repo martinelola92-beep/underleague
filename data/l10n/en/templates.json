@@ -389,9 +389,9 @@
   },
   "runEffects": {
     "counterGold": "the club earns {gold} gold",
-    "deathGold": "the club earns {gold} gold",
-    "resale": "sells for {percent}% of its value, without the usual cut",
-    "inheritance": "their linked teammate inherits {percent}% of each of the dead player's attributes, up to +{max} each"
+    "deathGold": "if they die, the club earns {gold} gold",
+    "resale": "when sold, injured or dead, they never fetch less than {percent}% of their price",
+    "inheritance": "if they die, the {links} inherits {percent}% of each of their attributes, up to +{max} each"
   },
   "counters": {
     "matches": "match",
