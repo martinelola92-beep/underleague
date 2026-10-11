@@ -79,6 +79,10 @@ Equipo, ficha e Inicio) y las 5 hojas de modelo (`docs/ui/referencias/hojas-de-m
 - **Retratos renderizados**: 40 bustos (5 razas × 8) de los mismos modelos (`Scenes/RetratosRender.tscn` →
   `tools/arte/retratos.py` → `Game/Art/Portraits/`), en `Portrait.Draw` con el dibujo por código de reserva.
 
+- **El balón tapado se ve (11 oct)**: con figuras ×1,45 y un balón de 0,09 el cuerpo del portador lo escondía (en
+  `retrans-modelos-conduccion` no se veía en ningún píxel). Una silueta clara con la prueba de profundidad invertida
+  (`DepthTest = Inverted`, Godot 4.5+) asoma sólo donde algo lo tapa; el balón visible no cambia (capturas antes/después).
+
 ## Siguiente
 
 1. **Que el revisor lo vea**: el salto de lo plano por código a modelos con sombreado de cómic es grande; las caras de

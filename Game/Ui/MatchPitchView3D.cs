@@ -1094,6 +1094,24 @@ public partial class MatchPitchView3D : SubViewportContainer
         };
         _world.AddChild(_ball);
 
+        // El balón tapado se ve a través de quien lo tapa. Con figuras a escala de miniatura (×1,45) y un balón de 0,09,
+        // el cuerpo del portador lo escondía casi siempre: en la captura `retrans-modelos-conduccion` (balón a 0,32 casillas
+        // del pie) no se veía en ningún píxel. La silueta usa la prueba de profundidad INVERTIDA, así que sólo pinta lo
+        // que está detrás de algo: el balón visible queda exactamente igual. Mismo hijo, mismas visibilidad y posición.
+        _ball.AddChild(new MeshInstance3D
+        {
+            Mesh = new SphereMesh { Radius = BallRadius * 1.15f, Height = BallRadius * 2.3f, RadialSegments = 16, Rings = 8 },
+            MaterialOverride = new StandardMaterial3D
+            {
+                ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                AlbedoColor = new Color(1f, 0.95f, 0.75f, 0.8f),
+                Transparency = BaseMaterial3D.TransparencyEnum.Alpha,
+                DepthTest = BaseMaterial3D.DepthTestEnum.Inverted,
+                RenderPriority = 10,
+            },
+            CastShadow = GeometryInstance3D.ShadowCastingSetting.Off,
+        });
+
         // La sombra del balón en vuelo: un disco plano pegado al césped, oscuro y semitransparente. No es
         // una sombra de motor (el balón ya proyecta la suya, pero con una luz en tres cuartos cae lejos y
         // no dice la altura): es un marcador de POSICIÓN en el suelo, que es lo que falta para leer un

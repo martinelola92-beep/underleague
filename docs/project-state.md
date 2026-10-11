@@ -50,8 +50,12 @@ renders y no pastillas»*. Todo lo hecho, las fuentes y licencias, el pipeline (
     (BX-10b barrera en la línea de fondo, BX-10c bloqueo del tiro) y dos lecturas LIKELY: `contextualAdvantage` −3,3
     y oscilación +1,7 puntos. La puerta de doctrinas está roja, pero es ruido de semilla (en la base ya se invierte con
     la semilla 2). Todo en `docs/pendientes/BX-10.md`.
+- **BX-7 cerrada (11 oct, `main` e8d1547):** en el saque que abre la turba, la barrera clavaba en su borde a quien
+  volvía desde campo contrario (12 de 71 turbas, 13 s parados, CONFIRMED). Ahora rodea el círculo: 0 al tope,
+  reglamentario byte a byte igual, revisión independiente hecha. Puertas: rojas `orc_violence` (ya roja) y
+  `betterTeamWinRate` (ya fuera de banda en la base en 3 de 4 semillas). Ficha: `docs/pendientes/BX-7.md`.
 - **Siguiente paso**:
-  1. BX-7 (paquete 2 de `docs/pendientes/BX-playtest-3oct.md`) con `gameplay-debug`.
+  1. ~~BX-7~~ hecho.
   2. Hermanos abiertos, de más a menos visible:
      - `EvaluatePress` al centro del poseedor (BX-13);
      - BX-10c, el bloqueo del tiro;
