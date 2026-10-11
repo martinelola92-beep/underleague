@@ -54,6 +54,9 @@ renders y no pastillas»*. Todo lo hecho, las fuentes y licencias, el pipeline (
   volvía desde campo contrario (12 de 71 turbas, 13 s parados, CONFIRMED). Ahora rodea el círculo: 0 al tope,
   reglamentario byte a byte igual, revisión independiente hecha. Puertas: rojas `orc_violence` (ya roja) y
   `betterTeamWinRate` (ya fuera de banda en la base en 3 de 4 semillas). Ficha: `docs/pendientes/BX-7.md`.
+- **Legibilidad (11 oct):** el balón tapado se ve en silueta (`DepthTest` invertido); cartas del mercado sin el precio
+  en medio del nombre; el detalle del mapa ya no lo tapa el botón; el informe da una fila por perk; las descripciones
+  ya no enseñan contadores internos, dicen lo que pagan a la run y quién lesiona (BY-A, con revisión independiente).
 - **Siguiente paso**:
   1. ~~BX-7~~ hecho.
   2. Hermanos abiertos, de más a menos visible:
