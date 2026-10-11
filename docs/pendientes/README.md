@@ -22,6 +22,7 @@ viva anotada.
 
 | Id | Título | Estado |
 |---|---|---|
+| [BX-7](./BX-7.md) | En la turba, un jugador se queda clavado y el saque tarda 13 s | **Cerrada en `/Sim`** (11 oct): la barrera del saque lo clavaba en su borde al volver desde campo contrario; ahora rodea el círculo (12 de 71 turbas al tope → 0) |
 | [BX-10](./BX-10.md) | El balón pasa al lado de un jugador solo y no lo coge | **Arreglada en `/Sim`** (10 oct): la intercepción del pase se tira en la máxima aproximación (antes, al entrar en el radio: el factor de cercanía de AZ-B paso 2 no llegaba) |
 | [BX-10b](./BX-10b.md) | La barrera del saque no aparta al rival pegado a la línea de fondo | Abierta: causa CONFIRMED (`SlideAlongPitchToClear` sólo desliza por la banda); sin daño en el alcance real, eximida con cota en el test |
 | [BX-10c](./BX-10c.md) | El bloqueo del tiro tira al entrar en el radio y mide en el plano | Abierta, hermano de BX-10 sin evidencia de activación como síntoma |

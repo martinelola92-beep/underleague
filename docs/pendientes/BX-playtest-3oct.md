@@ -16,6 +16,9 @@ Capturas: `capturas/playtest-3oct-saque-portero.png` (saque de puerta al centro,
 
 ## Paquete 2 — Conducta en el campo (`/Sim`)
 - **BX-7** En una turba, el delantero se queda «bloqueado» sin poder volver a su campo porque el saque tarda mucho.
+  **Cerrada (11 oct), `/Sim`. Ficha: [BX-7](BX-7.md).** La barrera de la reanudación clavaba en su borde a quien volvía
+  desde campo contrario con su sitio detrás del balón (12 de 71 turbas, 13 s de saque parado, CONFIRMED). Ahora rodea
+  el círculo; 0 de 71 turbas al tope y el reglamentario byte a byte igual.
 - **BX-8** El portero saca de puerta sin criterio: lanza el balón al centro, hacia los rivales, en vez de buscar a un compañero abierto. Captura.
   **Ficha: [BX-8](BX-8.md). Diagnosticada (10 oct), arreglo en la rama `bx8-saque-de-puerta`, pendiente de decisión del
   revisor.** El portero despejaba el 89 % de los saques y el rival se quedaba el 92 %. Dos causas CONFIRMED:
