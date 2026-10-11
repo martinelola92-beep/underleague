@@ -138,6 +138,14 @@ public static class SubstitutionPoints
                 continue;
             }
 
+            // Al expulsado no se le sustituye, aunque se lesionara en el mismo tick: una entrada sin balón puede lesionar al
+            // propio infractor y costarle la roja a la vez. El motor ya lo rechaza (ADR 0094: el que sale tiene que haber
+            // salido por lesión o muerte, y está SentOff); ofrecerlo aquí tiraba la run entera (RunPolicy, orcos, semilla 4).
+            if (SentOffBy(events, e.Actor, e.Tick))
+            {
+                continue;
+            }
+
             var candidates = Candidates(side);
             if (candidates.Count == 0)
             {
@@ -530,6 +538,21 @@ public static class SubstitutionPoints
     /// sigue vivo, y si además deja el campo es por la lesión, que es lo que hay que decirle a quien
     /// abre la ventana de sustitución.
     /// </summary>
+    /// <summary>¿Vio el jugador una roja (no anulada por un perk) en ese tick o antes?</summary>
+    private static bool SentOffBy(IReadOnlyList<MatchEvent> events, int playerId, int tick)
+    {
+        for (int i = 0; i < events.Count; i++)
+        {
+            var e = events[i];
+            if (e.Type == EventType.Card && e.Actor == playerId && e.Tick <= tick && e.Detail == "red")
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static bool DiedAt(IReadOnlyList<MatchEvent> events, int playerId, int tick)
     {
         for (int i = 0; i < events.Count; i++)
