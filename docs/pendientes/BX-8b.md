@@ -88,4 +88,6 @@ banda sólo `betterTeamWinRate_human_60_vs_human_40`, que ya lo estaba en la bas
 
 ## Queda abierto
 
-- El bono de peligro **tras blocar**, con el balón en juego (BX-8 §3): ahí sí puede haber un rechace cerca. Sin decidir.
+- ~~El bono de peligro **tras blocar**~~: arreglado en [BX-8c](./BX-8c.md).
+- **Instrumento validado (11 oct, Regla J):** clasificadas por el evento del sacador en vez de por `ActionAt`, las 63
+  faltas coinciden una a una (12 despejes antes, 0 después).

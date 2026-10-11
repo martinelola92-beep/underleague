@@ -114,3 +114,9 @@ Cinco `bruised_knuckles` (se dispara con `FOUL`, +30 de `injure` por falta acumu
 `scar_tissue` (con `INJURY`) y tres `brute_boots`. Si el volumen de faltas no la mueve, lo siguiente es
 medir si esos contadores **llegan a acumular** dentro de un partido, o si el tope ×3 se alcanza tan tarde
 que el partido ya está decidido.
+
+## 11 oct 2026: BX-8c la pone roja en la semilla de la puerta
+
+`badBuildsLoseToNone_elf_out_of_zone` 45,34 en la puerta tras [BX-8c](./BX-8c.md). Por semilla (1-4), base → cambio:
+43,33/44,17/42,71/48,96 → 48,75/42,71/46,46/45,83; medias 44,79 → 45,94, deltas de signo cambiante, ~0,7 ET: LIKELY
+ruido sobre una métrica que ya estaba en el filo. `orc_violence` 57,97 → 56,67 de media (~0,8 ET).

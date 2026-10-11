@@ -163,7 +163,7 @@ Hallazgos y estado:
 
    El riesgo de que el arreglo del alcance aumentara los despejes queda **REJECTED**: el juego abierto mejora.
    - El bono de peligro tras blocar no se ha tocado (el despeje sigue en 77 %). Es la misma confusión de posición con
-     amenaza, pero tras una parada sí puede haber rivales cerca (rechace). **Sin decidir**, anotado como hermano.
+     amenaza, pero tras una parada sí puede haber rivales cerca (rechace). **Sin decidir**, anotado como hermano. **Decidido con medición y arreglado: [BX-8c](./BX-8c.md)** (11 oct).
 4. **Los pesos del portero se calibraron sobre el fallo** (`ShortPass` 600, `LongPass` 320, desde `1994bae`). Cierto.
    Se anota; recalibrarlos es balance aparte, con su lote.
 5. **BN-A / ADR 0152** (la comba de 3,5 sólo va en el despeje del portero). Con menos despejes cambia la forma del

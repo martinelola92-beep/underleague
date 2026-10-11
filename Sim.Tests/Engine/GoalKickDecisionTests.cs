@@ -55,7 +55,9 @@ public sealed class GoalKickDecisionTests
     {
         float shortRange = Catalog.Ai.Context.ShortPassMaxCells;
         int checkedPasses = 0;
-        foreach (var (trace, events, frame, taker) in GoalKicks(60))
+
+        // 200 partidos: el corto es el 2 % de los saques, y con BX-8c 60 partidos se quedaron sin ninguno.
+        foreach (var (trace, events, frame, taker) in GoalKicks(200))
         {
             if (trace.ActionAt(frame, taker) != PlayerAction.ShortPass)
             {
@@ -81,29 +83,33 @@ public sealed class GoalKickDecisionTests
         Assert.True(checkedPasses > 0, "la muestra debía tener algún pase corto de saque de puerta");
     }
     /// <summary>
-    /// Revisión independiente de BX-8: el bono de peligro se quita SÓLO con el balón muerto (saque de puerta y, desde
-    /// BX-8b, falta a favor; el resto de reanudaciones no admite despejar). En el saque el despeje
-    /// queda en base más presión; con el balón en juego en su área (tras blocar) sigue cobrando el peligro, que ahí sí
-    /// puede ser un rechace. Umbrales: base 150, presión 3 por centésima (tope 450 sin peligro); el portero en su área
-    /// tiene peligro de 90 y pico (volcado de BX-8), así que con el bono pasa de 500.
+    /// El bono de peligro del despeje se quita SÓLO cuando nadie puede amenazar: con el balón muerto (saque de puerta y
+    /// falta a favor, BX-8 y BX-8b) y con el portero dueño del balón en su área, que la cierra (ADR 0152, BX-8c): tras
+    /// blocar y también al recogerlo suelto o de un pase atrás, en el mismo tick. Ahí el
+    /// despeje queda en base más presión (tope 450). El control del otro lado: un jugador de campo con el balón en su
+    /// área, en juego y sin rival a menos del radio de presión, sí lo cobra —su despeje pasa de la base en al menos 100—.
     /// </summary>
     [Fact]
-    public void OnlyTheDeadBallDropsTheDangerBonusOfTheClearance()
+    public void OnlyWhenNobodyCanThreatenDoesTheClearanceDropTheDangerBonus()
     {
         var context = Catalog.Ai.Context;
         int withoutDanger = context.ClearBase + (context.ClearPressureBonusPerCenti * 100);
         int goalKicks = 0;
-        int openPlay = 0;
+        int caught = 0;
+        int pickedUp = 0;
+        int outfield = 0;
 
-        // El balón en juego se toma en un blocaje (estado Holding, la parada con el balón en las manos): el portero que
-        // recoge un balón que ha salido va a sacar de puerta, y su primera decisión ya es el saque (medido, semilla 4).
-        for (ulong seed = 1; seed <= 20 && (goalKicks < 5 || openPlay < 5); seed++)
+        // El blocaje se toma en el estado Holding (la parada con el balón en las manos): el portero que recoge un balón
+        // que ha salido va a sacar de puerta, y su primera decisión ya es el saque (medido, semilla 4).
+        for (ulong seed = 1; seed <= 40 && (goalKicks < 5 || caught < 5 || pickedUp < 5 || outfield < 5); seed++)
         {
             var setup = TestMatches.Reference(Catalog, seed);
             var trace = Simulator.Run(setup, seed, Catalog, new SimConfig(CollectLog: false, Trace: true)).Trace!;
             int? goalKickAt = null;
-            int? openPlayAt = null;
-            for (int f = 1; f < trace.FrameCount && (goalKickAt is null || openPlayAt is null); f++)
+            int? caughtAt = null;
+            int? pickedUpAt = null;
+            int? outfieldAt = null;
+            for (int f = 1; f < trace.FrameCount && (goalKickAt is null || caughtAt is null || pickedUpAt is null || outfieldAt is null); f++)
             {
                 int taker = trace.RestartTakerAt(f);
                 if (goalKickAt is null && trace.RestartAt(f) == RestartKind.GoalKick && taker >= 0 && trace.Players[taker].Role == Position.Goalkeeper)
@@ -112,11 +118,33 @@ public sealed class GoalKickDecisionTests
                 }
 
                 int owner = trace.BallOwnerAt(f);
-                if (openPlayAt is null && owner >= 0 && trace.BallOwnerAt(f - 1) != owner && trace.Players[owner].Role == Position.Goalkeeper
-                    && trace.RestartAt(f) == RestartKind.None && trace.PhaseAt(f) == MatchPhase.OpenPlay
-                    && trace.StateAt(f, owner) == PlayerState.Holding)
+                if (owner < 0 || trace.RestartAt(f) != RestartKind.None || trace.PhaseAt(f) != MatchPhase.OpenPlay)
                 {
-                    openPlayAt = f;
+                    continue;
+                }
+
+                if (caughtAt is null && trace.BallOwnerAt(f - 1) != owner && trace.Players[owner].Role == Position.Goalkeeper
+                    && trace.StateAt(f, owner) == PlayerState.Holding && Pitch.IsInArea(trace.BallAt(f), trace.Players[owner].Team))
+                {
+                    caughtAt = f;
+                }
+
+                // Sin una reanudación en los fotogramas de alrededor: el sacador de una falta decide justo cuando la
+                // traza ya la da por cerrada, y ese despeje, con el balón muerto, no cobra el peligro (BX-8b).
+                // Recogida suelta o pase atrás: el portero decide en el mismo tick en que se hace con el balón, que es
+                // donde un área publicada al principio del tick todavía constaba como abierta (revisión de BX-8c).
+                if (pickedUpAt is null && trace.BallOwnerAt(f - 1) != owner && trace.Players[owner].Role == Position.Goalkeeper
+                    && trace.StateAt(f, owner) != PlayerState.Holding && f >= 2 && trace.RestartAt(f - 1) == RestartKind.None
+                    && Pitch.IsInArea(trace.BallAt(f), trace.Players[owner].Team))
+                {
+                    pickedUpAt = f;
+                }
+
+                if (outfieldAt is null && trace.Players[owner].Role != Position.Goalkeeper && f >= 2
+                    && trace.RestartAt(f - 1) == RestartKind.None && trace.RestartAt(f - 2) == RestartKind.None
+                    && Pitch.IsInArea(trace.BallAt(f), trace.Players[owner].Team) && NearestRival(trace, f, owner) > PitchConstants.PressureRadius + 0.2f)
+                {
+                    outfieldAt = f;
                 }
             }
 
@@ -126,14 +154,109 @@ public sealed class GoalKickDecisionTests
                 Assert.True(kick.Context <= withoutDanger, $"semilla {seed}: el despeje del saque de puerta cobra {kick.Context}, más que base y presión ({withoutDanger})");
             }
 
-            if (openPlayAt is { } o && ClearAt(setup, seed, trace, o, trace.BallOwnerAt(o)) is { Rejected: false } play)
+            // La primera decisión es al acabar el Holding: mientras sostiene el balón no decide.
+            int? decideAt = null;
+            if (caughtAt is { } c0)
             {
-                openPlay++;
-                Assert.True(play.Context > withoutDanger + 50, $"semilla {seed}: el despeje del portero en juego cobra {play.Context}; sin el bono de peligro no pasaría de {withoutDanger}");
+                int keeper = trace.BallOwnerAt(c0);
+                for (int f = c0; f < trace.FrameCount && trace.BallOwnerAt(f) == keeper; f++)
+                {
+                    if (trace.StateAt(f, keeper) != PlayerState.Holding)
+                    {
+                        decideAt = f;
+                        break;
+                    }
+                }
+            }
+
+            if (decideAt is { } c && ClearAt(setup, seed, trace, c, trace.BallOwnerAt(c)) is { Rejected: false } held)
+            {
+                caught++;
+                Assert.True(held.Context <= withoutDanger, $"semilla {seed}: el despeje del portero tras blocar cobra {held.Context}, más que base y presión ({withoutDanger})");
+            }
+
+            if (pickedUpAt is { } u && ClearAt(setup, seed, trace, u, trace.BallOwnerAt(u)) is { Rejected: false } picked)
+            {
+                pickedUp++;
+                Assert.True(picked.Context <= withoutDanger, $"semilla {seed}, tick {trace.TickAt(u)}: el despeje del portero que recoge el balón en su área cobra {picked.Context}, más que base y presión ({withoutDanger})");
+            }
+
+            if (outfieldAt is { } o && ClearAt(setup, seed, trace, o, trace.BallOwnerAt(o)) is { Rejected: false } play)
+            {
+                outfield++;
+                Assert.True(play.Context >= context.ClearBase + 100, $"semilla {seed}, tick {trace.TickAt(o)}: el despeje de un jugador de campo en su área cobra {play.Context}; sin rival que apriete, sólo el bono de peligro lo separa de la base ({context.ClearBase})");
             }
         }
 
-        Assert.True(goalKicks >= 5 && openPlay >= 5, $"muestra corta: {goalKicks} saques y {openPlay} balones en juego del portero");
+        Assert.True(goalKicks >= 5 && caught >= 5 && pickedUp >= 5 && outfield >= 5, $"muestra corta: {goalKicks} saques, {caught} blocajes, {pickedUp} recogidas y {outfield} balones de campo en el área");
+    }
+
+    /// <summary>
+    /// BX-8c, el resultado: tras blocar dentro de su área, el equipo del portero se queda el balón (primer dueño
+    /// distinto del portero, o quien saca la reanudación siguiente). Con este instrumento, 133 de 408 (33 %) cuando el
+    /// despeje cobraba el peligro —despejaba el 86 %— y 260 de 409 (64 %) sin él. El suelo del 50 % separa las dos.
+    /// </summary>
+    [Fact]
+    public void TheKeepersTeamKeepsTheBallAfterACatchOftenEnough()
+    {
+        int catches = 0;
+        int kept = 0;
+        for (ulong seed = 1; seed <= 200; seed++)
+        {
+            var trace = Simulator.Run(TestMatches.Reference(Catalog, seed), seed, Catalog, new SimConfig(CollectLog: false, Trace: true)).Trace!;
+            for (int f = 1; f < trace.FrameCount; f++)
+            {
+                int keeper = trace.BallOwnerAt(f);
+                if (keeper < 0 || trace.BallOwnerAt(f - 1) == keeper || trace.Players[keeper].Role != Position.Goalkeeper
+                    || trace.StateAt(f, keeper) != PlayerState.Holding || trace.RestartAt(f) != RestartKind.None
+                    || !Pitch.IsInArea(trace.BallAt(f), trace.Players[keeper].Team))
+                {
+                    continue;
+                }
+
+                int next = -1;
+                for (int g = f + 1; g < trace.FrameCount && g < f + 200; g++)
+                {
+                    if (trace.RestartAt(g) != RestartKind.None)
+                    {
+                        next = trace.RestartTakerAt(g);
+                        break;
+                    }
+
+                    int owner = trace.BallOwnerAt(g);
+                    if (owner >= 0 && owner != keeper)
+                    {
+                        next = owner;
+                        break;
+                    }
+                }
+
+                catches++;
+                if (next >= 0 && trace.Players[next].Team == trace.Players[keeper].Team)
+                {
+                    kept++;
+                }
+
+                f += 10;
+            }
+        }
+
+        Assert.True(catches >= 200, $"muestra corta: {catches} blocajes");
+        Assert.True(kept * 100 >= catches * 50, $"el equipo del portero conservó {kept} de {catches} blocajes ({100.0 * kept / catches:F0} %; con el bono de peligro, 133 de 408)");
+    }
+
+    private static float NearestRival(MatchTrace trace, int frame, int player)
+    {
+        float best = float.MaxValue;
+        for (int q = 0; q < trace.Players.Count; q++)
+        {
+            if (trace.Players[q].Team != trace.Players[player].Team && trace.OnPitchAt(frame, q))
+            {
+                best = Math.Min(best, Vec2.Distance(trace.PositionAt(frame, player), trace.PositionAt(frame, q)));
+            }
+        }
+
+        return best;
     }
 
     /// <summary>

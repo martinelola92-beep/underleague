@@ -6298,7 +6298,7 @@ internal sealed class MatchEngine : IPerkWorld
         }
 
         var owner = _ball.Owner;
-        return owner is { IsOutfield: false } && Pitch.IsInArea(_ball.Position, owner.Team) ? owner.Team : -1;
+        return owner is not null && Utility.KeeperHoldsInOwnArea(owner, _ball.Position) ? owner.Team : -1;
     }
 
     /// <summary>Saca un punto del área que defiende <paramref name="team"/> por su borde más cercano.</summary>

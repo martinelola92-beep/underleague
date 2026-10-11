@@ -61,12 +61,16 @@ public sealed class MobNarrowingTests
     // (Utility.EvaluateClear, balón muerto). Antes de renovarlas, el árbol sin ese cambio pasaba las seis. Valores anteriores
     // (BX-7): 11802565828531529863 / 35 / 16912896484881689970 y, con las reglas apagadas, 5672238047937891983 / 37 /
     // 4527772544229341512.
-    private const ulong RegulationOnlyBefore = 6210812062334602913UL;
-    private const int RegulationOnlyMatches = 35;
+    // Renovadas el 11 oct 2026 por BX-8c: el portero con el balón en su área (cerrada, ADR 0152) tampoco cobra el bono de
+    // peligro en el despeje. Antes de renovarlas, main (d7995de, BX-8b) pasaba las seis. Valores anteriores (BX-8b):
+    // 6210812062334602913 / 35 / 6930658435677953924 y, con las reglas apagadas, 12438416515188529232 / 38 /
+    // 5654105993874569265.
+    private const ulong RegulationOnlyBefore = 4307792465364797863UL;
+    private const int RegulationOnlyMatches = 36;
     // Y otra vez, sólo la de TODOS los partidos (2589647808657858224 -> 16912896484881689970), por BX-7 (11 oct 2026): en el
     // saque de centro que abre la turba, quien vuelve desde campo contrario rodea la barrera en vez de quedarse clavado en su
     // borde. Las del reglamentario no cambian (el rodeo sólo actúa en campo contrario, y tras un gol nadie anda desde allí).
-    private const ulong EveryMatchBefore = 6930658435677953924UL;
+    private const ulong EveryMatchBefore = 3709357635564605170UL;
 
     // Las mismas tres huellas con las reglas de las ADR 0184/0186 apagadas (positioningHoldBonus = 0, BV-B apagada) y las
     // bases de lesión de antes: el motor de antes de la ADR 0184 más los arreglos sin dato posteriores (BO-A).
@@ -77,10 +81,10 @@ public sealed class MobNarrowingTests
     // Y otra vez, sólo la de TODOS los partidos (13369841099302331167 -> 8688216646563204419), por el segundo arreglo sin
     // dato de la ADR 0185: el sacador del saque de centro tiene que llegar andando (TakerInPlaceCells) también con
     // accelTicks 0. Con esa comprobación condicionada otra vez al arranque, la huella vieja vuelve (comprobado).
-    private const ulong RegulationOnlyBeforeAdr0184PlusBoA = 12438416515188529232UL;
-    private const int RegulationOnlyMatchesBeforeAdr0184PlusBoA = 38;
+    private const ulong RegulationOnlyBeforeAdr0184PlusBoA = 11132563582499268854UL;
+    private const int RegulationOnlyMatchesBeforeAdr0184PlusBoA = 39;
     // BX-7 (11 oct 2026), lo mismo con las reglas apagadas: 13589622101850632235 -> 4527772544229341512.
-    private const ulong EveryMatchBeforeAdr0184PlusBoA = 5654105993874569265UL;
+    private const ulong EveryMatchBeforeAdr0184PlusBoA = 11036718760857116434UL;
 
     private const float Eps = 0.001f;
 

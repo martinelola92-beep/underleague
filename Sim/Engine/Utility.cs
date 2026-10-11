@@ -1224,6 +1224,14 @@ internal static class Utility
     }
 
     /// <summary>
+    /// ¿Tiene <paramref name="owner"/>, portero, el balón dentro del área que defiende? Es la condición que la cierra
+    /// (ADR 0152, RF-057d): una sola definición para el motor, que saca a los jugadores de campo, y para la utilidad,
+    /// que deja de ver amenaza en el despeje (BX-8c).
+    /// </summary>
+    internal static bool KeeperHoldsInOwnArea(MatchPlayer owner, Vec2 ball) =>
+        !owner.IsOutfield && Pitch.IsInArea(ball, owner.Team);
+
+    /// <summary>
     /// Despejar (Gameplay AI Foundations Pass, P4). Simétrica de <see cref="EvaluateShield"/>: la
     /// precondición dura es el <b>peligro</b>, porque un despeje sin peligro no es prudencia, es regalar el
     /// balón. Puntúan el peligro y la presión; la fuerza <b>no</b> entra en la decisión —entra en la
@@ -1253,9 +1261,12 @@ internal static class Utility
         // las mismas posiciones. La amenaza real, el rival que aprieta, la sigue diciendo la presión.
         // Vale para cualquier sacador porque hoy sólo el saque de puerta y la falta admiten despejar (RestartAllows): si otra
         // reanudación pasa a admitirlo, hereda esta exención.
-        bool deadBall = ctx.RestartTakerIndex == p.Index;
+        // BX-8c: y para el portero con el balón en su área, que la cierra (ADR 0152, RF-057d): nadie puede cargarle y los
+        // jugadores de campo salen. Tras blocar despejaba el 86 % y su equipo conservaba el 34 %. Se evalúa aquí y no con
+        // el área que el motor publica al principio del tick: si la recoge a mitad de tick, decide en ese mismo tick.
+        bool noThreat = ctx.RestartTakerIndex == p.Index || KeeperHoldsInOwnArea(p, ctx.Ball.Position);
         eval.Context = context.ClearBase
-            + (deadBall ? 0 : context.ClearDangerBonusPerCenti * danger)
+            + (noThreat ? 0 : context.ClearDangerBonusPerCenti * danger)
             + (context.ClearPressureBonusPerCenti * ctx.Pressure[p.Index]);
     }
 

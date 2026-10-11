@@ -149,8 +149,11 @@ public sealed class KeeperAreaTests
     [Fact]
     public void TheKeepersClearanceDoesNotComeBackToHim()
     {
+        // 400 partidos y no Seeds (60): desde BX-8c el portero con el balón en su área ya casi no despeja (360 despejes
+        // en 150 partidos -> 52) y la muestra quedaba por debajo de su mínimo. La cota es por partido y no cambia.
+        const int matches = 400;
         int clearances = 0, back = 0;
-        for (ulong seed = 1; seed <= Seeds; seed++)
+        for (ulong seed = 1; seed <= matches; seed++)
         {
             var result = Run(seed);
             var trace = result.Trace!;
@@ -182,7 +185,7 @@ public sealed class KeeperAreaTests
         // comba, 3 (0,05). Con la ADR 0155 (el equipo que saca de puerta sube a buscar hueco y deja al portero
         // más solo) son 13 (0,22), por el mismo mecanismo pero raro. 30 (0,5 por partido) caza el bucle con
         // mucho margen sin confundirlo con eso. La primera cota, 6, no tenía más procedencia que haber visto 0.
-        Assert.True(back <= Seeds / 2, $"{back} despejes del portero le vuelven en {Seeds} partidos: el bucle ha vuelto");
+        Assert.True(back <= matches / 2, $"{back} despejes del portero le vuelven en {matches} partidos: el bucle ha vuelto");
     }
 
     /// <summary>
