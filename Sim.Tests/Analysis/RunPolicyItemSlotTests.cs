@@ -38,6 +38,13 @@ public sealed class RunPolicyItemSlotTests
     /// </summary>
     private const int Runs = 48;
 
+    /// <summary>
+    /// Runs de <see cref="TheGateNeverBlocksADoctrineThatDoesNotLookAtValue"/>. Saver es la doctrina que menos compra, y con
+    /// 48 volvió a cruzar a cero en BX-10c (11 oct 2026), sólo por mover el RNG del partido: el bloqueo del tiro pasó a medir
+    /// en esfera. Sólo este test la necesita, porque es el único que mira a Saver.
+    /// </summary>
+    private const int DoctrineRuns = 96;
+
     private const ulong Seed = 1;
 
     private const string ClubId = "item_slot_club";
@@ -60,7 +67,7 @@ public sealed class RunPolicyItemSlotTests
     /// Memoria de lotes ya jugados. Los tests comparten configuraciones —el gate abierto sale en tres— y
     /// una run completa cuesta lo que cuesta: sin esto la clase juega el mismo lote tres veces.
     /// </summary>
-    private static readonly Dictionary<(RunPolicyOptions Options, bool Measured), int> Memo = new();
+    private static readonly Dictionary<(RunPolicyOptions Options, bool Measured, int Runs), int> Memo = new();
 
     private sealed record World(
         Catalog Catalog,
@@ -79,8 +86,8 @@ public sealed class RunPolicyItemSlotTests
     [InlineData(PurchaseDoctrine.Saver)]
     public void TheGateNeverBlocksADoctrineThatDoesNotLookAtValue(PurchaseDoctrine doctrine)
     {
-        int free = ItemsBought(RunPolicyOptions.For(doctrine));
-        int barred = ItemsBought(RunPolicyOptions.For(doctrine) with { MinItemValueMarket = AboveEveryTable });
+        int free = ItemsBought(RunPolicyOptions.For(doctrine), runs: DoctrineRuns);
+        int barred = ItemsBought(RunPolicyOptions.For(doctrine) with { MinItemValueMarket = AboveEveryTable }, runs: DoctrineRuns);
 
         Assert.True(free > 0, $"{doctrine} no compró ningún objeto en el mercado: la muestra no prueba nada");
         Assert.Equal(free, barred);
@@ -178,11 +185,11 @@ public sealed class RunPolicyItemSlotTests
     }
 
     /// <summary>Runs con la política dada; devuelve los objetos comprados <b>en el mercado</b> en total.</summary>
-    private static int ItemsBought(RunPolicyOptions options, StandardRunSystems? systems = null)
+    private static int ItemsBought(RunPolicyOptions options, StandardRunSystems? systems = null, int runs = Runs)
     {
         var world = Data.Value;
         var run = systems ?? world.Standard;
-        var key = (options, ReferenceEquals(run, world.Standard));
+        var key = (options, ReferenceEquals(run, world.Standard), runs);
         lock (Memo)
         {
             if (Memo.TryGetValue(key, out int cached))
@@ -192,7 +199,7 @@ public sealed class RunPolicyItemSlotTests
         }
 
         int bought = 0;
-        for (int i = 0; i < Runs; i++)
+        for (int i = 0; i < runs; i++)
         {
             var setup = run.NewRunSetup(ClubId, world.Races[i % world.Races.Count], world.Files)
                 with { GeneratedQuality = StartingQuality };

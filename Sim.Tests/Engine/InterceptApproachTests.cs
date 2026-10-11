@@ -69,4 +69,66 @@ public sealed class InterceptApproachTests
         Assert.True(measured >= 100, $"muestra escasa: {measured} intercepciones medibles");
         Assert.True(atClosest * 100 > measured * 70, $"sólo {atClosest} de {measured} cortes en el punto más cercano del pase");
     }
+
+    /// <summary>
+    /// BX-10c: el bloqueo del tiro mide el alcance en esfera (ADR 0135, decisión 3), como el corte del pase. Ningún defensa
+    /// bloquea un balón que le pasa por encima de su radio. La cuota de bloqueo se sube a 100 (<c>shot.blockChancePercent</c>,
+    /// el doble de la publicada) para tener muestra: cambia cuántos, no dónde.
+    /// <para>El instrumento (Regla J, revisión independiente): la traza enseña el balón bloqueado con altura 0, porque
+    /// <c>Ball.SetLoose</c> la pone a cero. La altura del tick del bloqueo sale de la parábola de los tres fotogramas
+    /// anteriores, que es exacta porque la comba es cuadrática en el tick. Sólo cuentan los bloqueos cuyos fotogramas son
+    /// todos del mismo vuelo; no lo son, por ejemplo, los remates de primera. Del que bloquea se toma la posición más
+    /// favorable de los dos fotogramas, porque se mueve dentro del tick. Casi todos los bloqueos caen en los primeros
+    /// ticks del vuelo y no son medibles, de ahí los 3200 partidos (~45 s). Medido en ellos: con el alcance en el plano,
+    /// 18 de 65 bloqueos medibles iban por encima; con la esfera, 0 de 49.</para>
+    /// </summary>
+    [Fact]
+    public void NoShotIsBlockedAboveTheDefendersReach()
+    {
+        var catalog = Catalog with { Tuning = Catalog.Tuning with { Shot = Catalog.Tuning.Shot with { BlockChancePercent = 100 } } };
+        float radius = catalog.Tuning.Pass.InterceptRadiusCells;
+        int measured = 0;
+        var above = new List<string>();
+        for (ulong seed = 1; seed <= 3200; seed++)
+        {
+            var result = Simulator.Run(TestMatches.Reference(catalog, seed), seed, catalog, new SimConfig(CollectLog: false, Trace: true));
+            var trace = result.Trace!;
+            foreach (var e in result.Events)
+            {
+                if (e.Type != EventType.ShotBlocked)
+                {
+                    continue;
+                }
+
+                int cut = trace.FrameOfTick(e.Tick);
+                if (cut < 3 || trace.TickAt(cut - 3) != e.Tick - 3
+                    || !trace.BallInFlightAt(cut - 1) || !trace.BallInFlightAt(cut - 2) || !trace.BallInFlightAt(cut - 3))
+                {
+                    continue;
+                }
+
+                var b1 = trace.BallAt(cut - 1);
+                var b2 = trace.BallAt(cut - 2);
+                var step = b1 - b2;
+                if (Vec2.Distance(trace.BallAt(cut), b1 + step) > 0.05f || Vec2.Distance(b2 - step, trace.BallAt(cut - 3)) > 0.05f)
+                {
+                    continue;
+                }
+
+                float z = (3f * trace.BallHeightAt(cut - 1)) - (3f * trace.BallHeightAt(cut - 2)) + trace.BallHeightAt(cut - 3);
+                int blocker = Enumerable.Range(0, trace.Players.Count).First(p => trace.Players[p].Id == e.Actor);
+                float reach = Math.Min(
+                    MatchEngine.ReachDistance(trace.PositionAt(cut - 1, blocker), trace.BallAt(cut), z),
+                    MatchEngine.ReachDistance(trace.PositionAt(cut, blocker), trace.BallAt(cut), z));
+                measured++;
+                if (reach >= radius + 0.01f)
+                {
+                    above.Add($"semilla {seed}, tick {e.Tick}: altura {z:F2}, a {reach:F2}");
+                }
+            }
+        }
+
+        Assert.True(measured >= 35, $"muestra escasa: {measured} bloqueos medibles");
+        Assert.True(above.Count == 0, $"{above.Count} de {measured} bloqueos por encima del alcance: {string.Join("; ", above.Take(5))}");
+    }
 }

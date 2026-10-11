@@ -66,7 +66,8 @@ renders y no pastillas»*. Todo lo hecho, las fuentes y licencias, el pipeline (
      todas las plantillas). `EvaluatePress` descartado como causa del temblor (BX-13: sin activación).
   2. Hermanos abiertos, de más a menos visible:
      - `EvaluatePress` al centro del poseedor (BX-13), sin activación;
-     - BX-10c, el bloqueo del tiro;
+     - ~~BX-10c, el bloqueo del tiro~~: **hecho (11 oct)**, alcance en esfera (ADR 0135); la máxima aproximación, descartada en el tiro;
+       queda el portero en el plano (resto del paso 3 de la ADR 0135, con su bucle de realimentación);
      - BX-10b, la barrera en la línea de fondo;
      - ~~el bono de peligro tras blocar~~: **hecho (11 oct, BX-8c)**, sin bono con el área cerrada (ADR 0152); despeje
        tras blocar 86 → 11 %, conservado 34 → 63 %;

@@ -65,12 +65,16 @@ public sealed class MobNarrowingTests
     // peligro en el despeje. Antes de renovarlas, main (d7995de, BX-8b) pasaba las seis. Valores anteriores (BX-8b):
     // 6210812062334602913 / 35 / 6930658435677953924 y, con las reglas apagadas, 12438416515188529232 / 38 /
     // 5654105993874569265.
-    private const ulong RegulationOnlyBefore = 4307792465364797863UL;
-    private const int RegulationOnlyMatches = 36;
+    // Renovadas el 11 oct 2026 por BX-10c: el bloqueo del tiro mide el alcance en esfera (ADR 0135), así que un tiro alto ya
+    // no se queda en el defensa. Antes de renovarlas, main (BX-8d, sin el cambio de MatchEngine.TryBlockShot) pasaba las
+    // seis. Valores anteriores (BX-8c): 4307792465364797863 / 36 / 3709357635564605170 y, con las reglas apagadas,
+    // 11132563582499268854 / 39 / 11036718760857116434.
+    private const ulong RegulationOnlyBefore = 6777586576671902309UL;
+    private const int RegulationOnlyMatches = 29;
     // Y otra vez, sólo la de TODOS los partidos (2589647808657858224 -> 16912896484881689970), por BX-7 (11 oct 2026): en el
     // saque de centro que abre la turba, quien vuelve desde campo contrario rodea la barrera en vez de quedarse clavado en su
     // borde. Las del reglamentario no cambian (el rodeo sólo actúa en campo contrario, y tras un gol nadie anda desde allí).
-    private const ulong EveryMatchBefore = 3709357635564605170UL;
+    private const ulong EveryMatchBefore = 16552935557097807472UL;
 
     // Las mismas tres huellas con las reglas de las ADR 0184/0186 apagadas (positioningHoldBonus = 0, BV-B apagada) y las
     // bases de lesión de antes: el motor de antes de la ADR 0184 más los arreglos sin dato posteriores (BO-A).
@@ -81,10 +85,10 @@ public sealed class MobNarrowingTests
     // Y otra vez, sólo la de TODOS los partidos (13369841099302331167 -> 8688216646563204419), por el segundo arreglo sin
     // dato de la ADR 0185: el sacador del saque de centro tiene que llegar andando (TakerInPlaceCells) también con
     // accelTicks 0. Con esa comprobación condicionada otra vez al arranque, la huella vieja vuelve (comprobado).
-    private const ulong RegulationOnlyBeforeAdr0184PlusBoA = 11132563582499268854UL;
-    private const int RegulationOnlyMatchesBeforeAdr0184PlusBoA = 39;
+    private const ulong RegulationOnlyBeforeAdr0184PlusBoA = 11608583036325633167UL;
+    private const int RegulationOnlyMatchesBeforeAdr0184PlusBoA = 37;
     // BX-7 (11 oct 2026), lo mismo con las reglas apagadas: 13589622101850632235 -> 4527772544229341512.
-    private const ulong EveryMatchBeforeAdr0184PlusBoA = 11036718760857116434UL;
+    private const ulong EveryMatchBeforeAdr0184PlusBoA = 14373137795501084227UL;
 
     private const float Eps = 0.001f;
 

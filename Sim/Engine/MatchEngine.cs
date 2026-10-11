@@ -2540,7 +2540,12 @@ internal sealed class MatchEngine : IPerkWorld
                 continue;
             }
 
-            float distanceToBall = Vec2.Distance(player.Position, _ball.Position);
+            // BX-10c: alcance en ESFERA, la decisión 3 de la ADR 0135, que docs/plan-altura-del-balon.md §9 dejaba para el
+            // bloqueo. Medido (revisión independiente, 400 partidos): en el plano, 6 de 51 bloqueos eran de un balón que pasaba
+            // por encima de ese alcance. La tirada sigue al entrar en el radio, NO en la máxima aproximación del pase (BX-10):
+            // en el tiro no subía la conversión por tirada, quitaba bloqueos y dejaba al portero parar antes de que el defensa
+            // que esperaba llegara a tirar (30 tiradas perdidas en 400 partidos), una ventaja por el orden del tick.
+            float distanceToBall = ReachDistance(player.Position, _ball.Position, _ball.Z);
             if (distanceToBall >= pass.InterceptRadiusCells)
             {
                 continue;
