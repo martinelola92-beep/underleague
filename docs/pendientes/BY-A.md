@@ -27,7 +27,11 @@ frases que prometían otra cosa (Herencia nombraba «su vinculado» y recibe el 
 - ~~Seis perks de `modifyTraitScalar` sin verbo~~ (Pagar el hierro, Kamikaze, Cañón…): «el portador suma +10 de…».
 - ~~`DEATH` no distinguía alcance~~: secciones opcionales `triggersOwn` («si muere») y `triggersTeam` («cuando muere
   un compañero»), con vuelta a `triggers` si falta la clave.
-- El detector de fugas sólo ve camelCase: un id en snake_case o de una palabra no lo vería.
+- ~~El detector de fugas sólo ve camelCase~~: **hecho (11 oct)**. Ahora también busca snake_case, UPPER_SNAKE y, en
+  español, ids de perk de una palabra, y cubre también los consumibles.
+  - Medido: ninguna fuga en el catálogo real.
+  - El detector ve (Regla J): sin `PerkRunEffects` salen las doce fugas de los contadores, y cada patrón tiene su caso
+    conocido en `TheLeakDetectorSeesEachKindOfIdentifier`.
 - Las cifras de `counter-gold.json` y `death-gold.json` están marcadas «a ojo, pendientes de medición» y ahora se
   enseñan como promesa (Regla H): el texto sigue al dato, el dato sigue sin medir.
 - Sin run detrás (equipo de pruebas) `TeamState.RunEffects` es null y vuelve el texto con el contador.

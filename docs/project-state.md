@@ -60,7 +60,7 @@ renders y no pastillas»*. Todo lo hecho, las fuentes y licencias, el pipeline (
 - **Siguiente paso**:
   1. ~~BX-7~~ hecho. **Decisiones pendientes del revisor (11 oct):** economía del mercado, opciones A-D en
      `docs/analisis/economia-mercado-2026-10-11.md`; `betterTeamWinRate` (BV-C, ya fuera en la base en 3 de 4 semillas).
-  1b. Sin decisión: hermanos de BY-A que quedan (detector de fugas sólo camelCase; cifras de oro sin medir); el salto
+  1b. Sin decisión: hermanos de BY-A que quedan (~~detector de fugas sólo camelCase~~, hecho el 11 oct; cifras de oro sin medir); el salto
      de hasta 2 casillas de la barrera en el primer tick del saque de la turba (BX-7, hermano de BC-A); ~~el portero puede
      sacar rasgos de campo~~: **hecho (11 oct, BZ-A)**, un rasgo muerto en el puesto (desde la tabla de pesos) no se sortea. Sólo cambian los porteros; la nota de
      que movía el RNG de todas las plantillas era falsa. `EvaluatePress` descartado como causa del temblor (BX-13: sin activación).
