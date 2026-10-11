@@ -73,12 +73,16 @@ public sealed class MobNarrowingTests
     // deslizamiento con una holgura de redondeo (antes lo daba por fallido a 1,99999 y dejaba al rival en la banda a 1,7-1,9).
     // Antes de renovarlas, main (BX-10c) pasaba las seis. Valores anteriores (BX-10c): 6777586576671902309 / 29 /
     // 16552935557097807472 y, con las reglas apagadas, 11608583036325633167 / 37 / 14373137795501084227.
-    private const ulong RegulationOnlyBefore = 17189399711512350656UL;
-    private const int RegulationOnlyMatches = 33;
+    // Renovadas el 11 oct 2026 por BZ-A: al portero ya no se le sortean rasgos de campo que en él no hacen nada (Catalog.TraitActsOn,
+    // desde la tabla de pesos), y cambian los rasgos de los porteros generados (sólo de ellos). Antes de renovarlas, main (BX-10b) pasaba
+    // las seis. Valores anteriores (BX-10b): 17189399711512350656 / 33 / 8766935230048128844 y, con las reglas apagadas,
+    // 7434830941871261915 / 43 / 2954636299904427360.
+    private const ulong RegulationOnlyBefore = 17379389293164961416UL;
+    private const int RegulationOnlyMatches = 35;
     // Y otra vez, sólo la de TODOS los partidos (2589647808657858224 -> 16912896484881689970), por BX-7 (11 oct 2026): en el
     // saque de centro que abre la turba, quien vuelve desde campo contrario rodea la barrera en vez de quedarse clavado en su
     // borde. Las del reglamentario no cambian (el rodeo sólo actúa en campo contrario, y tras un gol nadie anda desde allí).
-    private const ulong EveryMatchBefore = 8766935230048128844UL;
+    private const ulong EveryMatchBefore = 1519762971433598932UL;
 
     // Las mismas tres huellas con las reglas de las ADR 0184/0186 apagadas (positioningHoldBonus = 0, BV-B apagada) y las
     // bases de lesión de antes: el motor de antes de la ADR 0184 más los arreglos sin dato posteriores (BO-A).
@@ -89,10 +93,10 @@ public sealed class MobNarrowingTests
     // Y otra vez, sólo la de TODOS los partidos (13369841099302331167 -> 8688216646563204419), por el segundo arreglo sin
     // dato de la ADR 0185: el sacador del saque de centro tiene que llegar andando (TakerInPlaceCells) también con
     // accelTicks 0. Con esa comprobación condicionada otra vez al arranque, la huella vieja vuelve (comprobado).
-    private const ulong RegulationOnlyBeforeAdr0184PlusBoA = 7434830941871261915UL;
-    private const int RegulationOnlyMatchesBeforeAdr0184PlusBoA = 43;
+    private const ulong RegulationOnlyBeforeAdr0184PlusBoA = 14774079004148473044UL;
+    private const int RegulationOnlyMatchesBeforeAdr0184PlusBoA = 35;
     // BX-7 (11 oct 2026), lo mismo con las reglas apagadas: 13589622101850632235 -> 4527772544229341512.
-    private const ulong EveryMatchBeforeAdr0184PlusBoA = 2954636299904427360UL;
+    private const ulong EveryMatchBeforeAdr0184PlusBoA = 2543972008033607170UL;
 
     private const float Eps = 0.001f;
 

@@ -954,6 +954,37 @@ public sealed record Catalog(
     public TraitDefinition Trait(Trait id) =>
         Traits.FirstOrDefault(t => t.Id == id) ?? throw new InvalidOperationException($"rasgo no encontrado en el catálogo: {id}");
 
+    /// <summary>
+    /// BZ-A: ¿hace algo el rasgo <paramref name="id"/> en un jugador de este puesto? No, si todo lo que toca está muerto en
+    /// él: un multiplicador de una acción con peso base 0 en el puesto (un porcentaje de cero es cero), y los bonos de tiro
+    /// si el puesto no puede tirar. Los demás bonos (velocidad, resistencia, líder, falta, parada…) cuentan siempre como
+    /// vivos. Se mira la tabla real de pesos y no una lista escrita a mano, como el techo C10 de los perks
+    /// (<c>PerkLoader</c>): así la regla sigue valiendo cuando la tabla cambie. Hoy, para el portero, son goleador y tiro
+    /// lejano.
+    /// </summary>
+    public bool TraitActsOn(Trait id, Position position)
+    {
+        var trait = Trait(id);
+        foreach (var (action, _) in trait.ActionMultipliers)
+        {
+            if (Ai.Base(position, action) > 0)
+            {
+                return true;
+            }
+        }
+
+        bool canShoot = Ai.Base(position, PlayerAction.Shoot) > 0;
+        if (canShoot && (trait.ShotQualityBonus != 0 || trait.ShootRangeBonusCells != 0))
+        {
+            return true;
+        }
+
+        return trait.HardTackleBonus != 0 || trait.SpeedBonusPercent != 0 || trait.PassQualityBonus != 0
+            || trait.FoulChanceBonus != 0 || trait.InjuryChanceBonus != 0 || trait.FatigueResistancePercent != 0
+            || trait.InjuryResistanceBonus != 0 || trait.AdjacentTeammateBonusPercent != 0 || trait.SaveBonusClose != 0
+            || trait.SaveBonusFar != 0 || trait.LeashBonus != 0;
+    }
+
     /// <summary>Tabla de progresión (§6); atajo a <c>Tuning.Progression</c>.</summary>
     public ProgressionTuning Progression => Tuning.Progression;
 }

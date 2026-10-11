@@ -259,7 +259,10 @@ public static class PlayerGenerator
         var countWeights = catalog.Tuning.Generation.TraitCountWeights;
         int count = PickWeightedIndex(ref rng, countWeights) + 1;
 
-        var pool = new List<(Trait Trait, int Weight)>(race.TraitWeights);
+        // BZ-A: un rasgo que en este puesto no hace nada no se le sortea (Catalog.TraitActsOn, desde la tabla de pesos): hoy,
+        // goleador y tiro lejano en el portero. Sólo cambia qué rasgo sale, no cuántos números se consumen, así que los
+        // jugadores de los demás puestos no cambian (medido: 0 de 36 000 en 2000 plantillas de referencia).
+        var pool = new List<(Trait Trait, int Weight)>(race.TraitWeights.Where(t => catalog.TraitActsOn(t.Trait, position)));
         var chosen = new List<Trait>();
         for (int i = 0; i < count && pool.Count > 0; i++)
         {
@@ -267,6 +270,13 @@ public static class PlayerGenerator
             for (int j = 0; j < pool.Count; j++)
             {
                 totalWeight += pool[j].Weight;
+            }
+
+            // Con el pool filtrado, lo que queda puede pesar 0 (una raza con peso sólo en rasgos muertos para el puesto):
+            // Range(0, 0) lanzaría. Se para aquí, igual que con el pool vacío.
+            if (totalWeight == 0)
+            {
+                break;
             }
 
             int r = rng.Range(0, totalWeight);

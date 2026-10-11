@@ -385,4 +385,69 @@ public class GeneratorTests
 
         Assert.All(team.Players, p => Assert.Equal(Rarity.Rare, p.Rarity));
     }
+
+    /// <summary>
+    /// BZ-A: al portero no se le sortea un rasgo que en él no hace nada (<c>Catalog.TraitActsOn</c>, desde la tabla de pesos).
+    /// Antes llevaba uno el 32 % de los porteros generados (1278 de 4000 en 2000 plantillas de referencia), y el jugador lo
+    /// veía en el ojeo. Casos conocidos (Regla J): en el portero los muertos son exactamente goleador y tiro lejano; en el
+    /// delantero, ninguno. Control: los delanteros siguen llevándolos.
+    /// </summary>
+    [Fact]
+    public void AGoalkeeperNeverDrawsATraitThatDoesNothingInHim()
+    {
+        var catalog = TestData.LoadCatalog();
+        var general = catalog.Traits.Where(t => !t.GoalkeeperOnly).Select(t => t.Id).ToList();
+        var deadInKeeper = general.Where(t => !catalog.TraitActsOn(t, Position.Goalkeeper)).ToHashSet();
+        Assert.Equal(new[] { Trait.LongShot, Trait.Scorer }, deadInKeeper.OrderBy(t => t.ToString()));
+        Assert.All(general, t => Assert.True(catalog.TraitActsOn(t, Position.Forward), $"{t} no haría nada en un delantero"));
+
+        int keepers = 0;
+        int forwardsWithThem = 0;
+        foreach (var race in catalog.Races.Where(r => r.Launch))
+        {
+            for (int i = 0; i < 300; i++)
+            {
+                var rng = RngStreams.Generation((ulong)i + 1, 0);
+                var keeper = PlayerGenerator.Generate(ref rng, catalog, race, Position.Goalkeeper, Rarity.Common, 1, i, "Portero");
+                var forward = PlayerGenerator.Generate(ref rng, catalog, race, Position.Forward, Rarity.Common, 1, i, "Delantero");
+                keepers++;
+                Assert.DoesNotContain(keeper.Traits, deadInKeeper.Contains);
+                if (forward.Traits.Any(deadInKeeper.Contains))
+                {
+                    forwardsWithThem++;
+                }
+            }
+        }
+
+        Assert.True(keepers >= 1000, $"muestra corta: {keepers} porteros");
+        Assert.True(forwardsWithThem > 0, "ningún delantero con goleador o tiro lejano: el control no prueba nada");
+    }
+
+    /// <summary>
+    /// La premisa de BZ-A (revisión independiente): el portero no tira nunca, así que un rasgo que sólo toca el tiro no hace
+    /// nada en él. No lo garantiza el peso base de <c>Shoot</c> a 0 por sí solo, porque el contexto del tiro no es 0; lo
+    /// garantiza que nunca gana. Medido: 0 de 6720 tiros en 1000 partidos, también antes de BZ-A, cuando el 32 % de los
+    /// porteros llevaba goleador o tiro lejano.
+    /// </summary>
+    [Fact]
+    public void AGoalkeeperNeverShoots()
+    {
+        var catalog = TestData.LoadCatalog();
+        int shots = 0;
+        for (ulong seed = 1; seed <= 300; seed++)
+        {
+            var setup = TestMatches.Reference(catalog, seed);
+            var keepers = setup.Home.Players.Concat(setup.Away.Players).Where(p => p.Position == Position.Goalkeeper).Select(p => p.Id).ToHashSet();
+            foreach (var e in Underleague.Sim.Engine.Simulator.Run(setup, seed, catalog, new Underleague.Sim.Engine.SimConfig(CollectLog: false)).Events)
+            {
+                if (e.Type == Underleague.Sim.Events.EventType.Shot && e.Detail != "attempted")
+                {
+                    shots++;
+                    Assert.False(keepers.Contains(e.Actor), $"semilla {seed}: el portero {e.Actor} tiró en el tick {e.Tick}");
+                }
+            }
+        }
+
+        Assert.True(shots > 1000, $"muestra corta: {shots} tiros");
+    }
 }

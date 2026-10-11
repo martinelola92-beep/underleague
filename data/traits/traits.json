@@ -1,5 +1,6 @@
 {
   "traits": {
+    "_doc": "Rasgos de campo, sorteados desde los pesos de la raza (RF-024c). A un puesto no se le sortea un rasgo que en él no hace nada: lo decide Catalog.TraitActsOn mirando la tabla de pesos de data/ai/weights.json, no una marca aquí (BZ-A). Hoy son goleador y tiro lejano en el portero, que tiene Shoot y OfferSupport a 0; antes los llevaba el 32 % de los porteros generados.",
     "Aggressive": { "name": { "es": "agresivo", "en": "aggressive" }, "actionMultipliers": { "Tackle": 160, "MarkOpponent": 120, "Block": 175 }, "hardTackleBonus": 15 },
     "Fast":       { "name": { "es": "rápido", "en": "fast" }, "actionMultipliers": { "ChaseBall": 130, "Dribble": 115 }, "speedBonusPercent": 8 },
     "Scorer":     { "name": { "es": "goleador", "en": "scorer" }, "actionMultipliers": { "Shoot": 150, "OfferSupport": 115 }, "shotQualityBonus": 6 },

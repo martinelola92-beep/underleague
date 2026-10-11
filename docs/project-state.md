@@ -61,9 +61,9 @@ renders y no pastillas»*. Todo lo hecho, las fuentes y licencias, el pipeline (
   1. ~~BX-7~~ hecho. **Decisiones pendientes del revisor (11 oct):** economía del mercado, opciones A-D en
      `docs/analisis/economia-mercado-2026-10-11.md`; `betterTeamWinRate` (BV-C, ya fuera en la base en 3 de 4 semillas).
   1b. Sin decisión: hermanos de BY-A que quedan (detector de fugas sólo camelCase; cifras de oro sin medir); el salto
-     de hasta 2 casillas de la barrera en el primer tick del saque de la turba (BX-7, hermano de BC-A); el portero puede
-     sacar rasgos de campo («Goleador»: `PlayerGenerator.PickTraits` no mira el puesto; cambiarlo mueve el RNG de
-     todas las plantillas). `EvaluatePress` descartado como causa del temblor (BX-13: sin activación).
+     de hasta 2 casillas de la barrera en el primer tick del saque de la turba (BX-7, hermano de BC-A); ~~el portero puede
+     sacar rasgos de campo~~: **hecho (11 oct, BZ-A)**, un rasgo muerto en el puesto (desde la tabla de pesos) no se sortea. Sólo cambian los porteros; la nota de
+     que movía el RNG de todas las plantillas era falsa. `EvaluatePress` descartado como causa del temblor (BX-13: sin activación).
   2. Hermanos abiertos, de más a menos visible:
      - `EvaluatePress` al centro del poseedor (BX-13), sin activación;
      - ~~BX-10c, el bloqueo del tiro~~: **hecho (11 oct)**, alcance en esfera (ADR 0135); la máxima aproximación, descartada en el tiro;
@@ -78,6 +78,17 @@ renders y no pastillas»*. Todo lo hecho, las fuentes y licencias, el pipeline (
      - tiros −0,35 por partido tras BX-8c (7,76-7,94): si cruzan 7, ficha y medición antes de tocar la banda;
      - ~~la falta a favor dentro del área propia~~: **hecho (11 oct, BX-8b)**, el despeje no cobra el peligro con el
        balón muerto; despejes en faltas del tercio propio 12 de 63 → 0 y balón conservado 68 → 80 %.
+  2b. Puertas tras BX-10b (11 oct), todas LIKELY ruido y medidas por semilla en `docs/pendientes/BX-10b.md`:
+     - `elf_brawler` 45,60, que ya pasaba del techo en `main` en 3 de 4 semillas;
+     - `MatchOrderTests` (defensivo encaja 0,038 menos; listón 0,04). La puerta es frágil: su error típico por bloque es
+       ~0,037;
+     - `TheThreeDoctrinesBuyDifferently` (BU-A).
+
+     Hermano arreglado de paso: la sustitución ofrecida a un expulsado lesionado en el mismo tick tiraba la run.
+     Quedan anotados, sin ficha:
+     - la barrera recoloca al instante en vez de dar un destino al que caminar;
+     - `TryAerialChallenge` resuelve al entrar en el radio;
+     - el portero sigue midiendo en el plano (resto del paso 3 de la ADR 0135).
   3. `runWinRate_noMarket` fuera de techo (economía; ADR 0193 la agrava). **Medido el 11 oct**
      (`docs/analisis/economia-mercado-2026-10-11.md`): el número de perks casi no mueve el partido (Spender compra el
      doble que Contextual y gana menos); el techo del 5 % no se alcanza con precios. **Decisión del revisor**: opciones
