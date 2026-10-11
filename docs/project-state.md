@@ -60,6 +60,19 @@ renders y no pastillas»*. Todo lo hecho, las fuentes y licencias, el pipeline (
 - **Siguiente paso**:
   1. ~~BX-7~~ hecho. **Decisiones pendientes del revisor (11 oct):** economía del mercado, opciones A-D en
      `docs/analisis/economia-mercado-2026-10-11.md`; `betterTeamWinRate` (BV-C, ya fuera en la base en 3 de 4 semillas).
+     **Y dos de BZ-B** (la barrera se sale andando; rama `bzb-barrera-andando`, sin fusionar; ver `docs/pendientes/BZ-B.md`):
+     - quita los saltos (faltas 1585 → 18 en 200 partidos), pero cuesta ~3 puntos a los orcos y saca a los no-muertos de
+       la banda D-29 (60,6 %), sin mecanismo aislado;
+     - el saque de puerta andado cuesta ~4 puntos de saque largo conservado.
+
+     ¿Se acepta, se compensa o se busca otra forma?
+  1c. Hecho en la sesión del 11 oct (tarde), en `main`:
+     - BX-8d: el bono de apretar al portero, sin cambio;
+     - BX-10c: el bloqueo del tiro mide en esfera;
+     - BX-10b: la barrera desliza por la línea de fondo y acepta con holgura de redondeo;
+     - la sustitución de un expulsado lesionado ya no tira la run;
+     - BZ-A: al portero no se le sortea un rasgo muerto, derivado de la tabla de pesos;
+     - el detector de fugas de BY-A ve snake_case, UPPER_SNAKE y consumibles.
   1b. Sin decisión: hermanos de BY-A que quedan (~~detector de fugas sólo camelCase~~, hecho el 11 oct; cifras de oro sin medir); el salto
      de hasta 2 casillas de la barrera en el primer tick del saque de la turba (BX-7, hermano de BC-A); ~~el portero puede
      sacar rasgos de campo~~: **hecho (11 oct, BZ-A)**, un rasgo muerto en el puesto (desde la tabla de pesos) no se sortea. Sólo cambian los porteros; la nota de
